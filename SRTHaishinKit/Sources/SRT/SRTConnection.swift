@@ -113,14 +113,21 @@ public actor SRTConnection: NetworkConnection {
                     do {
                         try await socket.open(addr, mode: mode, options: options)
                         self.uri = uri
-                        connected = await socket.status == .connected
+                        switch mode {
+                        case .caller:
+                            self.socket = socket
+                        case .listener:
+                            self.listener = socket
+                            self.socket = try await socket.accept()
+                            self.listener = nil
+                        }
+                        connected = await self.socket?.status == .connected
                         continuation.resume()
                     } catch {
                         continuation.resume(throwing: error)
                     }
                 }
             }
-            setMode(mode, socket: socket)
         } catch {
             throw error
         }
@@ -170,33 +177,6 @@ public actor SRTConnection: NetworkConnection {
     func removeStream(_ stream: SRTStream) {
         if let index = streams.firstIndex(where: { $0 === stream }) {
             streams.remove(at: index)
-        }
-    }
-
-    func acceptSocket() async {
-        guard let listener else {
-            return
-        }
-        do {
-            socket = try await listener.accept()
-            // It is a one-by-one connection and stops once the first connection is established.
-            self.listener = nil
-            connected = true
-        } catch {
-            logger.error(error)
-            await acceptSocket()
-        }
-    }
-
-    private func setMode(_ mode: SRTMode, socket: SRTSocket) {
-        switch mode {
-        case .caller:
-            self.socket = socket
-        case .listener:
-            listener = socket
-            Task {
-                await acceptSocket()
-            }
         }
     }
 
