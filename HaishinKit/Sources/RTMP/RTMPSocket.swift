@@ -1,10 +1,10 @@
 import Foundation
 import Network
 
-final actor RTMPSocket {
+public final actor RTMPSocket {
     static let defaultWindowSizeC = Int(UInt8.max)
 
-    enum Error: Swift.Error {
+    public enum Error: Swift.Error {
         case invalidState
         case endOfStream
         case connectionTimedOut
@@ -48,7 +48,7 @@ final actor RTMPSocket {
         }
     }
 
-    func connect(_ name: String, port: Int) async throws {
+    internal func connect(_ name: String, port: Int) async throws {
         guard !connected else {
             throw Error.invalidState
         }
@@ -82,7 +82,7 @@ final actor RTMPSocket {
         }
     }
 
-    func send(_ data: Data) {
+    internal func send(_ data: Data) {
         guard connected else {
             return
         }
@@ -90,7 +90,7 @@ final actor RTMPSocket {
         outputs?.yield(data)
     }
 
-    func send(_ iterator: AnyIterator<Data>) {
+    internal func send(_ iterator: AnyIterator<Data>) {
         guard connected else {
             return
         }
@@ -100,7 +100,7 @@ final actor RTMPSocket {
         }
     }
 
-    func recv() -> AsyncStream<Data> {
+    internal func recv() -> AsyncStream<Data> {
         AsyncStream<Data> { continuation in
             Task {
                 do {
@@ -116,7 +116,7 @@ final actor RTMPSocket {
         }
     }
 
-    func close(_ error: NWError? = nil) {
+    internal func close(_ error: NWError? = nil) {
         guard connection != nil else {
             return
         }
@@ -210,11 +210,11 @@ final actor RTMPSocket {
 
 extension RTMPSocket: NetworkTransportReporter {
     // MARK: NetworkTransportReporter
-    func makeNetworkMonitor() async -> NetworkMonitor {
+    public func makeNetworkMonitor() async -> NetworkMonitor {
         return .init(self)
     }
 
-    func makeNetworkTransportReport() -> NetworkTransportReport {
+    public func makeNetworkTransportReport() -> NetworkTransportReport {
         return .init(queueBytesOut: queueBytesOut, totalBytesIn: totalBytesIn, totalBytesOut: totalBytesOut)
     }
 }
