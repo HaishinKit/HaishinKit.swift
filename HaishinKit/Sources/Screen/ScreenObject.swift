@@ -158,12 +158,21 @@ extension ScreenObject: Hashable {
 /// An object that manages offscreen rendering a cgImage source.
 public final class ImageScreenObject: ScreenObject {
     /// Specifies the image.
+    private let queue = DispatchQueue(label: "com.ImageScreenObject.cgImageQueue")
+    private var _cgImage: CGImage?
     public var cgImage: CGImage? {
-        didSet {
-            guard cgImage != oldValue else {
-                return
+        get {
+            return queue.sync {
+                _cgImage
             }
-            invalidateLayout()
+        }
+        set {
+            queue.sync {
+                if _cgImage !== newValue {
+                    _cgImage = newValue
+                }
+            }
+            self.invalidateLayout()
         }
     }
 
