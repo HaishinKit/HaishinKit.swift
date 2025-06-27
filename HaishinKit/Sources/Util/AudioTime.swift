@@ -43,7 +43,7 @@ final class AudioTime {
             return
         }
         sampleRate = time.sampleRate
-        sampleTime = 0
+        sampleTime = time.sampleTime
         anchorTime = time
     }
 

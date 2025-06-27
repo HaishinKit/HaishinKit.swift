@@ -170,6 +170,7 @@ final class AudioCodec {
         if logger.isEnabledFor(level: .info) {
             logger.info("converter:", converter ?? "nil", ",inputFormat:", inputFormat, ",outputFormat:", outputFormat)
         }
+        audioTime.reset()
         return converter
     }
 }
