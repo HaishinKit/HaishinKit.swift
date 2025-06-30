@@ -54,7 +54,7 @@ final class AudioRingBuffer {
         if sampleTime == 0 {
             sampleTime = targetSampleTime
         }
-        if inputBuffer.frameLength < sampleBuffer.numSamples {
+        if inputBuffer.frameCapacity < sampleBuffer.numSamples {
             if let buffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: AVAudioFrameCount(sampleBuffer.numSamples)) {
                 self.inputBuffer = buffer
             }
@@ -87,7 +87,7 @@ final class AudioRingBuffer {
         if sampleTime == 0 {
             sampleTime = when.sampleTime
         }
-        if inputBuffer.frameLength < audioPCMBuffer.frameLength {
+        if inputBuffer.frameCapacity < audioPCMBuffer.frameLength {
             if let buffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: audioPCMBuffer.frameCapacity) {
                 self.inputBuffer = buffer
             }
