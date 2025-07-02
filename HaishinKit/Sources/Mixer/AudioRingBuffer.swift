@@ -21,6 +21,11 @@ final class AudioRingBuffer {
     private var sampleTime: AVAudioFramePosition = 0
     private var inputFormat: AVAudioFormat
     private var inputBuffer: AVAudioPCMBuffer
+#if DEBUG
+    var testableInputBuffer: AVAudioPCMBuffer {
+      inputBuffer
+    }
+#endif
     private var outputBuffer: AVAudioPCMBuffer
 
     init?(_ inputFormat: AVAudioFormat, bufferCounts: UInt32 = AudioRingBuffer.bufferCounts) {

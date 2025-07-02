@@ -21,6 +21,29 @@ import Testing
         try appendSampleBuffer(1024, channels: 2)
     }
 
+    @Test func reusesInputBufferWhenCapacityIsSufficient() throws {
+        let audioFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 48000, channels: 1, interleaved: true)!
+        let ringBuffer = AudioRingBuffer(audioFormat, bufferCounts: 3)!
+        let initialInternalPCMBuff = ringBuffer.testableInputBuffer
+        let buffer1 = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: 1)!
+        buffer1.frameLength = 1
+        ringBuffer.append(buffer1, when: .init(sampleTime: 0, atRate: 48000))
+
+        #expect(initialInternalPCMBuff === ringBuffer.testableInputBuffer)
+    }
+
+    @Test func reallocatesInputBufferWhenCapacityIsInsufficient() throws {
+        let audioFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 48000, channels: 1, interleaved: true)!
+        let ringBuffer = AudioRingBuffer(audioFormat, bufferCounts: 3)!
+        let initialInternalPCMBuff = ringBuffer.testableInputBuffer
+        let buffer1 = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: initialInternalPCMBuff.frameCapacity + 1)!
+        buffer1.frameLength = buffer1.frameCapacity
+        ringBuffer.append(buffer1, when: .init(sampleTime: 0, atRate: 48000))
+
+        #expect(initialInternalPCMBuff !== ringBuffer.testableInputBuffer)
+        #expect(ringBuffer.testableInputBuffer.frameCapacity == buffer1.frameCapacity)
+    }
+
     private func appendSampleBuffer(_ numSamples: Int, channels: UInt32) throws {
         var asbd = AudioStreamBasicDescription(
             mSampleRate: 44100,
