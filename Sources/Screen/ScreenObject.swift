@@ -35,6 +35,11 @@ open class ScreenObject {
         case bottom
     }
 
+    enum BlendMode {
+        case normal
+        case alpha
+    }
+
     /// The screen object container that contains this screen object
     public internal(set) weak var parent: ScreenObjectContainer?
 
@@ -70,6 +75,10 @@ open class ScreenObject {
 
     /// Specifies the alignment position along the horizontal axis.
     public var horizontalAlignment: HorizontalAlignment = .left
+
+    var blendMode: BlendMode {
+        .alpha
+    }
 
     var shouldInvalidateLayout = true
 
@@ -197,7 +206,10 @@ public final class ImageScreenObject: ScreenObject {
 }
 
 /// An object that manages offscreen rendering a video track source.
-public final class VideoTrackScreenObject: ScreenObject {
+public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
+    static let capacity: Int = 3
+    public var chromaKeyColor: CGColor?
+
     /// Specifies the track number how the displays the visual content.
     public var track: UInt8 = 0 {
         didSet {
@@ -218,15 +230,27 @@ public final class VideoTrackScreenObject: ScreenObject {
         }
     }
 
+    public var frameRate: Int {
+        frameTracker.frameRate
+    }
+
+    override var blendMode: ScreenObject.BlendMode {
+        if 0.0 < cornerRadius || chromaKeyColor != nil {
+            return .alpha
+        }
+        return .normal
+    }
+
     private var queue: TypedBlockQueue<CMSampleBuffer>?
     private var effects: [VideoEffect] = .init()
+    private var frameTracker = FrameTracker()
 
     /// Create a screen object.
     override public init() {
         super.init()
         horizontalAlignment = .center
         do {
-            queue = try TypedBlockQueue(capacity: 1, handlers: .outputPTSSortedSampleBuffers)
+            queue = try TypedBlockQueue(capacity: Self.capacity, handlers: .outputPTSSortedSampleBuffers)
         } catch {
             logger.error(error)
         }
@@ -251,9 +275,11 @@ public final class VideoTrackScreenObject: ScreenObject {
     }
 
     override public func makeImage(_ renderer: some ScreenRenderer) -> CGImage? {
-        guard let sampleBuffer = queue?.dequeue(), let pixelBuffer = sampleBuffer.imageBuffer else {
+        guard let sampleBuffer = queue?.dequeue(renderer.presentationTimeStamp),
+              let pixelBuffer = sampleBuffer.imageBuffer else {
             return nil
         }
+        frameTracker.update(sampleBuffer.presentationTimeStamp)
         // Resizing before applying the filter for performance optimization.
         var image = CIImage(cvPixelBuffer: pixelBuffer).transformed(by: videoGravity.scale(
             bounds.size,
@@ -286,12 +312,20 @@ public final class VideoTrackScreenObject: ScreenObject {
         }
     }
 
+    override public func draw(_ renderer: some ScreenRenderer) {
+        super.draw(renderer)
+        if queue?.isEmpty == false {
+            invalidateLayout()
+        }
+    }
+
     func enqueue(_ sampleBuffer: CMSampleBuffer) {
         try? queue?.enqueue(sampleBuffer)
         invalidateLayout()
     }
 
     func reset() {
+        frameTracker.clear()
         try? queue?.reset()
         invalidateLayout()
     }
@@ -384,7 +418,9 @@ public final class TextScreenObject: ScreenObject {
 
 #if !os(visionOS)
 /// An object that manages offscreen rendering an asset resource.
-public final class AssetScreenObject: ScreenObject {
+public final class AssetScreenObject: ScreenObject, ChromaKeyProcessable {
+    public var chromaKeyColor: CGColor?
+
     public var isReading: Bool {
         return reader?.status == .reading
     }

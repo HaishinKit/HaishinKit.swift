@@ -14,7 +14,7 @@ public struct IOAudioMixerTrackSettings: Codable, Sendable {
     public static let `default` = IOAudioMixerTrackSettings()
 
     /// Specifies the volume for output.
-    public var volume: Float = 1.0
+    public var volume: Float
 
     /// Specifies the muted that indicates whether the audio output is muted.
     public var isMuted = false
@@ -29,6 +29,14 @@ public struct IOAudioMixerTrackSettings: Codable, Sendable {
     /// channelMap = [2, 3]
     /// ```
     public var channelMap: [Int]?
+
+    /// Creates a new instance.
+    public init(volume: Float = 1.0, isMuted: Bool = false, downmix: Bool = true, channelMap: [Int]? = nil) {
+        self.volume = volume
+        self.isMuted = isMuted
+        self.downmix = downmix
+        self.channelMap = channelMap
+    }
 
     func apply(_ converter: AVAudioConverter?, oldValue: IOAudioMixerTrackSettings?) {
         guard let converter else {

@@ -1,5 +1,6 @@
 import AudioUnit
 import AVFoundation
+import CoreAudio
 import CoreMedia
 import Foundation
 

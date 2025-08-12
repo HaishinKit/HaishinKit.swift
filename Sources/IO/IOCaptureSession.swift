@@ -236,14 +236,6 @@ final class IOCaptureSession {
             return
         }
         let error = AVError(_nsError: errorValue)
-        switch error.code {
-        #if os(iOS) || os(tvOS)
-        case .mediaServicesWereReset:
-            startRunningIfNeeded()
-        #endif
-        default:
-            break
-        }
         delegate?.captureSession(self, sessionRuntimeError: session, error: error)
     }
 

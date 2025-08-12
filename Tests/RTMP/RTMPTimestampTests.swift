@@ -15,12 +15,12 @@ final class RTMPTimestampTests: XCTestCase {
             CMTime(value: 286340338232723, timescale: 1000000000),
         ]
         var timestamp = RTMPTimestamp<CMTime>()
-        XCTAssertEqual(0, timestamp.update(times[0]))
-        XCTAssertEqual(33, timestamp.update(times[1]))
-        XCTAssertEqual(33, timestamp.update(times[2]))
-        XCTAssertEqual(33, timestamp.update(times[3]))
-        XCTAssertEqual(34, timestamp.update(times[4]))
-        XCTAssertEqual(33, timestamp.update(times[5]))
+        XCTAssertEqual(0, try? timestamp.update(times[0]))
+        XCTAssertEqual(33, try? timestamp.update(times[1]))
+        XCTAssertEqual(33, try? timestamp.update(times[2]))
+        XCTAssertEqual(33, try? timestamp.update(times[3]))
+        XCTAssertEqual(34, try? timestamp.update(times[4]))
+        XCTAssertEqual(33, try? timestamp.update(times[5]))
     }
 
     func testAVAudioTime() {
@@ -33,11 +33,11 @@ final class RTMPTimestampTests: XCTestCase {
             .init(hostTime: 6901297434500, sampleTime: 13802594869, atRate: 48000),
         ]
         var timestamp = RTMPTimestamp<AVAudioTime>()
-        XCTAssertEqual(0, timestamp.update(times[0]))
-        XCTAssertEqual(21, timestamp.update(times[1]))
-        XCTAssertEqual(21, timestamp.update(times[2]))
-        XCTAssertEqual(22, timestamp.update(times[3]))
-        XCTAssertEqual(21, timestamp.update(times[4]))
-        XCTAssertEqual(21, timestamp.update(times[5]))
+        XCTAssertEqual(0, try? timestamp.update(times[0]))
+        XCTAssertEqual(21, try? timestamp.update(times[1]))
+        XCTAssertEqual(21, try? timestamp.update(times[2]))
+        XCTAssertEqual(22, try? timestamp.update(times[3]))
+        XCTAssertEqual(21, try? timestamp.update(times[4]))
+        XCTAssertEqual(21, try? timestamp.update(times[5]))
     }
 }

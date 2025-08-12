@@ -10,6 +10,8 @@ extension CMFormatDescription {
             return .h264
         case .mpeg4AAC_LD:
             return .adtsAac
+        case .mpeg4AAC:
+            return .adtsAac
         default:
             return .unspecific
         }

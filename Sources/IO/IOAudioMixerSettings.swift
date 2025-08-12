@@ -22,13 +22,13 @@ public struct IOAudioMixerSettings: Sendable {
     public let channels: UInt32
 
     /// Specifies the muted that indicates whether the audio output is muted.
-    public var isMuted = false
+    public var isMuted: Bool
 
     /// Specifies the main track number.
-    public var mainTrack: UInt8 = 0
+    public var mainTrack: UInt8
 
     /// Specifies the track settings.
-    public var tracks: [UInt8: IOAudioMixerTrackSettings] = .init()
+    public var tracks: [UInt8: IOAudioMixerTrackSettings]
 
     /// Specifies the maximum number of channels supported by the system
     /// - Description: The maximum number of channels to be used when the number of channels is 0 (not set). More than 2 channels are not supported by the service. It is defined to prevent audio issues since recording does not support more than 2 channels.
@@ -37,10 +37,16 @@ public struct IOAudioMixerSettings: Sendable {
     /// Creates a new instance of a settings.
     public init(
         sampleRate: Float64 = 0,
-        channels: UInt32 = 0
+        channels: UInt32 = 0,
+        isMuted: Bool = false,
+        mainTrack: UInt8 = 0,
+        tracks: [UInt8: IOAudioMixerTrackSettings] = .init()
     ) {
         self.sampleRate = sampleRate
         self.channels = channels
+        self.isMuted = isMuted
+        self.mainTrack = mainTrack
+        self.tracks = tracks
     }
 
     func invalidateOutputFormat(_ oldValue: Self) -> Bool {

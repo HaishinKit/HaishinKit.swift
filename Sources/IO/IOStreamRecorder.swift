@@ -44,6 +44,14 @@ public final class IOStreamRecorder {
     public var fileName: String?
     /// The running indicies whether recording or not.
     public private(set) var isRunning: Atomic<Bool> = .init(false)
+    /// Specifies the movie fragment interval in sec. This value allows the file to be written continuously, so the file will remain even if the app crashes or is forcefully terminated. A value of 10 seconds or more is recommended.
+    public var movieFragmentInterval: Double? {
+        didSet {
+            if let movieFragmentInterval {
+                self.movieFragmentInterval = max(10.0, movieFragmentInterval)
+            }
+        }
+    }
     private let lockQueue = DispatchQueue(label: "com.haishinkit.HaishinKit.IOStreamRecorder.lock")
     private var isReadyForStartWriting: Bool {
         guard let writer = writer else {
@@ -214,6 +222,9 @@ extension IOStreamRecorder: Running {
                 let fileName = self.fileName ?? UUID().uuidString
                 let url = self.moviesDirectory.appendingPathComponent(fileName).appendingPathExtension("mp4")
                 self.writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+                if let movieFragmentInterval = self.movieFragmentInterval {
+                    self.writer?.movieFragmentInterval = CMTime(seconds: movieFragmentInterval, preferredTimescale: 1)
+                }
                 self.isRunning.mutate { $0 = true }
             } catch {
                 self.delegate?.recorder(self, errorOccured: .failedToCreateAssetWriter(error: error))

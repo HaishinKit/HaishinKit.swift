@@ -1,4 +1,5 @@
 import Accelerate
+import CoreImage
 import CoreVideo
 import Foundation
 
@@ -108,6 +109,10 @@ extension CVPixelBuffer {
             CVPixelBufferUnlockBaseAddress(self, lockFlags)
         }
         try lambda(self)
+    }
+
+    func makeCIImage() -> CIImage {
+        CIImage(cvPixelBuffer: self)
     }
 
     @inlinable

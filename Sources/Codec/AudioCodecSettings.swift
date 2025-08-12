@@ -5,6 +5,8 @@ import Foundation
 public struct AudioCodecSettings: Codable, Sendable {
     /// The default value.
     public static let `default` = AudioCodecSettings()
+    /// The default bitRate. The value is 64,000 bps.
+    public static let defaultBitRate = 64 * 1000
     /// Maximum number of channels supported by the system
     public static let maximumNumberOfChannels: UInt32 = 8
 
@@ -131,16 +133,23 @@ public struct AudioCodecSettings: Codable, Sendable {
     }
 
     /// Specifies the bitRate of audio output.
-    public var bitRate: Int = 64 * 1000
+    public var bitRate: Int
 
     /// Specifies the mixes the channels or not.
-    public var downmix = true
+    public var downmix: Bool
 
     /// Specifies the map of the output to input channels.
     public var channelMap: [Int]?
 
     /// Specifies the output format.
     var format: AudioCodecSettings.Format = .aac
+
+    /// Creates a new instance.
+    public init(bitRate: Int = AudioCodecSettings.defaultBitRate, downmix: Bool = true, channelMap: [Int]? = nil) {
+        self.bitRate = bitRate
+        self.downmix = downmix
+        self.channelMap = channelMap
+    }
 
     func apply(_ converter: AVAudioConverter?, oldValue: AudioCodecSettings?) {
         guard let converter else {

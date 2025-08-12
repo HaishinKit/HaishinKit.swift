@@ -107,8 +107,7 @@ final class CameraIngestViewController: NSViewController {
     }
 
     @IBAction private func orientation(_ sender: AnyObject) {
-        // lfView.rotate(byDegrees: 90)
-        stream.videoMixerSettings.isMuted.toggle()
+        lfView.rotate(byDegrees: 90)
     }
 
     @IBAction private func mirror(_ sender: AnyObject) {

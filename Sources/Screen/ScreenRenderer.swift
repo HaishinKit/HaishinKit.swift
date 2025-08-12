@@ -11,6 +11,8 @@ public protocol ScreenRenderer: AnyObject {
     var backgroundColor: CGColor { get set }
     /// The current screen bounds.
     var bounds: CGRect { get }
+    /// The current presentationTimeStamp.
+    var presentationTimeStamp: CMTime { get }
     /// Layouts a screen object.
     func layout(_ screenObject: ScreenObject)
     /// Draws a sceen object.
@@ -20,7 +22,11 @@ public protocol ScreenRenderer: AnyObject {
 }
 
 final class ScreenRendererByCPU: ScreenRenderer {
+    static let noFlags = vImage_Flags(kvImageNoFlags)
+    static let doNotTile = vImage_Flags(kvImageDoNotTile)
+
     var bounds: CGRect = .init(origin: .zero, size: Screen.size)
+    var presentationTimeStamp: CMTime = .zero
 
     lazy var context = {
         guard let deive = MTLCreateSystemDefaultDevice() else {
@@ -61,6 +67,7 @@ final class ScreenRendererByCPU: ScreenRenderer {
             }
         }
     }
+
     private var format = vImage_CGImageFormat(
         bitsPerComponent: 8,
         bitsPerPixel: 32,
@@ -69,7 +76,6 @@ final class ScreenRendererByCPU: ScreenRenderer {
         version: 0,
         decode: nil,
         renderingIntent: .defaultIntent)
-    private var masks: [ScreenObject: vImage_Buffer] = [:]
     private var images: [ScreenObject: vImage_Buffer] = [:]
     private var canvas: vImage_Buffer = .init()
     private var converter: vImageConverter?
@@ -83,6 +89,9 @@ final class ScreenRendererByCPU: ScreenRenderer {
         }
     }
     private var backgroundColorUInt8Array: [UInt8] = [0x00, 0x00, 0x00, 0x00]
+    private lazy var choromaKeyProcessor: ChromaKeyProcessor? = {
+        return try? ChromaKeyProcessor()
+    }()
 
     func setTarget(_ pixelBuffer: CVPixelBuffer?) {
         guard let pixelBuffer else {
@@ -125,13 +134,21 @@ final class ScreenRendererByCPU: ScreenRenderer {
             }
             do {
                 images[screenObject]?.free()
-                images[screenObject] = try vImage_Buffer(cgImage: image, format: format)
+                var buffer = try vImage_Buffer(cgImage: image, format: format)
+                images[screenObject] = buffer
                 if 0 < screenObject.cornerRadius {
-                    masks[screenObject] = shapeFactory.cornerRadius(screenObject.bounds.size, cornerRadius: screenObject.cornerRadius)
+                    if var mask = shapeFactory.cornerRadius(image.size, cornerRadius: screenObject.cornerRadius) {
+                        vImageOverwriteChannels_ARGB8888(&mask, &buffer, &buffer, 0x8, Self.noFlags)
+                    }
                 } else {
-                    masks[screenObject] = nil
+                    if let screenObject = screenObject as? (any ChromaKeyProcessable),
+                       let chromaKeyColor = screenObject.chromaKeyColor,
+                       var mask = try choromaKeyProcessor?.makeMask(&buffer, chromeKeyColor: chromaKeyColor) {
+                        vImageOverwriteChannels_ARGB8888(&mask, &buffer, &buffer, 0x8, Self.noFlags)
+                    }
                 }
             } catch {
+                logger.error(error)
             }
         }
     }
@@ -139,10 +156,6 @@ final class ScreenRendererByCPU: ScreenRenderer {
     func draw(_ screenObject: ScreenObject) {
         guard var image = images[screenObject] else {
             return
-        }
-
-        if var mask = masks[screenObject] {
-            vImageSelectChannels_ARGB8888(&mask, &image, &image, 0x8, vImage_Flags(kvImageNoFlags))
         }
 
         let origin = screenObject.bounds.origin
@@ -157,12 +170,22 @@ final class ScreenRendererByCPU: ScreenRenderer {
 
         switch pixelFormatType {
         case kCVPixelFormatType_32ARGB:
-            vImageAlphaBlend_ARGB8888(
-                &image,
-                &destination,
-                &destination,
-                vImage_Flags(kvImageDoNotTile)
-            )
+            switch screenObject.blendMode {
+            case .normal:
+                vImageCopyBuffer(
+                    &image,
+                    &destination,
+                    4,
+                    Self.doNotTile
+                )
+            case .alpha:
+                vImageAlphaBlend_ARGB8888(
+                    &image,
+                    &destination,
+                    &destination,
+                    Self.doNotTile
+                )
+            }
         default:
             break
         }

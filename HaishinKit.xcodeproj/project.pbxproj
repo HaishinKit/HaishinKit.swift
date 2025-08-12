@@ -237,6 +237,7 @@
 		BC959F0E29705B1B0067BA97 /* SCStreamPublishViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC959F0D29705B1B0067BA97 /* SCStreamPublishViewController.swift */; };
 		BC959F1229717EDB0067BA97 /* PreferenceViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC959F1129717EDB0067BA97 /* PreferenceViewController.swift */; };
 		BC9CFA9323BDE8B700917EEF /* IOStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9CFA9223BDE8B700917EEF /* IOStreamView.swift */; };
+		BC9D20442C5E25C400E3D404 /* ChromaKeyProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9D20432C5E25C400E3D404 /* ChromaKeyProcessor.swift */; };
 		BC9F9C7826F8C16600B01ED0 /* Choreographer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9F9C7726F8C16600B01ED0 /* Choreographer.swift */; };
 		BCA3A5252BC4ED220083BBB1 /* RTMPTimestamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA3A5242BC4ED220083BBB1 /* RTMPTimestamp.swift */; };
 		BCA3A5272BC507880083BBB1 /* RTMPTimestampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA3A5262BC507880083BBB1 /* RTMPTimestampTests.swift */; };
@@ -250,6 +251,7 @@
 		BCB976DF26107B5600C9A649 /* TSField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB976DE26107B5600C9A649 /* TSField.swift */; };
 		BCB9773F2621812800C9A649 /* ISOTypeBufferUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB9773E2621812800C9A649 /* ISOTypeBufferUtil.swift */; };
 		BCB9D79F2BF12AD8008C5B1B /* SampleVideo_360x240_5mb.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 29B876D91CD70CE700FC07DA /* SampleVideo_360x240_5mb.mp4 */; };
+		BCBF01762CE0AD1D00C63E7A /* FrameTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBF01752CE0AD1900C63E7A /* FrameTracker.swift */; };
 		BCC1A72B264FAC1800661156 /* ESSpecificData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC1A72A264FAC1800661156 /* ESSpecificData.swift */; };
 		BCC2237E2C1468C700F5F234 /* SRTHaishinKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCCC45962AA289FA0016EFE8 /* SRTHaishinKit.framework */; };
 		BCC2237F2C1468C700F5F234 /* SRTHaishinKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BCCC45962AA289FA0016EFE8 /* SRTHaishinKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -295,6 +297,7 @@
 		BCFB355524FA27EA00DC5108 /* PlaybackViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFB355324FA275600DC5108 /* PlaybackViewController.swift */; };
 		BCFB355A24FA40DD00DC5108 /* PlaybackContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFB355924FA40DD00DC5108 /* PlaybackContainerViewController.swift */; };
 		BCFC51FE2AAB420700014428 /* IOAudioMixerTrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFC51FD2AAB420700014428 /* IOAudioMixerTrack.swift */; };
+		BCFDF6322C82E50600BA9024 /* StreamScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFDF6312C82E50600BA9024 /* StreamScreenObject.swift */; };
 		BCFF640B29C0C44B004EFF2F /* SampleVideo_360x240_5mb_2ch.ts in Resources */ = {isa = PBXBuildFile; fileRef = BCFF640A29C0C44B004EFF2F /* SampleVideo_360x240_5mb_2ch.ts */; };
 /* End PBXBuildFile section */
 
@@ -699,6 +702,7 @@
 		BC959F0D29705B1B0067BA97 /* SCStreamPublishViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SCStreamPublishViewController.swift; sourceTree = "<group>"; };
 		BC959F1129717EDB0067BA97 /* PreferenceViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenceViewController.swift; sourceTree = "<group>"; };
 		BC9CFA9223BDE8B700917EEF /* IOStreamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOStreamView.swift; sourceTree = "<group>"; };
+		BC9D20432C5E25C400E3D404 /* ChromaKeyProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromaKeyProcessor.swift; sourceTree = "<group>"; };
 		BC9F9C7726F8C16600B01ED0 /* Choreographer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Choreographer.swift; sourceTree = "<group>"; };
 		BCA2E7F32C4B6C7E0012F2D4 /* SRTHaishinKit.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; path = SRTHaishinKit.podspec; sourceTree = "<group>"; };
 		BCA3A5242BC4ED220083BBB1 /* RTMPTimestamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RTMPTimestamp.swift; sourceTree = "<group>"; };
@@ -711,6 +715,7 @@
 		BCABED202BDE23C600CC7E73 /* AudioNode+DebugExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioNode+DebugExtension.swift"; sourceTree = "<group>"; };
 		BCB976DE26107B5600C9A649 /* TSField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TSField.swift; sourceTree = "<group>"; };
 		BCB9773E2621812800C9A649 /* ISOTypeBufferUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ISOTypeBufferUtil.swift; sourceTree = "<group>"; };
+		BCBF01752CE0AD1900C63E7A /* FrameTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTracker.swift; sourceTree = "<group>"; };
 		BCC1A72A264FAC1800661156 /* ESSpecificData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESSpecificData.swift; sourceTree = "<group>"; };
 		BCC4F4142AD6FC1100954EF5 /* IOTellyUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOTellyUnit.swift; sourceTree = "<group>"; };
 		BCC9E9082636FF7400948774 /* DataBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataBufferTests.swift; sourceTree = "<group>"; };
@@ -745,6 +750,7 @@
 		BCFB355324FA275600DC5108 /* PlaybackViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackViewController.swift; sourceTree = "<group>"; };
 		BCFB355924FA40DD00DC5108 /* PlaybackContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackContainerViewController.swift; sourceTree = "<group>"; };
 		BCFC51FD2AAB420700014428 /* IOAudioMixerTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOAudioMixerTrack.swift; sourceTree = "<group>"; };
+		BCFDF6312C82E50600BA9024 /* StreamScreenObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamScreenObject.swift; sourceTree = "<group>"; };
 		BCFF640A29C0C44B004EFF2F /* SampleVideo_360x240_5mb_2ch.ts */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.typescript; path = SampleVideo_360x240_5mb_2ch.ts; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -878,6 +884,7 @@
 				BC0D236C26331BAB001DDA0C /* DataBuffer.swift */,
 				29B876671CD70AB300FC07DA /* DataConvertible.swift */,
 				2976A4851D4903C300B53EF2 /* DeviceUtil.swift */,
+				BCBF01752CE0AD1900C63E7A /* FrameTracker.swift */,
 				BC32E88729C9971100051507 /* InstanceHolder.swift */,
 				2942424C1CF4C01300D65DCB /* MD5.swift */,
 				2942A4F721A9418A004E1BEE /* Running.swift */,
@@ -1317,12 +1324,14 @@
 			isa = PBXGroup;
 			children = (
 				BC9F9C7726F8C16600B01ED0 /* Choreographer.swift */,
+				BC9D20432C5E25C400E3D404 /* ChromaKeyProcessor.swift */,
 				BCDEB4F92BE442F900EEC6ED /* Screen.swift */,
 				BC16019B2BE0E4750061BD3E /* ScreenObject.swift */,
 				BCDEB4FB2BE4436D00EEC6ED /* ScreenObjectContainer.swift */,
 				BCDEB4F72BE441D300EEC6ED /* ScreenRenderer.swift */,
 				BC3004CD296B0A1700119932 /* Shape.swift */,
 				BC6FC91D29609A6800A746EE /* ShapeFactory.swift */,
+				BCFDF6312C82E50600BA9024 /* StreamScreenObject.swift */,
 				29B8768F1CD70AFE00FC07DA /* VideoEffect.swift */,
 				B317235F2C0940D800C7AED0 /* VideoRotator.swift */,
 			);
@@ -1855,6 +1864,7 @@
 				BC11023E2917C35B00D48035 /* CVPixelBufferPool+Extension.swift in Sources */,
 				29C2631C1D0083B50098D4EF /* IOVideoUnit.swift in Sources */,
 				29B876B41CD70B2800FC07DA /* RTMPSharedObject.swift in Sources */,
+				BCBF01762CE0AD1D00C63E7A /* FrameTracker.swift in Sources */,
 				2901A4EE1D437170002BBD23 /* MediaLink.swift in Sources */,
 				29B876941CD70AFE00FC07DA /* SoundTransform.swift in Sources */,
 				29DF20662312A436004057C3 /* RTMPSocketCompatible.swift in Sources */,
@@ -1900,6 +1910,7 @@
 				BCCBCE9729A90D880095B51C /* AVCNALUnit.swift in Sources */,
 				BC37861D2C0F7B9900D79263 /* CMFormatDescription+Extension.swift in Sources */,
 				29B876BD1CD70B3900FC07DA /* CRC32.swift in Sources */,
+				BC9D20442C5E25C400E3D404 /* ChromaKeyProcessor.swift in Sources */,
 				BC4914A628DDD367009E2DF6 /* VTSessionOption.swift in Sources */,
 				BC1CCF622BE66C220067198A /* CGImage+Extension.swift in Sources */,
 				BC0F1FDA2ACC4CC100C326FF /* IOCaptureVideoPreview.swift in Sources */,
@@ -1964,6 +1975,7 @@
 				29B876AC1CD70B2800FC07DA /* AMF3Serializer.swift in Sources */,
 				BC31DBD22A653D1600C4DEA3 /* IOAudioMonitor.swift in Sources */,
 				B31723622C0948E300C7AED0 /* VTRotationSessionOption+Extension.swift in Sources */,
+				BCFDF6322C82E50600BA9024 /* StreamScreenObject.swift in Sources */,
 				BCB976DF26107B5600C9A649 /* TSField.swift in Sources */,
 				BC11024A2925147300D48035 /* IOCaptureUnit.swift in Sources */,
 				29B876921CD70AFE00FC07DA /* IOMixer.swift in Sources */,
@@ -2450,7 +2462,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.9.2;
+				MARKETING_VERSION = 1.9.9;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu99 gnu++11";
 				ONLY_ACTIVE_ARCH = YES;
@@ -2497,7 +2509,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.9.2;
+				MARKETING_VERSION = 1.9.9;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu99 gnu++11";
 				ONLY_ACTIVE_ARCH = NO;
@@ -2910,7 +2922,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.9.2;
+				MARKETING_VERSION = 1.9.9;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++20";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -2966,7 +2978,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.9.2;
+				MARKETING_VERSION = 1.9.9;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++20";
 				MTL_FAST_MATH = YES;

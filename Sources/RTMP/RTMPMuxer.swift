@@ -94,7 +94,7 @@ final class RTMPMuxer {
             if audioFormat == nil {
                 audioFormat = message.makeAudioFormat()
             }
-            payload.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
+            payload.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
                 guard let baseAddress = buffer.baseAddress, let audioBuffer else {
                     return
                 }
@@ -153,46 +153,54 @@ extension RTMPMuxer: IOMuxer {
         guard let stream, let audioBuffer = audioBuffer as? AVAudioCompressedBuffer else {
             return
         }
-        let timedelta = audioTimestamp.update(when)
-        var buffer = Data([RTMPMuxer.aac, FLVAACPacketType.raw.rawValue])
-        buffer.append(audioBuffer.data.assumingMemoryBound(to: UInt8.self), count: Int(audioBuffer.byteLength))
-        stream.doOutput(
-            .one,
-            chunkStreamId: FLVTagType.audio.streamId,
-            message: RTMPAudioMessage(streamId: 0, timestamp: timedelta, payload: buffer)
-        )
+        do {
+            let timedelta = try audioTimestamp.update(when)
+            var buffer = Data([RTMPMuxer.aac, FLVAACPacketType.raw.rawValue])
+            buffer.append(audioBuffer.data.assumingMemoryBound(to: UInt8.self), count: Int(audioBuffer.byteLength))
+            stream.doOutput(
+                .one,
+                chunkStreamId: FLVTagType.audio.streamId,
+                message: RTMPAudioMessage(streamId: 0, timestamp: timedelta, payload: buffer)
+            )
+        } catch {
+            logger.info(error)
+        }
     }
 
     func append(_ sampleBuffer: CMSampleBuffer) {
         guard let stream, let data = try? sampleBuffer.dataBuffer?.dataBytes() else {
             return
         }
-        let keyframe = !sampleBuffer.isNotSync
-        let decodeTimeStamp = sampleBuffer.decodeTimeStamp.isValid ? sampleBuffer.decodeTimeStamp : sampleBuffer.presentationTimeStamp
-        let compositionTime = videoTimestamp.getCompositionTime(sampleBuffer)
-        let timedelta = videoTimestamp.update(decodeTimeStamp)
-        stream.frameCount += 1
-        switch sampleBuffer.formatDescription?.mediaSubType {
-        case .h264?:
-            var buffer = Data([((keyframe ? FLVFrameType.key.rawValue : FLVFrameType.inter.rawValue) << 4) | FLVVideoCodec.avc.rawValue, FLVAVCPacketType.nal.rawValue])
-            buffer.append(contentsOf: compositionTime.bigEndian.data[1..<4])
-            buffer.append(data)
-            stream.doOutput(
-                .one,
-                chunkStreamId: FLVTagType.video.streamId,
-                message: RTMPVideoMessage(streamId: 0, timestamp: timedelta, payload: buffer)
-            )
-        case .hevc?:
-            var buffer = Data([0b10000000 | ((keyframe ? FLVFrameType.key.rawValue : FLVFrameType.inter.rawValue) << 4) | FLVVideoPacketType.codedFrames.rawValue, 0x68, 0x76, 0x63, 0x31])
-            buffer.append(contentsOf: compositionTime.bigEndian.data[1..<4])
-            buffer.append(data)
-            stream.doOutput(
-                .one,
-                chunkStreamId: FLVTagType.video.streamId,
-                message: RTMPVideoMessage(streamId: 0, timestamp: timedelta, payload: buffer)
-            )
-        default:
-            break
+        do {
+            let keyframe = !sampleBuffer.isNotSync
+            let decodeTimeStamp = sampleBuffer.decodeTimeStamp.isValid ? sampleBuffer.decodeTimeStamp : sampleBuffer.presentationTimeStamp
+            let compositionTime = videoTimestamp.getCompositionTime(sampleBuffer)
+            let timedelta = try videoTimestamp.update(decodeTimeStamp)
+            stream.frameCount += 1
+            switch sampleBuffer.formatDescription?.mediaSubType {
+            case .h264?:
+                var buffer = Data([((keyframe ? FLVFrameType.key.rawValue : FLVFrameType.inter.rawValue) << 4) | FLVVideoCodec.avc.rawValue, FLVAVCPacketType.nal.rawValue])
+                buffer.append(contentsOf: compositionTime.bigEndian.data[1..<4])
+                buffer.append(data)
+                stream.doOutput(
+                    .one,
+                    chunkStreamId: FLVTagType.video.streamId,
+                    message: RTMPVideoMessage(streamId: 0, timestamp: timedelta, payload: buffer)
+                )
+            case .hevc?:
+                var buffer = Data([0b10000000 | ((keyframe ? FLVFrameType.key.rawValue : FLVFrameType.inter.rawValue) << 4) | FLVVideoPacketType.codedFrames.rawValue, 0x68, 0x76, 0x63, 0x31])
+                buffer.append(contentsOf: compositionTime.bigEndian.data[1..<4])
+                buffer.append(data)
+                stream.doOutput(
+                    .one,
+                    chunkStreamId: FLVTagType.video.streamId,
+                    message: RTMPVideoMessage(streamId: 0, timestamp: timedelta, payload: buffer)
+                )
+            default:
+                break
+            }
+        } catch {
+            logger.info(error)
         }
     }
 }

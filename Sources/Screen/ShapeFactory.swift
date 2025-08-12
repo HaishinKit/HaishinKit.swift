@@ -10,22 +10,19 @@ final class ShapeFactory {
     private var imageBuffers: [String: vImage_Buffer] = [:]
     private var roundedSquareShape = RoundedSquareShape()
 
-    func cornerRadius(_ size: CGSize, cornerRadius: CGFloat) -> vImage_Buffer {
+    func cornerRadius(_ size: CGSize, cornerRadius: CGFloat) -> vImage_Buffer? {
         let key = "\(size.width):\(size.height):\(cornerRadius)"
         if let buffer = imageBuffers[key] {
             return buffer
         }
-        var imageBuffer = vImage_Buffer()
         roundedSquareShape.rect = .init(origin: .zero, size: size)
         roundedSquareShape.cornerRadius = cornerRadius
         guard
-            let image = roundedSquareShape.makeCGImage(),
-            var format = vImage_CGImageFormat(cgImage: image),
-            vImageBuffer_InitWithCGImage(&imageBuffer, &format, nil, image, vImage_Flags(kvImageNoFlags)) == kvImageNoError else {
-            return imageBuffer
+            let image = roundedSquareShape.makeCGImage() else {
+            return nil
         }
-        imageBuffers[key] = imageBuffer
-        return imageBuffer
+        imageBuffers[key] = try? vImage_Buffer(cgImage: image)
+        return imageBuffers[key]
     }
 
     func removeAll() {

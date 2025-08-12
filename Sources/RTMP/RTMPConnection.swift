@@ -350,7 +350,7 @@ public class RTMPConnection {
             call("releaseStream", responder: nil, arguments: fcPublishName)
             call("FCPublish", responder: nil, arguments: fcPublishName)
         }
-        let responder = RTMPResponder(result: { data -> Void in
+        let responder = RTMPResponder(result: { data in
             guard let id = data[0] as? Double else {
                 return
             }

@@ -10,19 +10,13 @@ public typealias IOVideoCaptureConfigurationBlock = (IOVideoCaptureUnit?, IOVide
 public final class IOVideoCaptureUnit: IOCaptureUnit {
     public typealias Output = AVCaptureVideoDataOutput
 
-    #if os(iOS) || os(macOS)
-    /// The default color format.
-    public static let colorFormat = kCVPixelFormatType_32ARGB
-    #else
     /// The default color format.
     public static let colorFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-    #endif
 
     /// The current video device object.
     public private(set) var device: AVCaptureDevice?
 
     /// Specifies the video capture color format.
-    /// - Warning: If a format other than kCVPixelFormatType_32ARGB is set, the multi-camera feature will become unavailable. We intend to support this in the future.
     public var colorFormat = IOVideoCaptureUnit.colorFormat
 
     /// The track number.

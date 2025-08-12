@@ -171,10 +171,6 @@ open class RTMPStream: IOStream {
     public internal(set) var info = RTMPStreamInfo()
     /// The object encoding (AMF). Framework supports AMF0 only.
     public private(set) var objectEncoding: RTMPObjectEncoding = RTMPConnection.defaultObjectEncoding
-    /// The boolean value that indicates audio samples allow access or not.
-    public private(set) var audioSampleAccess = true
-    /// The boolean value that indicates video samples allow access or not.
-    public private(set) var videoSampleAccess = true
     /// Incoming audio plays on the stream or not.
     public var receiveAudio = true {
         didSet {

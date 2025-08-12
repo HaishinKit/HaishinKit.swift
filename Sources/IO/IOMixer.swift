@@ -17,6 +17,10 @@ protocol IOMixerDelegate: AnyObject {
     @available(tvOS 17.0, *)
     func mixer(_ mixer: IOMixer, sessionInterruptionEnded session: AVCaptureSession)
     #endif
+    #if os(iOS) || os(tvOS)
+    @available(tvOS 17.0, *)
+    func mixer(_ mixer: IOMixer, mediaServicesWereReset error: AVError)
+    #endif
 }
 
 /// An object that mixies audio and video for streaming.
@@ -164,6 +168,14 @@ extension IOMixer: IOCaptureSessionDelegate {
             break
         }
         #endif
+        switch error.code {
+        #if os(iOS) || os(tvOS)
+        case .mediaServicesWereReset:
+            delegate?.mixer(self, mediaServicesWereReset: error)
+        #endif
+        default:
+            break
+        }
     }
 
     #if os(iOS) || os(tvOS) || os(visionOS)

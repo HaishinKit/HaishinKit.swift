@@ -16,11 +16,18 @@ public struct IOVideoMixerSettings: Codable, Sendable {
     }
 
     /// Specifies the image rendering mode.
-    public var mode: Mode = .passthrough
+    public var mode: Mode
 
     /// Specifies the muted indicies whether freeze video signal or not.
-    public var isMuted = false
+    public var isMuted: Bool
 
     /// Specifies the main track number.
-    public var mainTrack: UInt8 = 0
+    public var mainTrack: UInt8
+
+    /// Create a new instance.
+    public init(mode: Mode = .passthrough, isMuted: Bool = false, mainTrack: UInt8 = 0) {
+        self.mode = mode
+        self.isMuted = isMuted
+        self.mainTrack = mainTrack
+    }
 }

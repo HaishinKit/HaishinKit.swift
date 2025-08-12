@@ -83,9 +83,24 @@ open class IOStream: NSObject {
     /// The lockQueue.
     public let lockQueue: DispatchQueue = .init(label: "com.haishinkit.HaishinKit.IOStream.lock", qos: .userInitiated)
 
+    /// The boolean value that indicates audio samples allow access or not.
+    public internal(set) var audioSampleAccess = true
+    /// The boolean value that indicates video samples allow access or not.
+    public internal(set) var videoSampleAccess = true
+
     /// The offscreen rendering object.
     public var screen: Screen {
         return mixer.videoIO.screen
+    }
+
+    /// Specifies the buffer time before starting to display the stream.
+    public var bufferTime: Double {
+        get {
+            telly.bufferTime
+        }
+        set {
+            telly.bufferTime = newValue
+        }
     }
 
     /// Specifies the adaptibe bitrate strategy.
@@ -93,6 +108,14 @@ open class IOStream: NSObject {
         didSet {
             bitrateStrategy.stream = self
             bitrateStrategy.setUp()
+        }
+    }
+
+    /// The capture session is in a running state or not.
+    @available(tvOS 17.0, *)
+    public var isCapturing: Bool {
+        lockQueue.sync {
+            mixer.session.isRunning.value
         }
     }
 
@@ -107,7 +130,7 @@ open class IOStream: NSObject {
     }
 
     #if os(iOS) || os(macOS) || os(tvOS)
-    /// Specifiet the device torch indicating wheter the turn on(TRUE) or not(FALSE).
+    /// Specifies the device torch indicating wheter the turn on(TRUE) or not(FALSE).
     public var torch: Bool {
         get {
             return lockQueue.sync { self.mixer.videoIO.torch }
@@ -466,6 +489,24 @@ open class IOStream: NSObject {
         }
     }
 
+    /// Starts capturing from input devices.
+    ///
+    /// Internally, it is called either when the view is attached or just before publishing. In other cases, please call this method if you want to manually start the capture.
+    @available(tvOS 17.0, *)
+    public func startCapturing() {
+        lockQueue.async {
+            self.mixer.session.startRunning()
+        }
+    }
+
+    /// Stops capturing from input devices.
+    @available(tvOS 17.0, *)
+    public func stopCapturing() {
+        lockQueue.async {
+            self.mixer.session.stopRunning()
+        }
+    }
+
     #if os(iOS) || os(tvOS) || os(visionOS)
     @objc
     private func didEnterBackground(_ notification: Notification) {
@@ -493,7 +534,9 @@ extension IOStream: IOMixerDelegate {
 
     // MARK: IOMixerDelegate
     func mixer(_ mixer: IOMixer, didOutput video: CMSampleBuffer) {
-        observers.forEach { $0.stream(self, didOutput: video) }
+        if readyState != .playing {
+            observers.forEach { $0.stream(self, didOutput: video) }
+        }
     }
 
     func mixer(_ mixer: IOMixer, didOutput audio: AVAudioPCMBuffer, when: AVAudioTime) {
@@ -519,12 +562,24 @@ extension IOStream: IOMixerDelegate {
         delegate?.stream(self, sessionInterruptionEnded: session)
     }
     #endif
+
+    #if os(iOS) || os(tvOS)
+    @available(tvOS 17.0, *)
+    func mixer(_ mixer: IOMixer, mediaServicesWereReset error: AVError) {
+        lockQueue.async {
+            self.mixer.session.startRunningIfNeeded()
+        }
+    }
+    #endif
 }
 
 extension IOStream: IOTellyUnitDelegate {
     // MARK: IOTellyUnitDelegate
     func tellyUnit(_ tellyUnit: IOTellyUnit, dequeue sampleBuffer: CMSampleBuffer) {
         mixer.videoIO.view?.enqueue(sampleBuffer)
+        if videoSampleAccess {
+            observers.forEach { $0.stream(self, didOutput: sampleBuffer) }
+        }
     }
 
     func tellyUnit(_ tellyUnit: IOTellyUnit, didBufferingChanged: Bool) {

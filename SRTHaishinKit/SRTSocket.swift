@@ -135,13 +135,18 @@ final class SRTSocket<T: SRTSocketDelegate> {
     }
 
     func doInput() {
-        incomingQueue.async {
-            repeat {
-                let result = self.recvmsg()
-                if 0 < result {
-                    self.delegate?.socket(self, incomingDataAvailabled: self.incomingBuffer, bytes: result)
-                }
-            } while self.isRunning.value
+        switch mode {
+        case .caller:
+            incomingQueue.async {
+                repeat {
+                    let result = self.recvmsg()
+                    if 0 < result {
+                        self.delegate?.socket(self, incomingDataAvailabled: self.incomingBuffer, bytes: result)
+                    }
+                } while self.isRunning.value
+            }
+        case .listener:
+            break
         }
     }
 
@@ -159,6 +164,11 @@ final class SRTSocket<T: SRTSocketDelegate> {
             return SRT_ERROR
         }
         return srt_bstats(socket, &perf, 1)
+    }
+
+    func reject() {
+        srt_setrejectreason(socket, Int32(SRT_REJ_CLOSE.rawValue))
+        srt_close(socket)
     }
 
     private func accept() {

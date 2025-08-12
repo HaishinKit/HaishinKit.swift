@@ -177,14 +177,12 @@ final class IOVideoUnit: IOUnit {
             }
             let capture = self.capture(for: track)
             configuration?(capture, nil)
+            videoMixer.reset(track)
             try capture?.attachDevice(device, videoUnit: self)
         }
         if device != nil && view != nil {
             // Start captureing if not running.
             mixer?.session.startRunning()
-        }
-        if device == nil {
-            videoMixer.reset(track)
         }
     }
 

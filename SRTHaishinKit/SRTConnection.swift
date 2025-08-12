@@ -18,6 +18,7 @@ public final class SRTConnection: NSObject {
     /// This instance connect to server(true) or not(false)
     @objc public private(set) dynamic var connected = false
 
+    var mode: SRTMode = .caller
     var socket: SRTSocket<SRTConnection>? {
         didSet {
             socket?.delegate = self
@@ -59,7 +60,13 @@ public final class SRTConnection: NSObject {
                 socket = .init()
                 try socket?.open(addr, mode: mode, options: options)
                 self.uri = uri
-                connected = socket?.status == SRTS_CONNECTED
+                switch mode {
+                case .listener:
+                    break
+                default:
+                    connected = socket?.status == SRTS_CONNECTED
+                }
+                self.mode = mode
                 continuation.resume()
             } catch {
                 continuation.resume(throwing: error)
@@ -98,7 +105,21 @@ public final class SRTConnection: NSObject {
 extension SRTConnection: SRTSocketDelegate {
     // MARK: SRTSocketDelegate
     func socket(_ socket: SRTSocket<SRTConnection>, status: SRT_SOCKSTATUS) {
-        connected = socket.status == SRTS_CONNECTED
+        switch mode {
+        case .caller:
+            connected = socket.status == SRTS_CONNECTED
+        case .listener:
+            let connected = socket.status == SRTS_CONNECTED
+            guard !connected else {
+                return
+            }
+            if let indexOf = clients.firstIndex(where: { $0.socket == socket.socket }) {
+                clients[indexOf].delegate = nil
+                clients[indexOf].close()
+                clients.remove(at: indexOf)
+            }
+            self.connected = false
+        }
     }
 
     func socket(_ socket: SRTSocket<SRTConnection>, incomingDataAvailabled data: Data, bytes: Int32) {
@@ -106,6 +127,15 @@ extension SRTConnection: SRTSocketDelegate {
     }
 
     func socket(_ socket: SRTSocket<SRTConnection>, didAcceptSocket client: SRTSocket<SRTConnection>) {
-        clients.append(client)
+        // only one client can accept.
+        if clients.isEmpty {
+            client.delegate = self
+            clients.append(client)
+            connected = true
+            client.startRunning()
+            client.doInput()
+        } else {
+            client.reject()
+        }
     }
 }

@@ -3,7 +3,6 @@ import Foundation
 #if os(macOS)
 
 import CoreVideo
-import Foundation
 
 // swiftlint:disable attributes
 
@@ -30,11 +29,12 @@ final class DisplayLink: NSObject {
             frameInterval = 1.0 / Double(preferredFramesPerSecond)
         }
     }
-    private(set) var duration = 0.0
     private(set) var timestamp: CFTimeInterval = 0
+    private(set) var targetTimestamp: CFTimeInterval = 0
     private var selector: Selector?
     private var displayLink: CVDisplayLink?
     private var frameInterval = 0.0
+    private var duration: CFTimeInterval = 0
     private weak var delegate: NSObject?
 
     deinit {
@@ -53,25 +53,24 @@ final class DisplayLink: NSObject {
             guard let self else {
                 return kCVReturnSuccess
             }
-            self.duration += inNow.pointee.duration
-            if frameInterval == 0 || frameInterval < inNow.pointee.timestamp - self.timestamp {
-                self.timestamp = inNow.pointee.timestamp
+            if frameInterval == 0 || frameInterval <= inNow.pointee.timestamp - self.timestamp {
+                self.timestamp = Double(inNow.pointee.timestamp)
+                self.targetTimestamp = self.timestamp + frameInterval
                 _ = self.delegate?.perform(self.selector, with: self)
-                self.duration = 0.0
             }
             return kCVReturnSuccess
         }
     }
 
     func add(to runloop: RunLoop, forMode mode: RunLoop.Mode) {
-        guard let displayLink = displayLink, !isPaused else {
+        guard let displayLink, !isPaused else {
             return
         }
         CVDisplayLinkStart(displayLink)
     }
 
     func invalidate() {
-        guard let displayLink = displayLink, isPaused else {
+        guard let displayLink, isPaused else {
             return
         }
         CVDisplayLinkStop(displayLink)
@@ -81,11 +80,7 @@ final class DisplayLink: NSObject {
 extension CVTimeStamp {
     @inlinable @inline(__always)
     var timestamp: Double {
-        Double(self.videoTime) / Double(self.videoTimeScale)
-    }
-
-    @inlinable @inline(__always) var duration: Double {
-        Double(self.videoRefreshPeriod) / Double(self.videoTimeScale)
+        Double(self.hostTime) / Double(self.videoTimeScale)
     }
 }
 
@@ -97,18 +92,15 @@ typealias DisplayLink = CADisplayLink
 #endif
 
 protocol ChoreographerDelegate: AnyObject {
-    func choreographer(_ choreographer: some Choreographer, didFrame duration: Double)
+    func choreographer(_ choreographer: some Choreographer, didFrame timestamp: TimeInterval, targetTimestamp: TimeInterval)
 }
 
 protocol Choreographer: Running {
     var isPaused: Bool { get set }
     var delegate: (any ChoreographerDelegate)? { get set }
-
-    func clear()
 }
 
 final class DisplayLinkChoreographer: NSObject, Choreographer {
-    private static let duration = 0.0
     private static let preferredFramesPerSecond = 0
 
     var isPaused: Bool {
@@ -121,28 +113,26 @@ final class DisplayLinkChoreographer: NSObject, Choreographer {
     }
     weak var delegate: (any ChoreographerDelegate)?
     var isRunning: Atomic<Bool> = .init(false)
-    var preferredFramesPerSecond = DisplayLinkChoreographer.preferredFramesPerSecond
-    private var duration: Double = DisplayLinkChoreographer.duration
+    var preferredFramesPerSecond = DisplayLinkChoreographer.preferredFramesPerSecond {
+        didSet {
+            guard let displayLink, preferredFramesPerSecond != oldValue else {
+                return
+            }
+            displayLink.preferredFramesPerSecond = preferredFramesPerSecond
+        }
+    }
     private var displayLink: DisplayLink? {
         didSet {
             oldValue?.invalidate()
-            guard let displayLink = displayLink else {
-                return
-            }
-            displayLink.isPaused = true
-            displayLink.preferredFramesPerSecond = preferredFramesPerSecond
-            displayLink.add(to: .main, forMode: .common)
+            displayLink?.isPaused = true
+            displayLink?.preferredFramesPerSecond = preferredFramesPerSecond
+            displayLink?.add(to: .main, forMode: .common)
         }
-    }
-
-    func clear() {
-        duration = Self.duration
     }
 
     @objc
     private func update(displayLink: DisplayLink) {
-        delegate?.choreographer(self, didFrame: duration)
-        duration += displayLink.duration
+        delegate?.choreographer(self, didFrame: displayLink.timestamp, targetTimestamp: displayLink.targetTimestamp)
     }
 }
 
@@ -154,7 +144,6 @@ extension DisplayLinkChoreographer: Running {
 
     func stopRunning() {
         displayLink = nil
-        duration = DisplayLinkChoreographer.duration
         isRunning.mutate { $0 = false }
     }
 }

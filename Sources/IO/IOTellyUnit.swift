@@ -10,6 +10,15 @@ protocol IOTellyUnitDelegate: AnyObject {
 final class IOTellyUnit {
     var isRunning: Atomic<Bool> = .init(false)
 
+    var bufferTime: Double {
+        get {
+            mediaLink.bufferTime
+        }
+        set {
+            mediaLink.bufferTime = newValue
+        }
+    }
+
     var audioFormat: AVAudioFormat? {
         didSet {
             delegate?.tellyUnit(self, didSetAudioFormat: audioFormat)

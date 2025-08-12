@@ -8,7 +8,7 @@
 
 * Camera and Microphone streaming library via RTMP and SRT for iOS, macOS, tvOS and visionOS.
 * README.md contains unreleased content, which can be tested on the main branch.
-* [API Documentation](https://docs.haishinkit.com/swift/1.9.2/)
+* [API Documentation](https://docs.haishinkit.com/swift/latest/)
 
 ## 💖 Sponsors
 <p align="center">
@@ -60,14 +60,14 @@ Project name    |Notes       |License
 - [x] Playback(beta)
 - [ ] mode
   - [x] caller
-  - [ ] listener
+  - [x] listener
   - [ ] rendezvous
 
 ### Offscreen Rendering.
 Through off-screen rendering capabilities, it is possible to display any text or bitmap on a video during broadcasting or viewing. This allows for various applications such as watermarking and time display.
-<p align="center">
-  <img width="732" alt="" src="https://github.com/shogo4405/HaishinKit.swift/assets/810189/43ad08d4-1a4c-4390-97ca-7bba6109e7cf">
-</p>
+|Ingest|Playback|
+|:---:|:---:|
+|<img width="961" alt="" src="https://github.com/user-attachments/assets/aaf6c06f-d2de-43c1-a435-90907f370977">|<img width="849" alt="" src="https://github.com/user-attachments/assets/0a07b418-aa56-41cb-8e6d-e12596b25ae8">|
 
 <details>
 <summary>Example</summary>
@@ -179,8 +179,9 @@ HaishinKit has a multi-module configuration. If you want to use the SRT protocol
 |  | HaishinKit | SRTHaishinKit |
 | - | :- | :- |
 | SPM | https://github.com/shogo4405/HaishinKit.swift | https://github.com/shogo4405/HaishinKit.swift |
-| CocoaPods |<pre>source 'https://github.com/CocoaPods/Specs.git'<br>use_frameworks!<br><br>def import_pods<br>  pod 'HaishinKit', '~> 1.9.1<br>end<br><br>target 'Your Target'  do<br>  platform :ios, '13.0'<br>  import_pods<br>end</pre>|Not available. |
-| Carthage | github "shogo4405/HaishinKit.swift" ~> 1.9.1 | Not available. |
+| CocoaPods |<pre>def import_pods<br>  pod 'HaishinKit', '~> 1.9.6<br>end</pre>|<pre>def import_pods<br>  pod 'SRTHaishinKit', '~> 1.9.6<br>end</pre>|
+| Carthage | github "shogo4405/HaishinKit.swift" ~> 1.9.6 | Not available. |
+* SRTHaishinKit via CocoaPods supports only iOS and tvOS.
 
 ## 🔧 Prerequisites
 Make sure you setup and activate your AVAudioSession iOS.
@@ -300,7 +301,7 @@ stream.configuration { session in
 ```
 
 ### 🔊 Audio
-#### [Capture](https://docs.haishinkit.com/swift/1.9.2/Classes/IOAudioCaptureUnit.html)
+#### [Capture](https://docs.haishinkit.com/swift/latest/Classes/IOAudioCaptureUnit.html)
 Specifies the capture capture settings.
 ```swift
 let front = AVCaptureDevice.default(for: .audio)
@@ -308,7 +309,7 @@ stream.attachAudio(front, track: 0) { audioUnit, error in
 }
 ```
 
-#### [AudioMixerSettings](https://docs.haishinkit.com/swift/1.9.2/Structs/IOAudioMixerSettings.html)
+#### [AudioMixerSettings](https://docs.haishinkit.com/swift/latest/Structs/IOAudioMixerSettings.html)
 If you want to mix multiple audio tracks, please enable the feature flag.
 ```swift
 stream.isMultiTrackAudioMixingEnabled = true
@@ -333,7 +334,7 @@ stream.audioMixerSettings.tracks = [
 ]
 ```
 
-#### [AudioCodecSettings](https://docs.haishinkit.com/swift/1.9.2/Structs/AudioCodecSettings.html)
+#### [AudioCodecSettings](https://docs.haishinkit.com/swift/latest/Structs/AudioCodecSettings.html)
 ```swift
 /// Specifies the bitRate of audio output.
 stream.audioSettings.bitrate = 64 * 1000
@@ -344,7 +345,7 @@ stream.audioSettings.downmix = true
 ```
 
 ### 🎥 Video
-#### [Capture](https://docs.haishinkit.com/swift/1.9.2/Classes/IOVideoCaptureUnit.html)
+#### [Capture](https://docs.haishinkit.com/swift/latest/Classes/IOVideoCaptureUnit.html)
 Specifies the video capture settings.
 ```swift
 let front = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
@@ -355,7 +356,7 @@ stream.attachCamera(front, track: 0) { videoUnit, error in
 }
 ```
 
-#### [VideoMixerSettings](https://docs.haishinkit.com/swift/1.9.2/Structs/IOVideoMixerSettings.html)
+#### [VideoMixerSettings](https://docs.haishinkit.com/swift/latest/Structs/IOVideoMixerSettings.html)
 ```swift
 /// Specifies the image rendering mode.
 stream.videoMixerSettings.mode = .passthrough or .offscreen
@@ -365,7 +366,7 @@ stream.videoMixerSettings.isMuted = false
 stream.videoMixerSettings.mainTrack = 0
 ```
 
-#### [VideoCodecSettings](https://docs.haishinkit.com/swift/1.9.2/Structs/VideoCodecSettings.html)
+#### [VideoCodecSettings](https://docs.haishinkit.com/swift/latest/Structs/VideoCodecSettings.html)
 ```swift
 stream.videoSettings = .init(
   videoSize: .init(width: 854, height: 480),
@@ -415,6 +416,9 @@ recorder.settings = [
 recorder.startRunning()
 // recorder.stopRunning()
 ```
+
+## 📜 Known Issues
+- [Xcode15.4+, High CPU Usage and Increse Memory with SPM](https://github.com/shogo4405/HaishinKit.swift/issues/1512)
 
 ## 📜 License
 BSD-3-Clause

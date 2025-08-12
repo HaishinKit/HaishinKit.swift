@@ -70,14 +70,14 @@ final class VideoCodec<T: VideoCodecDelegate> {
         }
     }
     private var invalidateSession = true
-    private var presentationTimeStamp: CMTime = .invalid
+    private var presentationTimeStamp: CMTime = .zero
 
     init(lockQueue: DispatchQueue) {
         self.lockQueue = lockQueue
     }
 
     func append(_ imageBuffer: CVImageBuffer, presentationTimeStamp: CMTime, duration: CMTime) {
-        guard isRunning.value, !willDropFrame(presentationTimeStamp) else {
+        guard isRunning.value, useFrame(presentationTimeStamp) else {
             return
         }
         if invalidateSession {
@@ -168,14 +168,17 @@ final class VideoCodec<T: VideoCodecDelegate> {
         }
     }
 
-    private func willDropFrame(_ presentationTimeStamp: CMTime) -> Bool {
+    private func useFrame(_ presentationTimeStamp: CMTime) -> Bool {
         guard startedAt <= presentationTimeStamp else {
-            return true
-        }
-        guard kVideoCodec_defaultFrameInterval < frameInterval else {
             return false
         }
-        return presentationTimeStamp.seconds - self.presentationTimeStamp.seconds <= frameInterval
+        guard self.presentationTimeStamp < presentationTimeStamp else {
+            return false
+        }
+        guard kVideoCodec_defaultFrameInterval < frameInterval else {
+            return true
+        }
+        return frameInterval <= presentationTimeStamp.seconds - self.presentationTimeStamp.seconds
     }
 
     #if os(iOS) || os(tvOS) || os(visionOS)
@@ -233,7 +236,7 @@ extension VideoCodec: Running {
             self.needsSync.mutate { $0 = true }
             self.inputFormat = nil
             self.outputFormat = nil
-            self.presentationTimeStamp = .invalid
+            self.presentationTimeStamp = .zero
             self.startedAt = .zero
             #if os(iOS) || os(tvOS) || os(visionOS)
             NotificationCenter.default.removeObserver(self, name: AVAudioSession.interruptionNotification, object: nil)

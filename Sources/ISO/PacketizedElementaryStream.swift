@@ -244,7 +244,7 @@ struct PacketizedElementaryStream: PESPacketHeader {
         if length < Int(UInt16.max) {
             packetLength = UInt16(length)
         } else {
-            return nil
+            packetLength = 0
         }
     }
 

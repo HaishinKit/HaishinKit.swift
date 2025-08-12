@@ -46,3 +46,20 @@ final class TypedBlockQueue<T: AnyObject> {
         try queue.reset()
     }
 }
+
+extension TypedBlockQueue where T == CMSampleBuffer {
+    func dequeue(_ presentationTimeStamp: CMTime) -> CMSampleBuffer? {
+        var result: CMSampleBuffer?
+        while !queue.isEmpty {
+            guard let head else {
+                break
+            }
+            if head.presentationTimeStamp <= presentationTimeStamp {
+                result = dequeue()
+            } else {
+                return result
+            }
+        }
+        return result
+    }
+}
