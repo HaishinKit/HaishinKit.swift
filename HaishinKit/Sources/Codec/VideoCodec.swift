@@ -74,6 +74,7 @@ final class VideoCodec {
                 try session.convert(sampleBuffer, continuation: continuation)
             } else {
                 if useFrame(sampleBuffer.presentationTimeStamp) {
+                    self.presentationTimeStamp = sampleBuffer.presentationTimeStamp
                     try session.convert(sampleBuffer, continuation: continuation)
                 }
             }
