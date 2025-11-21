@@ -43,4 +43,10 @@ import Testing
         }()
         #expect(weakMixer == nil)
     }
+
+    @Test func currentFrameRate() async throws {
+        let mixer = MediaMixer()
+        try await mixer.setFrameRate(60)
+        #expect(await mixer.frameRate == 60)
+    }
 }
