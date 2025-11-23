@@ -60,6 +60,9 @@ public actor SRTStream {
         if outgoing.audioInputFormat != nil {
             writer.expectedMedias.insert(.audio)
         }
+        if writer.expectedMedias.isEmpty {
+            logger.error("Please set expected media.")
+        }
         Task {
             for await buffer in outgoing.videoOutputStream {
                 append(buffer)
@@ -118,6 +121,14 @@ public actor SRTStream {
         outgoing.stopRunning()
         Task { await incoming.stopRunning() }
         readyState = .idle
+    }
+
+    /// Sets the expected media.
+    ///
+    /// This sets whether the stream contains audio only, video only, or both. Normally, this is automatically set through the append method.
+    /// If you cannot call the append method before publishing, please use this method to explicitly specify the contents of the stream.
+    public func setExpectedMedia(_ expectedMedia: Set<AVMediaType>) {
+        writer.expectedMedias = expectedMedia
     }
 
     func doInput(_ data: Data) {
