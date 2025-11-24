@@ -355,6 +355,10 @@ final class PublishViewModel: ObservableObject {
                 }
                 // Sets to output frameRate.
                 try await mixer.setFrameRate(fps)
+                if var videoSettings = await session?.stream.videoSettings {
+                    videoSettings.expectedFrameRate = fps
+                    try? await session?.stream.setVideoSettings(videoSettings)
+                }
             } catch {
                 logger.error(error)
             }

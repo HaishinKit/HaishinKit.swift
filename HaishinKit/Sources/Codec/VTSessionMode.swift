@@ -32,6 +32,9 @@ enum VTSessionMode {
             guard status == noErr else {
                 throw VTSessionError.failedToPrepare(status: status)
             }
+            if let expectedFrameRate = videoCodec.settings.expectedFrameRate {
+                status = session.setOption(.init(key: .expectedFrameRate, value: expectedFrameRate as CFNumber))
+            }
             videoCodec.frameInterval = videoCodec.settings.frameInterval
             return session
         case .decompression:

@@ -5,7 +5,7 @@ struct Preference: Sendable {
     static nonisolated(unsafe) var `default` = Preference()
 
     // var uri = "http://192.168.1.14:1985/rtc/v1/whip/?app=live&stream=livestream"
-    var uri = "rtmp://192.168.1.17/live"
+    var uri = "rtmp://192.168.1.11/live"
     var streamName = "live"
 
     func makeURL() -> URL? {

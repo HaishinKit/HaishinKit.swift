@@ -692,7 +692,9 @@ public actor RTMPStream {
             metadata["height"] = outgoing.videoSettings.videoSize.height
             metadata["videocodecid"] = outgoing.videoSettings.format.codecid
             metadata["videodatarate"] = outgoing.videoSettings.bitRate / 1000
-            metadata["framerate"] = outgoing.videoSettings.expectedFrameRate
+            if let expectedFrameRate = outgoing.videoSettings.expectedFrameRate {
+                metadata["framerate"] = outgoing.videoSettings.expectedFrameRate
+            }
         }
         if let audioFormat = outgoing.audioInputFormat?.audioStreamBasicDescription {
             metadata["audiocodecid"] = outgoing.audioSettings.format.codecid
