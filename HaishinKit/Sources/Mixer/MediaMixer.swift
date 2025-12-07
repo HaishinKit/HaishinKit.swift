@@ -126,6 +126,7 @@ public final actor MediaMixer {
     private var outputs: [any MediaMixerOutput] = []
     @MainActor
     private var cancellables: Set<AnyCancellable> = []
+    private var isInBackground = false
     private lazy var audioIO = AudioCaptureUnit(session, isMultiTrackAudioMixingEnabled: isMultiTrackAudioMixingEnabled)
     private lazy var videoIO = VideoCaptureUnit(session)
     private lazy var session: (any CaptureSessionConvertible) = captureSessionMode.makeSession()
@@ -394,14 +395,15 @@ public final actor MediaMixer {
     }
 
     #if os(iOS) || os(tvOS) || os(visionOS)
-    private func setBackgroundMode(_ background: Bool) {
+    private func setInBackground(_ isInBackground: Bool) {
+        self.isInBackground = isInBackground
         guard #available(tvOS 17.0, *) else {
             return
         }
-        if background {
-            videoIO.setBackgroundMode(background)
+        if isInBackground {
+            videoIO.setBackgroundMode(isInBackground)
         } else {
-            videoIO.setBackgroundMode(background)
+            videoIO.setBackgroundMode(isInBackground)
             session.startRunningIfNeeded()
         }
     }
@@ -437,6 +439,11 @@ public final actor MediaMixer {
                 logger.warn(error)
             }
         #endif
+        case .unknown:
+            // AVFoundationErrorDomain Code=-11800 "The operation could not be completed"
+            if error.errorCode == -11800 && !isInBackground {
+                session.startRunningIfNeeded()
+            }
         default:
             break
         }
@@ -492,7 +499,7 @@ extension MediaMixer: AsyncRunner {
                 .Publisher(center: .default, name: UIApplication.didEnterBackgroundNotification, object: nil)
                 .sink { _ in
                     Task {
-                        await self.setBackgroundMode(true)
+                        await self.setInBackground(true)
                     }
                 }
                 .store(in: &cancellables)
@@ -500,7 +507,7 @@ extension MediaMixer: AsyncRunner {
                 .Publisher(center: .default, name: UIApplication.willEnterForegroundNotification, object: nil)
                 .sink { _ in
                     Task {
-                        await self.setBackgroundMode(false)
+                        await self.setInBackground(false)
                     }
                 }
                 .store(in: &cancellables)
