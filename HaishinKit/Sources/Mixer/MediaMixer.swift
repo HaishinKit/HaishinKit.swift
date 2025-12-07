@@ -104,10 +104,10 @@ public final actor MediaMixer {
     /// The output frame rate.
     public private(set) var frameRate = MediaMixer.defaultFrameRate
 
-    /// The capture session is in a running state or not.
+    /// The AVCaptureSession is in a running state or not.
     @available(tvOS 17.0, *)
     public var isCapturing: Bool {
-        session.isRunning
+        session.isCapturing
     }
 
     /// The interrupts events is occured or not.
@@ -311,6 +311,7 @@ public final actor MediaMixer {
     @available(tvOS 17.0, *)
     public func startCapturing() {
         guard !session.isRunning else {
+            session.startRunningIfNeeded()
             return
         }
         session.startRunning()

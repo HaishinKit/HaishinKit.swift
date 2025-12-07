@@ -6,6 +6,7 @@ protocol CaptureSessionConvertible: Runner {
     var sessionPreset: AVCaptureSession.Preset { get set }
     #endif
 
+    var isCapturing: Bool { get }
     var isInturreped: AsyncStream<Bool> { get }
     var runtimeError: AsyncStream<AVError> { get }
     var synchronizationClock: CMClock? { get }
@@ -35,7 +36,9 @@ final class CaptureSession {
         }
     }
 
-    private(set) var isRunning = false
+    var isCapturing: Bool {
+        session.isRunning
+    }
 
     var isMultitaskingCameraAccessEnabled: Bool {
         capabilities.isMultitaskingCameraAccessEnabled(session)
@@ -50,6 +53,8 @@ final class CaptureSession {
     var synchronizationClock: CMClock? {
         capabilities.synchronizationClock(session)
     }
+
+    private(set) var isRunning = false
 
     #if !os(visionOS)
     var sessionPreset: AVCaptureSession.Preset = .default {
@@ -86,7 +91,13 @@ final class CaptureSession {
         }
     }
 
-    private(set) var isRunning = false
+    var isCapturing: Bool {
+        if #available(tvOS 17.0, *) {
+            session.isRunning
+        } else {
+            false
+        }
+    }
 
     var isMultitaskingCameraAccessEnabled: Bool {
         if #available(tvOS 17.0, *) {
@@ -109,6 +120,8 @@ final class CaptureSession {
             return nil
         }
     }
+
+    private(set) var isRunning = false
 
     private var _session: Any?
     /// The capture session instance.
@@ -304,6 +317,7 @@ final class NullCaptureSession: CaptureSessionConvertible {
     }
     #endif
 
+    let isCapturing: Bool = false
     var isMultiCamSessionEnabled = false
     let isMultitaskingCameraAccessEnabled = false
     let synchronizationClock: CMClock? = nil
