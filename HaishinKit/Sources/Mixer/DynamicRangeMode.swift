@@ -45,15 +45,6 @@ public enum DynamicRangeMode: Sendable {
         ]
     }
 
-    private var pixelFormat: OSType {
-        switch self {
-        case .sdr:
-            return kCVPixelFormatType_32ARGB
-        case .hdr:
-            return kCVPixelFormatType_64RGBAHalf
-        }
-    }
-
     func attach(_ pixelBuffer: CVPixelBuffer) {
         switch self {
         case .sdr:
@@ -88,21 +79,11 @@ public enum DynamicRangeMode: Sendable {
     }
 
     func makePixelBufferAttributes(_ size: CGSize) -> CFDictionary {
-        switch self {
-        case .sdr:
-            return [
-                kCVPixelBufferPixelFormatTypeKey: NSNumber(value: pixelFormat),
-                kCVPixelBufferMetalCompatibilityKey: kCFBooleanTrue,
-                kCVPixelBufferWidthKey: NSNumber(value: Int(size.width)),
-                kCVPixelBufferHeightKey: NSNumber(value: Int(size.height))
-            ] as CFDictionary
-        case .hdr:
-            return [
-                kCVPixelBufferPixelFormatTypeKey: NSNumber(value: videoFormat),
-                kCVPixelBufferMetalCompatibilityKey: kCFBooleanTrue,
-                kCVPixelBufferWidthKey: NSNumber(value: Int(size.width)),
-                kCVPixelBufferHeightKey: NSNumber(value: Int(size.height))
-            ] as CFDictionary
-        }
+        return [
+            kCVPixelBufferPixelFormatTypeKey: NSNumber(value: videoFormat),
+            kCVPixelBufferMetalCompatibilityKey: kCFBooleanTrue,
+            kCVPixelBufferWidthKey: NSNumber(value: Int(size.width)),
+            kCVPixelBufferHeightKey: NSNumber(value: Int(size.height))
+        ] as CFDictionary
     }
 }

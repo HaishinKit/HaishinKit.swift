@@ -42,21 +42,6 @@ public final class Screen: ScreenObjectContainerConvertible {
         }
     }
 
-    /// Specifies the gpu rendering enabled.
-    @available(*, deprecated)
-    public var isGPURendererEnabled = false {
-        didSet {
-            guard isGPURendererEnabled != oldValue else {
-                return
-            }
-            if isGPURendererEnabled {
-                renderer = ScreenRendererByGPU(dynamicRangeMode: dynamicRangeMode)
-            } else {
-                renderer = ScreenRendererByCPU(dynamicRangeMode: dynamicRangeMode)
-            }
-        }
-    }
-
     #if os(macOS)
     /// Specifies the background color.
     public var backgroundColor: CGColor = NSColor.black.cgColor {
@@ -92,15 +77,11 @@ public final class Screen: ScreenObjectContainerConvertible {
             guard dynamicRangeMode != oldValue else {
                 return
             }
-            if isGPURendererEnabled {
-                renderer = ScreenRendererByGPU(dynamicRangeMode: dynamicRangeMode)
-            } else {
-                renderer = ScreenRendererByCPU(dynamicRangeMode: dynamicRangeMode)
-            }
+            renderer = ScreenRendererByGPU(dynamicRangeMode: dynamicRangeMode)
             CVPixelBufferPoolCreate(nil, nil, dynamicRangeMode.makePixelBufferAttributes(size), &pixelBufferPool)
         }
     }
-    private(set) var renderer: (any ScreenRenderer) = ScreenRendererByCPU(dynamicRangeMode: .sdr) {
+    private(set) var renderer: (any ScreenRenderer) = ScreenRendererByGPU(dynamicRangeMode: .sdr) {
         didSet {
             renderer.bounds = oldValue.bounds
             renderer.backgroundColor = oldValue.backgroundColor

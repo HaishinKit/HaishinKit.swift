@@ -31,7 +31,6 @@ final class PreferenceViewModel: ObservableObject {
         static let bitRateMode = "pref_bitrate_mode"
         static let isLowLatencyEnabled = "pref_low_latency"
         static let viewType = "pref_view_type"
-        static let isGPURendererEnabled = "pref_gpu_renderer"
         static let audioCaptureMode = "pref_audio_capture_mode"
         static let isDualCameraEnabled = "pref_dual_camera"
         static let isHDREnabled = "pref_hdr_enabled"
@@ -77,11 +76,6 @@ final class PreferenceViewModel: ObservableObject {
             UserDefaults.standard.set(viewType.rawValue, forKey: Keys.viewType)
         }
     }
-    @Published var isGPURendererEnabled: Bool = true {
-        didSet {
-            UserDefaults.standard.set(isGPURendererEnabled, forKey: Keys.isGPURendererEnabled)
-        }
-    }
     @Published var audioCaptureMode: AudioSourceServiceMode = .audioEngine {
         didSet {
             UserDefaults.standard.set(audioCaptureMode.rawValue, forKey: Keys.audioCaptureMode)
@@ -124,10 +118,6 @@ final class PreferenceViewModel: ObservableObject {
         if let rawValue = defaults.string(forKey: Keys.viewType),
            let type = ViewType(rawValue: rawValue) {
             self.viewType = type
-        }
-
-        if defaults.object(forKey: Keys.isGPURendererEnabled) != nil {
-            self.isGPURendererEnabled = defaults.bool(forKey: Keys.isGPURendererEnabled)
         }
 
         if let rawValue = defaults.string(forKey: Keys.audioCaptureMode),

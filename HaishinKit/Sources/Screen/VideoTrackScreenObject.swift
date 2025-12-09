@@ -73,13 +73,6 @@ public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
         return false
     }
 
-    override public func makeImage(_ renderer: some ScreenRenderer) -> CGImage? {
-        guard let image: CIImage = makeImage(renderer) else {
-            return nil
-        }
-        return renderer.context.createCGImage(image, from: videoGravity.region(bounds, image: image.extent))
-    }
-
     override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
         let presentationTimeStamp = renderer.presentationTimeStamp.convertTime(from: CMClockGetHostTimeClock(), to: renderer.synchronizationClock)
         guard let sampleBuffer = queue?.dequeue(presentationTimeStamp),

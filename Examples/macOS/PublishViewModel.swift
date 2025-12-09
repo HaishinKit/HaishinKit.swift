@@ -98,11 +98,6 @@ final class PublishViewModel: ObservableObject {
             await makeSession(preference)
         }
         Task { @ScreenActor in
-            if await preference.isGPURendererEnabled {
-                await mixer.screen.isGPURendererEnabled = true
-            } else {
-                await mixer.screen.isGPURendererEnabled = false
-            }
             let assetScreenObject = AssetScreenObject()
             assetScreenObject.size = .init(width: 180, height: 180)
             assetScreenObject.layoutMargin = .init(top: 16, left: 16, bottom: 0, right: 0)

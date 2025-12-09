@@ -85,9 +85,6 @@ struct PreferenceView: View {
                         Text(String(describing: view)).tag(view)
                     }
                 }
-                Toggle(isOn: $model.isGPURendererEnabled) {
-                    Text("GPU Rendering")
-                }
             } header: {
                 Text("Capture Settings")
             } footer: {

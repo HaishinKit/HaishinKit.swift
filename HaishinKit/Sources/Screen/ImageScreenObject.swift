@@ -12,11 +12,15 @@ public final class ImageScreenObject: ScreenObject {
         }
     }
 
-    override public func makeImage(_ renderer: some ScreenRenderer) -> CGImage? {
+    override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
         let intersection = bounds.intersection(renderer.bounds)
 
         guard bounds != intersection else {
-            return cgImage
+            if let cgImage {
+                return CIImage(cgImage: cgImage)
+            } else {
+                return nil
+            }
         }
 
         // Handling when the drawing area is exceeded.
@@ -40,14 +44,11 @@ public final class ImageScreenObject: ScreenObject {
             y = abs(bounds.origin.y)
         }
 
-        return cgImage?.cropping(to: .init(origin: .init(x: x, y: y), size: intersection.size))
-    }
-
-    override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
-        guard let image: CGImage = makeImage(renderer) else {
+        if let cgImage = cgImage?.cropping(to: .init(origin: .init(x: x, y: y), size: intersection.size)) {
+            return CIImage(cgImage: cgImage)
+        } else {
             return nil
         }
-        return CIImage(cgImage: image)
     }
 
     override public func makeBounds(_ size: CGSize) -> CGRect {

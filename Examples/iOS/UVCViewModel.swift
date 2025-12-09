@@ -197,11 +197,6 @@ final class UVCViewModel: ObservableObject {
             await makeSession(preference)
         }
         Task { @ScreenActor in
-            if await preference.isGPURendererEnabled {
-                await mixer.screen.isGPURendererEnabled = true
-            } else {
-                await mixer.screen.isGPURendererEnabled = false
-            }
             await mixer.screen.size = .init(width: 720, height: 1280)
             await mixer.screen.backgroundColor = UIColor.black.cgColor
         }

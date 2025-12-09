@@ -79,7 +79,7 @@ public final class TextScreenObject: ScreenObject {
         return super.makeBounds(frameSize)
     }
 
-    override public func makeImage(_ renderer: some ScreenRenderer) -> CGImage? {
+    override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
         guard let context, let framesetter else {
             return nil
         }
@@ -87,13 +87,10 @@ public final class TextScreenObject: ScreenObject {
         let frame = CTFramesetterCreateFrame(framesetter, .init(), path, nil)
         context.clear(context.boundingBoxOfPath)
         CTFrameDraw(frame, context)
-        return context.makeImage()
-    }
-
-    override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
-        guard let image: CGImage = makeImage(renderer) else {
+        if let cgImage = context.makeImage() {
+            return CIImage(cgImage: cgImage)
+        } else {
             return nil
         }
-        return CIImage(cgImage: image)
     }
 }

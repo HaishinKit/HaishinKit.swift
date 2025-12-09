@@ -292,8 +292,6 @@ final class PublishViewModel: ObservableObject {
         isMixerReady = false
         isDualCameraEnabled = false
 
-        let isGPURendererEnabled = preference.isGPURendererEnabled
-
         Task {
             tasks.forEach { $0.cancel() }
             tasks.removeAll()
@@ -336,7 +334,7 @@ final class PublishViewModel: ObservableObject {
             videoMixerSettings.mode = .offscreen
             await mixer.setVideoMixerSettings(videoMixerSettings)
 
-            await configureScreen(isGPURendererEnabled: isGPURendererEnabled)
+            await configureScreen(isGPURendererEnabled: true)
 
             let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
             let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
@@ -371,7 +369,7 @@ final class PublishViewModel: ObservableObject {
                 logger.info(error)
             }
             await makeSession(preference)
-            let isLandscape = await UIDevice.current.orientation.isLandscape
+            let isLandscape = UIDevice.current.orientation.isLandscape
             await updateVideoEncoderSize(isLandscape: isLandscape)
             let screenSize = await mixer.screen.size
             if let session = self.session {
@@ -399,7 +397,6 @@ final class PublishViewModel: ObservableObject {
 
     @ScreenActor
     private func configureScreen(isGPURendererEnabled: Bool) async {
-        await mixer.screen.isGPURendererEnabled = isGPURendererEnabled
         await mixer.screen.size = .init(width: 720, height: 1280)
         await mixer.screen.backgroundColor = UIColor.black.cgColor
     }
@@ -491,7 +488,7 @@ final class PublishViewModel: ObservableObject {
         Task { @ScreenActor in
             if isEnabled {
                 if let videoScreenObject {
-                    try? await mixer.screen.removeChild(videoScreenObject)
+                    await mixer.screen.removeChild(videoScreenObject)
                 }
                 await MainActor.run { isDualCameraEnabled = false }
             } else {
