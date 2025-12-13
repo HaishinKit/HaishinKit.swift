@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Combine
+import HaishinKit
 
 struct AudioSource: Sendable, Hashable, Equatable, CustomStringConvertible {
     static let empty = AudioSource(portName: "", dataSourceName: "", isSupportedStereo: false)
@@ -17,10 +18,23 @@ struct AudioSource: Sendable, Hashable, Equatable, CustomStringConvertible {
 }
 
 actor AudioSourceService {
+    enum Mode: CaseIterable, Sendable {
+        case audioSource
+        case audioEngine
+    }
+
     enum Error: Swift.Error {
         case missingDataSource(_ source: AudioSource)
     }
 
+    var buffer: AsyncStream<(AVAudioPCMBuffer, AVAudioTime)> {
+        AsyncStream { continuation in
+            bufferContinuation = continuation
+        }
+    }
+
+    private(set) var mode: Mode = .audioEngine
+    private(set) var isRunning = false
     private(set) var sources: [AudioSource] = [] {
         didSet {
             guard sources != oldValue else {
@@ -35,27 +49,24 @@ actor AudioSourceService {
             oldValue?.finish()
         }
     }
-
-    init() {
-        Task { await _init() }
+    private var tasks: [Task<Void, Swift.Error>] = []
+    private var audioEngineCapture: AudioEngineCapture? {
+        didSet {
+            audioEngineCapture?.delegate = self
+        }
     }
-
-    private func _init() async {
-        sources = makeAudioSources()
-        Task {
-            for await _ in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)
-                .compactMap({ $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt })
-                .compactMap({ AVAudioSession.RouteChangeReason(rawValue: $0) }) {
-                sources = makeAudioSources()
-            }
+    private var bufferContinuation: AsyncStream<(AVAudioPCMBuffer, AVAudioTime)>.Continuation? {
+        didSet {
+            oldValue?.finish()
         }
     }
 
-    func setUp() {
-        let session = AVAudioSession.sharedInstance()
+    func setUp(_ mode: Mode) {
+        self.mode = mode
         do {
+            let session = AVAudioSession.sharedInstance()
             // If you set the "mode" parameter, stereo capture is not possible, so it is left unspecified.
-            try session.setCategory(.playAndRecord, mode: .videoRecording, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
             // It looks like this setting is required on iOS 18.5.
             try session.setPreferredInputNumberOfChannels(2)
             try session.setActive(true)
@@ -123,6 +134,57 @@ actor AudioSourceService {
             }
         } catch {
             logger.warn(error)
+        }
+    }
+}
+
+extension AudioSourceService: AsyncRunner {
+    // MARK: AsyncRunner
+    func startRunning() async {
+        guard !isRunning else {
+            return
+        }
+        switch mode {
+        case .audioEngine:
+            audioEngineCapture = AudioEngineCapture()
+            audioEngineCapture?.startRunning()
+            tasks.append(Task {
+                for await _ in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)
+                    .compactMap({ $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt })
+                    .compactMap({ AVAudioSession.RouteChangeReason(rawValue: $0) }) {
+                    audioEngineCapture?.startCaptureIfNeeded()
+                }
+            })
+        case .audioSource:
+            tasks.append(Task {
+                for await _ in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)
+                    .compactMap({ $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt })
+                    .compactMap({ AVAudioSession.RouteChangeReason(rawValue: $0) }) {
+                    sources = makeAudioSources()
+                }
+            })
+        }
+        isRunning = true
+    }
+
+    func stopRunning() async {
+        guard isRunning else {
+            return
+        }
+        audioEngineCapture?.stopRunning()
+        for task in tasks {
+            task.cancel()
+        }
+        tasks.removeAll()
+        isRunning = false
+    }
+}
+
+extension AudioSourceService: AudioEngineCaptureDelegate {
+    // MARK: AudioEngineCaptureDelegate
+    nonisolated func audioCapture(_ audioCapture: AudioEngineCapture, buffer: AVAudioPCMBuffer, time: AVAudioTime) {
+        Task {
+            await bufferContinuation?.yield((buffer, time))
         }
     }
 }

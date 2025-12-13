@@ -28,6 +28,7 @@ final class PreferenceViewModel: ObservableObject {
     // MARK: - Others
     @Published var viewType: ViewType = .metal
     var isGPURendererEnabled: Bool = true
+    @Published var audioCaptureMode: AudioSourceService.Mode = .audioEngine
 
     init() {
         if #available(iOS 16.0, tvOS 16.0, *) {

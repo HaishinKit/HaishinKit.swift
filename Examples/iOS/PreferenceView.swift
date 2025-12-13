@@ -49,6 +49,11 @@ struct PreferenceView: View {
                         Text(String(describing: view)).tag(view)
                     }
                 }
+                Picker("Audio Capture Mode", selection: $model.audioCaptureMode) {
+                    ForEach(AudioSourceService.Mode.allCases, id: \.self) { view in
+                        Text(String(describing: view)).tag(view)
+                    }
+                }
                 Toggle(isOn: $model.isGPURendererEnabled) {
                     Text("Use GPU rendering.")
                 }

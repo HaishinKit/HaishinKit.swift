@@ -20,11 +20,8 @@ final class AudioCodec {
         return audioConverter?.outputFormat
     }
 
-    var outputStream: AsyncStream<(AVAudioBuffer, AVAudioTime)> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-        }
-    }
+    @AsyncStreamedFlow
+    var outputStream: AsyncStream<(AVAudioBuffer, AVAudioTime)>
 
     /// This instance is running to process(true) or not(false).
     private(set) var isRunning = false
@@ -47,11 +44,6 @@ final class AudioCodec {
     private var audioTime = AudioTime()
     private var ringBuffer: AudioRingBuffer?
     private var inputBuffers: [AVAudioBuffer] = []
-    private var continuation: AsyncStream<(AVAudioBuffer, AVAudioTime)>.Continuation? {
-        didSet {
-            oldValue?.finish()
-        }
-    }
     private var outputBuffers: [AVAudioBuffer] = []
     private var audioConverter: AVAudioConverter?
     private var inputBuffersCursor = AudioCodec.defaultInputBuffersCursor
@@ -128,9 +120,9 @@ final class AudioCodec {
             case .haveData:
                 if audioTime.hasAnchor {
                     audioTime.advanced(AVAudioFramePosition(audioConverter.outputFormat.streamDescription.pointee.mFramesPerPacket))
-                    continuation?.yield((outputBuffer, audioTime.at))
+                    _outputStream.yield((outputBuffer, audioTime.at))
                 } else {
-                    continuation?.yield((outputBuffer, when))
+                    _outputStream.yield((outputBuffer, audioTime.at))
                 }
                 inputBuffersCursor += 1
                 if inputBuffersCursor == inputBuffers.count {
@@ -166,6 +158,9 @@ final class AudioCodec {
         settings.apply(converter, oldValue: nil)
         if inputFormat.formatDescription.mediaSubType == .linearPCM {
             ringBuffer = AudioRingBuffer(inputFormat)
+        }
+        if self.outputFormat?.sampleRate != outputFormat.sampleRate {
+            audioTime.reset()
         }
         if logger.isEnabledFor(level: .info) {
             logger.info("converter:", converter ?? "nil", ",inputFormat:", inputFormat, ",outputFormat:", outputFormat)
@@ -216,6 +211,6 @@ extension AudioCodec: Runner {
             return
         }
         isRunning = false
-        continuation = nil
+        _outputStream.finish()
     }
 }

@@ -226,10 +226,16 @@ final class PublishViewModel: ObservableObject {
 
     func startRunning(_ preference: PreferenceViewModel) {
         Task {
-            await audioSourceService.setUp()
+            let audioCaptureMode = preference.audioCaptureMode
+            await audioSourceService.setUp(preference.audioCaptureMode)
             await mixer.configuration { session in
-                // It is required for the stereo setting.
-                session.automaticallyConfiguresApplicationAudioSession = false
+                switch audioCaptureMode {
+                case .audioEngine:
+                    session.automaticallyConfiguresApplicationAudioSession = true
+                case .audioSource:
+                    // It is required for the stereo setting.
+                    session.automaticallyConfiguresApplicationAudioSession = false
+                }
             }
             // SetUp a mixer.
             await mixer.setMonitoringEnabled(DeviceUtil.isHeadphoneConnected())
@@ -243,6 +249,7 @@ final class PublishViewModel: ObservableObject {
             try? await mixer.attachVideo(front, track: 1) { videoUnit in
                 videoUnit.isVideoMirrored = true
             }
+            await audioSourceService.startRunning()
             await mixer.startRunning()
             await makeSession(preference)
         }
@@ -266,6 +273,11 @@ final class PublishViewModel: ObservableObject {
             try? await mixer.screen.addChild(videoScreenObject)
         }
         Task {
+            for await buffer in await audioSourceService.buffer {
+                await mixer.append(buffer.0, when: buffer.1)
+            }
+        }
+        Task {
             for await sources in await audioSourceService.sourcesUpdates() {
                 audioSources = sources
                 if let first = sources.first, audioSource == .empty {
@@ -277,6 +289,7 @@ final class PublishViewModel: ObservableObject {
 
     func stopRunning() {
         Task {
+            await audioSourceService.stopRunning()
             await mixer.stopRunning()
             try? await mixer.attachAudio(nil)
             try? await mixer.attachVideo(nil, track: 0)
