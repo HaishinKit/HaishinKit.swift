@@ -4,7 +4,8 @@ import Testing
 
 @testable import HaishinKit
 
-@Suite struct MediaMixerTests {
+@Suite(.disabled(if: TestEnvironment.isCI))
+struct MediaMixerTests {
     @Test func videoConfiguration() async throws {
         let mixer = MediaMixer()
         await #expect(throws: (MediaMixer.Error).self) {

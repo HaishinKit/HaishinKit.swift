@@ -1,13 +1,16 @@
 desc 'Review PullRequest.'
 lane :review do
+
   spm(
     command: 'test',
     package_path: 'HaishinKit'
   )
+
   spm(
     command: 'test',
     package_path: 'SRTHaishinKit'
   )
+
   begin
     danger(
       danger_id: 'danger',
