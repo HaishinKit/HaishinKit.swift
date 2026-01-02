@@ -1,7 +1,7 @@
-#if os(iOS) || os(tvOS) || os(macOS)
 import AVFoundation
 import Foundation
 
+#if os(iOS) || os(tvOS) || os(macOS)
 /// Configuration calback block for an AudioDeviceUnit
 @available(tvOS 17.0, *)
 public typealias AudioDeviceConfigurationBlock = @Sendable (AudioDeviceUnit) throws -> Void
@@ -56,6 +56,19 @@ final class AudioDeviceUnitDataOutput: NSObject, AVCaptureAudioDataOutputSampleB
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         audioMixer.append(track, buffer: sampleBuffer)
+    }
+}
+
+#else
+final class AudioDeviceUnit: DeviceUnit {
+    var output: AVCaptureOutput?
+    var track: UInt8
+    var input: AVCaptureInput?
+    var device: AVCaptureDevice?
+    var connection: AVCaptureConnection?
+
+    init(_ track: UInt8, device: AVCaptureDevice) throws {
+        self.track = track
     }
 }
 #endif

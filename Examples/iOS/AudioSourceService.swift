@@ -18,11 +18,6 @@ struct AudioSource: Sendable, Hashable, Equatable, CustomStringConvertible {
 }
 
 actor AudioSourceService {
-    enum Mode: CaseIterable, Sendable {
-        case audioSource
-        case audioEngine
-    }
-
     enum Error: Swift.Error {
         case missingDataSource(_ source: AudioSource)
     }
@@ -33,7 +28,7 @@ actor AudioSourceService {
         }
     }
 
-    private(set) var mode: Mode = .audioEngine
+    private(set) var mode: AudioSourceServiceMode = .audioEngine
     private(set) var isRunning = false
     private(set) var sources: [AudioSource] = [] {
         didSet {
@@ -61,15 +56,15 @@ actor AudioSourceService {
         }
     }
 
-    func setUp(_ mode: Mode) {
+    func setUp(_ mode: AudioSourceServiceMode) {
         self.mode = mode
         do {
             let session = AVAudioSession.sharedInstance()
             // If you set the "mode" parameter, stereo capture is not possible, so it is left unspecified.
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
-            // It looks like this setting is required on iOS 18.5.
-            try session.setPreferredInputNumberOfChannels(2)
             try session.setActive(true)
+            // It looks like this setting is required on iOS 18.5.
+            try? session.setPreferredInputNumberOfChannels(2)
         } catch {
             logger.error(error)
         }
@@ -145,6 +140,18 @@ extension AudioSourceService: AsyncRunner {
             return
         }
         switch mode {
+        case .audioSource:
+            break
+        case .audioSourceWithSterao:
+            sources = makeAudioSources()
+            tasks.append(Task {
+                for await reason in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)
+                    .compactMap({ $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt })
+                    .compactMap({ AVAudioSession.RouteChangeReason(rawValue: $0) }) {
+                    logger.info("route change ->", reason.rawValue)
+                    sources = makeAudioSources()
+                }
+            })
         case .audioEngine:
             audioEngineCapture = AudioEngineCapture()
             audioEngineCapture?.startRunning()
@@ -186,14 +193,6 @@ extension AudioSourceService: AsyncRunner {
                     }
                 }
             })
-        case .audioSource:
-            tasks.append(Task {
-                for await _ in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)
-                    .compactMap({ $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt })
-                    .compactMap({ AVAudioSession.RouteChangeReason(rawValue: $0) }) {
-                    sources = makeAudioSources()
-                }
-            })
         }
         isRunning = true
     }
@@ -203,9 +202,7 @@ extension AudioSourceService: AsyncRunner {
             return
         }
         audioEngineCapture?.stopRunning()
-        for task in tasks {
-            task.cancel()
-        }
+        tasks.forEach { $0.cancel() }
         tasks.removeAll()
         isRunning = false
     }

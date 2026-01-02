@@ -28,6 +28,7 @@ final class AudioCaptureUnit: CaptureUnit {
             self.continutation = continutation
         }
     }
+    private(set) var isSuspended = false
     private lazy var audioMixer: any AudioMixer = {
         if isMultiTrackAudioMixingEnabled {
             var mixer = AudioMixerByMultiTrack()
@@ -52,7 +53,7 @@ final class AudioCaptureUnit: CaptureUnit {
             _devices as! [UInt8: AudioDeviceUnit]
         }
     }
-    #elseif os(iOS) || os(macOS)
+    #else
     var devices: [UInt8: AudioDeviceUnit] = [:]
     #endif
 
@@ -97,6 +98,28 @@ final class AudioCaptureUnit: CaptureUnit {
         default:
             break
         }
+    }
+
+    @available(tvOS 17.0, *)
+    func suspend() {
+        guard !isSuspended else {
+            return
+        }
+        for capture in devices.values {
+            session.detachCapture(capture)
+        }
+        isSuspended = true
+    }
+
+    @available(tvOS 17.0, *)
+    func resume() {
+        guard isSuspended else {
+            return
+        }
+        for capture in devices.values {
+            session.attachCapture(capture)
+        }
+        isSuspended = false
     }
 
     func finish() {

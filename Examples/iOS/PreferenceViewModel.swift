@@ -9,6 +9,12 @@ enum ViewType: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
+enum AudioSourceServiceMode: String, CaseIterable, Sendable {
+    case audioSource
+    case audioSourceWithSterao
+    case audioEngine
+}
+
 @MainActor
 final class PreferenceViewModel: ObservableObject {
     @Published var showPublishSheet: Bool = false
@@ -28,7 +34,7 @@ final class PreferenceViewModel: ObservableObject {
     // MARK: - Others
     @Published var viewType: ViewType = .metal
     var isGPURendererEnabled: Bool = true
-    @Published var audioCaptureMode: AudioSourceService.Mode = .audioEngine
+    @Published var audioCaptureMode: AudioSourceServiceMode = .audioEngine
 
     init() {
         if #available(iOS 16.0, tvOS 16.0, *) {

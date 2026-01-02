@@ -126,6 +126,7 @@ public final actor MediaMixer {
     private var outputs: [any MediaMixerOutput] = []
     @MainActor
     private var cancellables: Set<AnyCancellable> = []
+    private var subscriptions: [Task<Void, Never>] = []
     private var isInBackground = false
     private lazy var audioIO = AudioCaptureUnit(session, isMultiTrackAudioMixingEnabled: isMultiTrackAudioMixingEnabled)
     private lazy var videoIO = VideoCaptureUnit(session)
@@ -408,6 +409,31 @@ public final actor MediaMixer {
             session.startRunningIfNeeded()
         }
     }
+
+    @available(tvOS 17.0, *)
+    private func didAudioSessionInterruption(_ notification: Notification) {
+        guard
+            let userInfo = notification.userInfo,
+            let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+        switch type {
+        case .began:
+            // video capture continues even while an incoming call is ringing.
+            audioIO.suspend()
+            session.startRunningIfNeeded()
+            logger.info("Audio suspended due to system interruption.")
+        case .ended:
+            let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
+            if options.contains(.shouldResume) {
+                audioIO.resume()
+            }
+            logger.info("Audio resumed after system interruption")
+        default: ()
+        }
+    }
     #endif
 
     @available(tvOS 17.0, *)
@@ -513,6 +539,16 @@ extension MediaMixer: AsyncRunner {
                 }
                 .store(in: &cancellables)
         }
+        if #available(tvOS 17.0, *) {
+            subscriptions.append(Task {
+                for await notification in NotificationCenter.default.notifications(
+                    named: AVAudioSession.interruptionNotification,
+                    object: AVAudioSession.sharedInstance()
+                ) {
+                    didAudioSessionInterruption(notification)
+                }
+            })
+        }
         #endif
     }
 
@@ -525,6 +561,8 @@ extension MediaMixer: AsyncRunner {
         }
         audioIO.finish()
         videoIO.finish()
+        subscriptions.forEach { $0.cancel() }
+        subscriptions.removeAll()
         // Wait for the task to finish to prevent memory leaks.
         await Task { @MainActor in
             cancellables.forEach { $0.cancel() }

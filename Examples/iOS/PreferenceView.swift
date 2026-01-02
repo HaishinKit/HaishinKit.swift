@@ -50,7 +50,7 @@ struct PreferenceView: View {
                     }
                 }
                 Picker("Audio Capture Mode", selection: $model.audioCaptureMode) {
-                    ForEach(AudioSourceService.Mode.allCases, id: \.self) { view in
+                    ForEach(AudioSourceServiceMode.allCases, id: \.self) { view in
                         Text(String(describing: view)).tag(view)
                     }
                 }

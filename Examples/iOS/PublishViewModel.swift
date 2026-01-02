@@ -230,11 +230,13 @@ final class PublishViewModel: ObservableObject {
             await audioSourceService.setUp(preference.audioCaptureMode)
             await mixer.configuration { session in
                 switch audioCaptureMode {
-                case .audioEngine:
-                    session.automaticallyConfiguresApplicationAudioSession = true
                 case .audioSource:
+                    session.automaticallyConfiguresApplicationAudioSession = true
+                case .audioSourceWithSterao:
                     // It is required for the stereo setting.
                     session.automaticallyConfiguresApplicationAudioSession = false
+                case .audioEngine:
+                    session.automaticallyConfiguresApplicationAudioSession = true
                 }
             }
             // SetUp a mixer.
@@ -248,6 +250,9 @@ final class PublishViewModel: ObservableObject {
             let front = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
             try? await mixer.attachVideo(front, track: 1) { videoUnit in
                 videoUnit.isVideoMirrored = true
+            }
+            if audioCaptureMode == .audioSource {
+                try? await mixer.attachAudio(AVCaptureDevice.default(for: .audio))
             }
             await audioSourceService.startRunning()
             await mixer.startRunning()
