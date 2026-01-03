@@ -54,6 +54,10 @@ final class AudioRingBuffer {
         if sampleTime == 0 {
             sampleTime = targetSampleTime
         }
+        if outputBuffer.frameLength < sampleBuffer.numSamples {
+            skip += sampleBuffer.numSamples
+            return
+        }
         if inputBuffer.frameLength < sampleBuffer.numSamples {
             if let buffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: AVAudioFrameCount(sampleBuffer.numSamples)) {
                 self.inputBuffer = buffer
@@ -103,7 +107,7 @@ final class AudioRingBuffer {
         if 0 < skip {
             let numSamples = min(Int(inNumberFrames), skip)
             guard let bufferList = UnsafeMutableAudioBufferListPointer(ioData) else {
-                return noErr
+                return -1
             }
             if inputFormat.isInterleaved {
                 let channelCount = Int(inputFormat.channelCount)
@@ -139,7 +143,7 @@ final class AudioRingBuffer {
         }
         let numSamples = min(Int(inNumberFrames), Int(outputBuffer.frameLength) - tail)
         guard let bufferList = UnsafeMutableAudioBufferListPointer(ioData), head != tail else {
-            return noErr
+            return -1
         }
         if inputFormat.isInterleaved {
             let channelCount = Int(inputFormat.channelCount)
