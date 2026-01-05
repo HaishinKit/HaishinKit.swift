@@ -1,12 +1,22 @@
 import AVFoundation
 import HaishinKit
+import MediaPlayer
 import Photos
 import RTCHaishinKit
 import SwiftUI
 
 @MainActor
 final class PublishViewModel: ObservableObject {
-    @Published var currentFPS: FPS = .fps30
+    private enum Keys {
+        static let currentFPS = "publish_fps"
+        static let videoBitRates = "publish_bitrate"
+    }
+
+    @Published var currentFPS: FPS = .fps30 {
+        didSet {
+            UserDefaults.standard.set(currentFPS.rawValue, forKey: Keys.currentFPS)
+        }
+    }
     @Published var visualEffectItem: VideoEffectItem = .none
     @Published private(set) var error: Error? {
         didSet {
@@ -16,6 +26,7 @@ final class PublishViewModel: ObservableObject {
         }
     }
     @Published var isShowError = false
+    @Published var showPreLiveDialog = false
     @Published private(set) var isAudioMuted = false
     @Published private(set) var isTorchEnabled = false
     @Published private(set) var readyState: SessionReadyState = .closed
@@ -29,24 +40,23 @@ final class PublishViewModel: ObservableObject {
     }
     @Published private(set) var audioSources: [AudioSource] = []
     @Published private(set) var isRecording = false
-    @Published var isHDREnabled = false {
-        didSet {
-            Task {
-                do {
-                    if isHDREnabled {
-                        try await mixer.setDynamicRangeMode(.hdr)
-                    } else {
-                        try await mixer.setDynamicRangeMode(.sdr)
-                    }
-                } catch {
-                    logger.info(error)
-                }
-            }
-        }
-    }
     @Published private(set) var stats: [Stats] = []
-    @Published var videoBitRates: Double = 100 {
+    @Published private(set) var currentCamera: String = "Back"
+    @Published private(set) var isDualCameraEnabled: Bool = false
+    @Published private(set) var isVolumeOn: Bool = false
+    @Published private(set) var isLoading: Bool = true
+    @Published private(set) var videoDimensions: String = ""
+    @Published private(set) var batteryUsed: Float = 0
+    @Published private(set) var streamDuration: TimeInterval = 0
+    @Published private(set) var thermalState: ProcessInfo.ThermalState = .nominal
+    @Published private(set) var currentUploadKBps: Int = 0
+    private var streamStartBattery: Float = 0
+    private var streamStartTime: Date?
+    private var batteryTimer: Timer?
+    private var durationTimer: Timer?
+    @Published var videoBitRates: Double = 2000 {
         didSet {
+            UserDefaults.standard.set(videoBitRates, forKey: Keys.videoBitRates)
             Task {
                 guard let session else {
                     return
@@ -57,9 +67,7 @@ final class PublishViewModel: ObservableObject {
             }
         }
     }
-    // If you want to use the multi-camera feature, please make create a MediaMixer with a capture mode.
-    // let mixer = MediaMixer(captureSesionMode: .multi)
-    private(set) var mixer = MediaMixer(captureSessionMode: .multi)
+    private(set) var mixer = MediaMixer()
     private var tasks: [Task<Void, Swift.Error>] = []
     private var session: (any Session)?
     private var recorder: StreamRecorder?
@@ -67,19 +75,48 @@ final class PublishViewModel: ObservableObject {
     private var audioSourceService = AudioSourceService()
     @ScreenActor private var videoScreenObject: VideoTrackScreenObject?
     @ScreenActor private var currentVideoEffect: VideoEffect?
+    private var volumeObserver: NSKeyValueObservation?
+    private var mtView: MTHKView?
+    private var isMixerReady = false
 
     init() {
+        let defaults = UserDefaults.standard
+
+        if let rawValue = defaults.string(forKey: Keys.currentFPS),
+           let fps = FPS(rawValue: rawValue) {
+            self.currentFPS = fps
+        }
+
+        if defaults.object(forKey: Keys.videoBitRates) != nil {
+            self.videoBitRates = defaults.double(forKey: Keys.videoBitRates)
+        }
+
         Task { @ScreenActor in
             videoScreenObject = VideoTrackScreenObject()
         }
     }
 
-    func startPublishing(_ preference: PreferenceViewModel) {
+    func startPublishing(_ preference: PreferenceViewModel, withRecording: Bool = false) {
         Task {
             guard let session else {
                 return
             }
             stats.removeAll()
+
+            let recorder = StreamRecorder()
+            await mixer.addOutput(recorder)
+            self.recorder = recorder
+
+            if withRecording {
+                do {
+                    try await recorder.startRecording()
+                    isRecording = true
+                } catch {
+                    self.error = error
+                    logger.warn(error)
+                }
+            }
+
             do {
                 try await session.connect {
                     Task { @MainActor in
@@ -95,6 +132,25 @@ final class PublishViewModel: ObservableObject {
 
     func stopPublishing() {
         Task {
+            if isRecording {
+                do {
+                    if let videoFile = try await recorder?.stopRecording() {
+                        Task.detached {
+                            try await PHPhotoLibrary.shared().performChanges {
+                                let creationRequest = PHAssetCreationRequest.forAsset()
+                                creationRequest.addResource(with: .video, fileURL: videoFile, options: nil)
+                            }
+                        }
+                    }
+                } catch {
+                    logger.warn(error)
+                }
+                isRecording = false
+            }
+            if let recorder {
+                await mixer.removeOutput(recorder)
+                self.recorder = nil
+            }
             do {
                 try await session?.close()
             } catch {
@@ -107,7 +163,6 @@ final class PublishViewModel: ObservableObject {
         if isRecording {
             Task {
                 do {
-                    // To use this in a product, you need to consider recovery procedures in case moving to the Photo Library fails.
                     if let videoFile = try await recorder?.stopRecording() {
                         Task.detached {
                             try await PHPhotoLibrary.shared().performChanges {
@@ -128,18 +183,17 @@ final class PublishViewModel: ObservableObject {
                         logger.warn(error)
                     }
                 }
-                recorder = nil
                 isRecording = false
             }
         } else {
             Task {
-                let recorder = StreamRecorder()
-                await mixer.addOutput(recorder)
+                guard let recorder else {
+                    logger.warn("Recorder not initialized")
+                    return
+                }
                 do {
-                    // When starting a recording while connected to Xcode, it freezes for about 30 seconds. iOS26 + Xcode26.
                     try await recorder.startRecording()
                     isRecording = true
-                    self.recorder = recorder
                 } catch {
                     self.error = error
                     logger.warn(error)
@@ -178,7 +232,6 @@ final class PublishViewModel: ObservableObject {
     }
 
     func makeSession(_ preference: PreferenceViewModel) async {
-        // Make session.
         do {
             session = try await SessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
@@ -186,11 +239,16 @@ final class PublishViewModel: ObservableObject {
             guard let session else {
                 return
             }
-            let videoSettings = await session.stream.videoSettings
-            videoBitRates = Double(videoSettings.bitRate / 1000)
+            var videoSettings = await session.stream.videoSettings
+            videoSettings.bitRate = Int(videoBitRates * 1000)
+            try? await session.stream.setVideoSettings(videoSettings)
             await session.stream.setBitRateStrategy(StatsMonitor({ data in
                 Task { @MainActor in
                     self.stats.append(data)
+                    if self.stats.count > 60 {
+                        self.stats.removeFirst(self.stats.count - 60)
+                    }
+                    self.currentUploadKBps = data.currentBytesOutPerSecond / 1024
                 }
             }))
             await mixer.addOutput(session.stream)
@@ -200,6 +258,10 @@ final class PublishViewModel: ObservableObject {
                     switch readyState {
                     case .open:
                         UIApplication.shared.isIdleTimerDisabled = false
+                        self.startBatteryTracking()
+                    case .closed:
+                        UIApplication.shared.isIdleTimerDisabled = true
+                        self.stopBatteryTracking()
                     default:
                         UIApplication.shared.isIdleTimerDisabled = true
                     }
@@ -225,74 +287,134 @@ final class PublishViewModel: ObservableObject {
     }
 
     func startRunning(_ preference: PreferenceViewModel) {
+        isMixerReady = false
+        isDualCameraEnabled = false
+
+        let isGPURendererEnabled = preference.isGPURendererEnabled
+
         Task {
+            tasks.forEach { $0.cancel() }
+            tasks.removeAll()
+
+            await audioSourceService.stopRunning()
+            await mixer.stopRunning()
+            try? await mixer.attachAudio(nil)
+            try? await mixer.attachVideo(nil, track: 0)
+            try? await mixer.attachVideo(nil, track: 1)
+            if let session {
+                await mixer.removeOutput(session.stream)
+                try? await session.close()
+            }
+            session = nil
+
+            mixer = MediaMixer(captureSessionMode: .multi)
+
             let audioCaptureMode = preference.audioCaptureMode
             await audioSourceService.setUp(preference.audioCaptureMode)
             await mixer.configuration { session in
                 switch audioCaptureMode {
                 case .audioSource:
                     session.automaticallyConfiguresApplicationAudioSession = true
-                case .audioSourceWithSterao:
-                    // It is required for the stereo setting.
+                case .audioSourceWithStereo:
                     session.automaticallyConfiguresApplicationAudioSession = false
                 case .audioEngine:
                     session.automaticallyConfiguresApplicationAudioSession = true
                 }
             }
-            // SetUp a mixer.
             await mixer.setMonitoringEnabled(DeviceUtil.isHeadphoneConnected())
             var videoMixerSettings = await mixer.videoMixerSettings
             videoMixerSettings.mode = .offscreen
             await mixer.setVideoMixerSettings(videoMixerSettings)
-            // Attach devices
-            let back = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: currentPosition)
-            try? await mixer.attachVideo(back, track: 0)
-            let front = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-            try? await mixer.attachVideo(front, track: 1) { videoUnit in
+
+            await configureScreen(isGPURendererEnabled: isGPURendererEnabled)
+
+            let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+            try? await mixer.attachVideo(backCamera, track: 0) { videoUnit in
+                videoUnit.isVideoMirrored = false
+            }
+            try? await mixer.attachVideo(frontCamera, track: 1) { videoUnit in
                 videoUnit.isVideoMirrored = true
             }
+            var videoMixerSettings2 = await mixer.videoMixerSettings
+            videoMixerSettings2.mainTrack = currentPosition == .front ? 1 : 0
+            await mixer.setVideoMixerSettings(videoMixerSettings2)
+            currentCamera = currentPosition == .front ? "Front" : "Back"
             if audioCaptureMode == .audioSource {
                 try? await mixer.attachAudio(AVCaptureDevice.default(for: .audio))
             }
             await audioSourceService.startRunning()
             await mixer.startRunning()
+
+            isMixerReady = true
+            if let mtView {
+                await mixer.addOutput(mtView)
+            }
+
+            do {
+                if preference.isHDREnabled {
+                    try await mixer.setDynamicRangeMode(.hdr)
+                } else {
+                    try await mixer.setDynamicRangeMode(.sdr)
+                }
+            } catch {
+                logger.info(error)
+            }
             await makeSession(preference)
+            let isLandscape = await UIDevice.current.orientation.isLandscape
+            await updateVideoEncoderSize(isLandscape: isLandscape)
+            let screenSize = await mixer.screen.size
+            if let session = self.session {
+                let videoSettings = await session.stream.videoSettings
+                self.videoDimensions = "Screen: \(Int(screenSize.width))x\(Int(screenSize.height)) | Video: \(videoSettings.videoSize.width)x\(videoSettings.videoSize.height)"
+            }
+            isLoading = false
         }
         orientationDidChange()
-        Task { @ScreenActor in
-            guard let videoScreenObject else {
-                return
-            }
-            if await preference.isGPURendererEnabled {
-                await mixer.screen.isGPURendererEnabled = true
-            } else {
-                await mixer.screen.isGPURendererEnabled = false
-            }
-            videoScreenObject.cornerRadius = 16.0
-            videoScreenObject.track = 1
-            videoScreenObject.horizontalAlignment = .right
-            videoScreenObject.layoutMargin = .init(top: 16, left: 0, bottom: 0, right: 16)
-            videoScreenObject.size = .init(width: 160 * 2, height: 90 * 2)
-            await mixer.screen.size = .init(width: 720, height: 1280)
-            await mixer.screen.backgroundColor = UIColor.black.cgColor
-            try? await mixer.screen.addChild(videoScreenObject)
-        }
-        Task {
+        tasks.append(Task {
             for await buffer in await audioSourceService.buffer {
                 await mixer.append(buffer.0, when: buffer.1)
             }
-        }
-        Task {
+        })
+        tasks.append(Task {
             for await sources in await audioSourceService.sourcesUpdates() {
                 audioSources = sources
                 if let first = sources.first, audioSource == .empty {
                     audioSource = first
                 }
             }
+        })
+        startVolumeMonitoring()
+    }
+
+    @ScreenActor
+    private func configureScreen(isGPURendererEnabled: Bool) async {
+        await mixer.screen.isGPURendererEnabled = isGPURendererEnabled
+        await mixer.screen.size = .init(width: 720, height: 1280)
+        await mixer.screen.backgroundColor = UIColor.black.cgColor
+    }
+
+    private func startVolumeMonitoring() {
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setActive(true)
+        isVolumeOn = audioSession.outputVolume > 0
+        volumeObserver = audioSession.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
+            Task { @MainActor in
+                if let volume = change.newValue {
+                    self?.isVolumeOn = volume > 0
+                }
+            }
         }
     }
 
+    private func stopVolumeMonitoring() {
+        volumeObserver?.invalidate()
+        volumeObserver = nil
+    }
+
     func stopRunning() {
+        isMixerReady = false
+        stopVolumeMonitoring()
         Task {
             await audioSourceService.stopRunning()
             await mixer.stopRunning()
@@ -309,27 +431,27 @@ final class PublishViewModel: ObservableObject {
 
     func flipCamera() {
         Task {
-            if await mixer.isMultiCamSessionEnabled {
-                var videoMixerSettings = await mixer.videoMixerSettings
-                if videoMixerSettings.mainTrack == 0 {
-                    videoMixerSettings.mainTrack = 1
-                    await mixer.setVideoMixerSettings(videoMixerSettings)
-                    Task { @ScreenActor in
-                        videoScreenObject?.track = 0
-                    }
-                } else {
-                    videoMixerSettings.mainTrack = 0
-                    await mixer.setVideoMixerSettings(videoMixerSettings)
-                    Task { @ScreenActor in
-                        videoScreenObject?.track = 1
-                    }
+            var videoMixerSettings = await mixer.videoMixerSettings
+            if videoMixerSettings.mainTrack == 0 {
+                videoMixerSettings.mainTrack = 1
+                await mixer.setVideoMixerSettings(videoMixerSettings)
+                currentPosition = .front
+                currentCamera = "Front"
+                if isTorchEnabled {
+                    await mixer.setTorchEnabled(false)
+                    isTorchEnabled = false
+                }
+                Task { @ScreenActor in
+                    videoScreenObject?.track = 0
                 }
             } else {
-                let position: AVCaptureDevice.Position = currentPosition == .back ? .front : .back
-                try? await mixer.attachVideo(AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position)) { videoUnit in
-                    videoUnit.isVideoMirrored = position == .front
+                videoMixerSettings.mainTrack = 0
+                await mixer.setVideoMixerSettings(videoMixerSettings)
+                currentPosition = .back
+                currentCamera = "Back"
+                Task { @ScreenActor in
+                    videoScreenObject?.track = 1
                 }
-                currentPosition = position
             }
         }
     }
@@ -353,10 +475,34 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
+    func toggleDualCamera() {
+        let isEnabled = isDualCameraEnabled
+        let position = currentPosition
+        Task { @ScreenActor in
+            if isEnabled {
+                if let videoScreenObject {
+                    try? await mixer.screen.removeChild(videoScreenObject)
+                }
+                await MainActor.run { isDualCameraEnabled = false }
+            } else {
+                if let videoScreenObject {
+                    videoScreenObject.size = .init(width: 400, height: 224)
+                    videoScreenObject.cornerRadius = 8.0
+                    videoScreenObject.track = position == .front ? 0 : 1
+                    videoScreenObject.verticalAlignment = .top
+                    videoScreenObject.horizontalAlignment = .right
+                    videoScreenObject.layoutMargin = .init(top: 32, left: 0, bottom: 0, right: 32)
+                    videoScreenObject.invalidateLayout()
+                    try? await mixer.screen.addChild(videoScreenObject)
+                }
+                await MainActor.run { isDualCameraEnabled = true }
+            }
+        }
+    }
+
     func setFrameRate(_ fps: Float64) {
         Task {
             do {
-                // Sets to input frameRate.
                 try? await mixer.configuration(video: 0) { video in
                     do {
                         try video.setFrameRate(fps)
@@ -371,7 +517,6 @@ final class PublishViewModel: ObservableObject {
                         logger.error(error)
                     }
                 }
-                // Sets to output frameRate.
                 try await mixer.setFrameRate(fps)
                 if var videoSettings = await session?.stream.videoSettings {
                     videoSettings.expectedFrameRate = fps
@@ -385,15 +530,72 @@ final class PublishViewModel: ObservableObject {
 
     func orientationDidChange() {
         Task { @ScreenActor in
-            if let orientation = await DeviceUtil.videoOrientation(by: UIApplication.shared.statusBarOrientation) {
-                await mixer.setVideoOrientation(orientation)
-            }
-            if await UIDevice.current.orientation.isLandscape {
-                await mixer.screen.size = .init(width: 1280, height: 720)
-            } else {
-                await mixer.screen.size = .init(width: 720, height: 1280)
+            await mixer.setVideoOrientation(.portrait)
+            await mixer.screen.size = .init(width: 720, height: 1280)
+            let screenSize = await mixer.screen.size
+            Task { @MainActor in
+                await self.updateVideoEncoderSize(isLandscape: false)
+                if let session = self.session {
+                    let videoSettings = await session.stream.videoSettings
+                    self.videoDimensions = "Screen: \(Int(screenSize.width))x\(Int(screenSize.height)) | Video: \(videoSettings.videoSize.width)x\(videoSettings.videoSize.height)"
+                } else {
+                    self.videoDimensions = "Screen: \(Int(screenSize.width))x\(Int(screenSize.height))"
+                }
             }
         }
+    }
+
+    private func updateVideoEncoderSize(isLandscape: Bool) async {
+        guard let session else { return }
+        var videoSettings = await session.stream.videoSettings
+        let targetSize: CGSize = isLandscape
+            ? CGSize(width: 1280, height: 720)
+            : CGSize(width: 720, height: 1280)
+        if videoSettings.videoSize != targetSize {
+            videoSettings.videoSize = targetSize
+            try? await session.stream.setVideoSettings(videoSettings)
+        }
+    }
+
+    private func startBatteryTracking() {
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        streamStartBattery = UIDevice.current.batteryLevel
+        streamStartTime = Date()
+        batteryUsed = 0
+        streamDuration = 0
+
+        durationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateDuration()
+            }
+        }
+
+        batteryTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateBatteryStats()
+            }
+        }
+    }
+
+    private func stopBatteryTracking() {
+        durationTimer?.invalidate()
+        durationTimer = nil
+        batteryTimer?.invalidate()
+        batteryTimer = nil
+        updateBatteryStats()
+    }
+
+    private func updateDuration() {
+        guard let startTime = streamStartTime else { return }
+        streamDuration = Date().timeIntervalSince(startTime)
+    }
+
+    private func updateBatteryStats() {
+        let currentBattery = UIDevice.current.batteryLevel
+        if currentBattery >= 0 && streamStartBattery >= 0 {
+            batteryUsed = (streamStartBattery - currentBattery) * 100
+        }
+        thermalState = ProcessInfo.processInfo.thermalState
     }
 
     private func selectAudioSource(_ audioSource: AudioSource) {
@@ -408,16 +610,11 @@ final class PublishViewModel: ObservableObject {
 
 extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
     nonisolated func connect(to view: MTHKView) {
-        Task {
-            await mixer.addOutput(view)
-        }
-    }
-}
-
-extension PublishViewModel: PiPHKViewRepresentable.PreviewSource {
-    nonisolated func connect(to view: PiPHKView) {
-        Task {
-            await mixer.addOutput(view)
+        Task { @MainActor in
+            self.mtView = view
+            if isMixerReady {
+                await mixer.addOutput(view)
+            }
         }
     }
 }

@@ -142,7 +142,7 @@ extension AudioSourceService: AsyncRunner {
         switch mode {
         case .audioSource:
             break
-        case .audioSourceWithSterao:
+        case .audioSourceWithStereo:
             sources = makeAudioSources()
             tasks.append(Task {
                 for await reason in NotificationCenter.default.notifications(named: AVAudioSession.routeChangeNotification)

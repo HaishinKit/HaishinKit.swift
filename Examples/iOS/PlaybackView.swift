@@ -9,59 +9,93 @@ struct PlaybackView: View {
             VStack {
                 PiPHKViewRepresentable(previewSource: model)
             }
+
             VStack {
                 Spacer()
+
+                if model.hasError {
+                    VStack(spacing: 16) {
+                        Image(systemName: "tv.slash")
+                            .font(.system(size: 48))
+                            .foregroundColor(.white.opacity(0.7))
+
+                        Text("Can't connect to stream")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        Text(model.friendlyErrorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+
+                        Button(action: {
+                            model.dismissError()
+                        }) {
+                            Text("Try Again")
+                                .font(.subheadline.bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .cornerRadius(8)
+                        }
+                    }
+                    .padding(24)
+                    .background(Color.black.opacity(0.8))
+                    .cornerRadius(16)
+                }
+
+                Spacer()
+
                 HStack {
                     Spacer()
                     switch model.readyState {
                     case .connecting:
-                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.5)
+                            .frame(width: 64, height: 64)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(32)
+                            .padding(16)
                     case .open:
                         Button(action: {
                             Task {
                                 await model.stop()
                             }
-                        }, label: {
-                            Image(systemName: "stop.circle")
+                        }) {
+                            Image(systemName: "stop.fill")
                                 .foregroundColor(.white)
                                 .font(.system(size: 24))
-                        })
-                        .frame(width: 60, height: 60)
-                        .background(Color.blue)
-                        .cornerRadius(30.0)
-                        .padding(EdgeInsets(top: 0, leading: 0, bottom: 16.0, trailing: 16.0))
-                    case .closed:
-                        Button(action: {
-                            Task {
-                                await model.start()
+                        }
+                        .frame(width: 64, height: 64)
+                        .background(Color.red)
+                        .cornerRadius(32)
+                        .padding(16)
+                    case .closed, .closing:
+                        if !model.hasError {
+                            Button(action: {
+                                Task {
+                                    await model.start()
+                                }
+                            }) {
+                                Image(systemName: "play.fill")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 24))
                             }
-                        }, label: {
-                            Image(systemName: "play.circle")
-                                .foregroundColor(.white)
-                                .font(.system(size: 24))
-                        })
-                        .frame(width: 60, height: 60)
-                        .background(Color.blue)
-                        .cornerRadius(30.0)
-                        .padding(EdgeInsets(top: 0, leading: 0, bottom: 16.0, trailing: 16.0))
-                    case .closing:
-                        Spacer()
+                            .frame(width: 64, height: 64)
+                            .background(Color.blue)
+                            .cornerRadius(32)
+                            .padding(16)
+                        }
                     }
                 }
             }
-            if model.readyState == .connecting {
-                VStack {
-                    ProgressView()
-                }
-            }
-        }.task {
+        }
+        .background(Color.black)
+        .task {
             await model.makeSession()
-        }.alert(isPresented: $model.isShowError) {
-            Alert(
-                title: Text("Error"),
-                message: Text(model.error?.localizedDescription ?? ""),
-                dismissButton: .default(Text("OK"))
-            )
         }
     }
 }
