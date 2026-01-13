@@ -273,7 +273,12 @@ struct PublishView: View {
     var body: some View {
         ZStack {
             VStack {
-                MTHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                switch preference.viewType {
+                case .metal:
+                    MTHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                case .pip:
+                    PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                }
             }
 
             if model.isLoading {

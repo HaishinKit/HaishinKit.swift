@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import HaishinKit
 import MediaPlayer
 import Photos
@@ -76,8 +77,9 @@ final class PublishViewModel: ObservableObject {
     @ScreenActor private var videoScreenObject: VideoTrackScreenObject?
     @ScreenActor private var currentVideoEffect: VideoEffect?
     private var volumeObserver: NSKeyValueObservation?
-    private var mtView: MTHKView?
+    private var mtView: MediaMixerOutput?
     private var isMixerReady = false
+    private var pictureInPictureController: AVPictureInPictureController?
 
     init() {
         let defaults = UserDefaults.standard
@@ -308,6 +310,14 @@ final class PublishViewModel: ObservableObject {
             session = nil
 
             mixer = MediaMixer(captureSessionMode: .multi)
+
+            let viewType = preference.viewType
+            await mixer.configuration { session in
+                if session.isMultitaskingCameraAccessSupported && viewType == .pip {
+                    session.isMultitaskingCameraAccessEnabled = true
+                    logger.info("session.isMultitaskingCameraAccessEnabled")
+                }
+            }
 
             let audioCaptureMode = preference.audioCaptureMode
             await audioSourceService.setUp(preference.audioCaptureMode)
@@ -614,6 +624,20 @@ extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
             self.mtView = view
             if isMixerReady {
                 await mixer.addOutput(view)
+            }
+        }
+    }
+}
+
+extension PublishViewModel: PiPHKViewRepresentable.PreviewSource {
+    nonisolated func connect(to view: PiPHKView) {
+        Task { @MainActor in
+            self.mtView = view
+            if isMixerReady {
+                await mixer.addOutput(view)
+            }
+            if pictureInPictureController == nil {
+                pictureInPictureController = AVPictureInPictureController(contentSource: .init(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate()))
             }
         }
     }

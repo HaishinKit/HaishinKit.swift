@@ -28,7 +28,7 @@ extension CaptureSession {
         }
 
         func isMultitaskingCameraAccessEnabled(_ session: AVCaptureSession) -> Bool {
-            session.isMultitaskingCameraAccessEnabled
+            false
         }
     }
     #elseif os(iOS) || os(tvOS)
@@ -62,7 +62,11 @@ extension CaptureSession {
 
         @available(tvOS 17.0, *)
         func isMultitaskingCameraAccessEnabled(_ session: AVCaptureSession) -> Bool {
-            session.isMultitaskingCameraAccessEnabled
+            if #available(iOS 16.0, tvOS 17.0, *) {
+                session.isMultitaskingCameraAccessEnabled
+            } else {
+                false
+            }
         }
 
         @available(tvOS 17.0, *)
@@ -75,9 +79,6 @@ extension CaptureSession {
             }
             if session.canSetSessionPreset(sessionPreset) {
                 session.sessionPreset = sessionPreset
-            }
-            if session.isMultitaskingCameraAccessSupported {
-                session.isMultitaskingCameraAccessEnabled = true
             }
             return session
         }
