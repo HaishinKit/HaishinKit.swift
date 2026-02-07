@@ -1,13 +1,91 @@
 #if canImport(AppKit)
 import AppKit
+
+extension NSColor {
+    fileprivate convenience init?(hex: String) {
+        var hex = hex
+        if hex.hasPrefix("#") {
+            hex.removeFirst()
+        }
+
+        guard hex.count == 8,
+              let value = UInt32(hex, radix: 16) else {
+            return nil
+        }
+
+        let a = CGFloat((value & 0xFF00_0000) >> 24) / 255.0
+        let r = CGFloat((value & 0x00FF_0000) >> 16) / 255.0
+        let g = CGFloat((value & 0x0000_FF00) >> 8) / 255.0
+        let b = CGFloat(value & 0x0000_00FF) / 255.0
+
+        self.init(red: r, green: g, blue: b, alpha: a)
+    }
+
+    fileprivate func toHexARGB() -> String? {
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+
+        self.getRed(&r, green: &g, blue: &b, alpha: &a)
+
+        let ri = Int(round(r * 255))
+        let gi = Int(round(g * 255))
+        let bi = Int(round(b * 255))
+        let ai = Int(round(a * 255))
+
+        return String(format: "#%02X%02X%02X%02X", ai, ri, gi, bi)
+    }
+}
 #endif
 
 #if canImport(UIKit)
 import UIKit
+
+extension UIColor {
+    fileprivate convenience init?(hex: String) {
+        var hex = hex
+        if hex.hasPrefix("#") {
+            hex.removeFirst()
+        }
+
+        guard hex.count == 8,
+              let value = UInt32(hex, radix: 16) else {
+            return nil
+        }
+
+        let a = CGFloat((value & 0xFF00_0000) >> 24) / 255.0
+        let r = CGFloat((value & 0x00FF_0000) >> 16) / 255.0
+        let g = CGFloat((value & 0x0000_FF00) >> 8) / 255.0
+        let b = CGFloat(value & 0x0000_00FF) / 255.0
+
+        self.init(red: r, green: g, blue: b, alpha: a)
+    }
+
+    fileprivate func toHexRGBA() -> String? {
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+
+        guard self.getRed(&r, green: &g, blue: &b, alpha: &a) else {
+            return nil
+        }
+
+        let ri = Int(round(r * 255))
+        let gi = Int(round(g * 255))
+        let bi = Int(round(b * 255))
+        let ai = Int(round(a * 255))
+
+        return String(format: "#%02X%02X%02X%02X", ai, ri, gi, bi)
+    }
+}
 #endif
 
 /// An object that manages offscreen rendering a text source.
 public final class TextScreenObject: ScreenObject {
+    public static let type: String = "text"
+
     /// Specifies the text value.
     public var string: String = "" {
         didSet {
@@ -28,6 +106,33 @@ public final class TextScreenObject: ScreenObject {
             invalidateLayout()
         }
     }
+
+    override public var elements: [String: String] {
+        get {
+            var size: String?
+            if let font = attributes?[.foregroundColor] as? NSFont {
+                size = font.pointSize.description
+            }
+            var color: String?
+            if let foregroundColor = attributes?[.foregroundColor] as? NSColor {
+                color = foregroundColor.toHexARGB()
+            }
+            return [
+                "value": string,
+                "size": size ?? "32",
+                "color": color ?? "#FFFFFFFF"
+            ]
+        }
+        set {
+            string = newValue["value"] ?? ""
+            if let size = Double(newValue["size"] ?? "32.0") {
+                attributes?[.font] = NSFont.boldSystemFont(ofSize: size)
+            }
+            if let color = NSColor(hex: newValue["color"] ?? "#FFFFFFFF") {
+                attributes?[.foregroundColor] = color
+            }
+        }
+    }
     #else
     /// Specifies the attributes for strings.
     public var attributes: [NSAttributedString.Key: Any]? = [
@@ -36,6 +141,33 @@ public final class TextScreenObject: ScreenObject {
     ] {
         didSet {
             invalidateLayout()
+        }
+    }
+
+    override public var elements: [String: String] {
+        get {
+            var size: String?
+            if let font = attributes?[.foregroundColor] as? UIFont {
+                size = font.pointSize.description
+            }
+            var color: String?
+            if let foregroundColor = attributes?[.foregroundColor] as? UIColor {
+                color = foregroundColor.toHexRGBA()
+            }
+            return [
+                "value": string,
+                "size": size ?? "32",
+                "color": color ?? "#FFFFFFFF"
+            ]
+        }
+        set {
+            string = newValue["value"] ?? ""
+            if let size = Double(newValue["size"] ?? "32.0") {
+                attributes?[.font] = UIFont.boldSystemFont(ofSize: size)
+            }
+            if let color = UIColor(hex: newValue["color"] ?? "#FFFFFFFF") {
+                attributes?[.foregroundColor] = color
+            }
         }
     }
     #endif

@@ -3,7 +3,9 @@ import CoreImage
 
 /// An object that manages offscreen rendering a video track source.
 public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
+    public static let type: String = "video"
     static let capacity: Int = 3
+
     public var chromaKeyColor: CGColor?
 
     /// Specifies the track number how the displays the visual content.
@@ -43,8 +45,8 @@ public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
     private var frameTracker = FrameTracker()
 
     /// Create a screen object.
-    override public init() {
-        super.init()
+    override public init(id: String? = nil) {
+        super.init(id: id)
         do {
             queue = try TypedBlockQueue(capacity: Self.capacity, handlers: .outputPTSSortedSampleBuffers)
         } catch {

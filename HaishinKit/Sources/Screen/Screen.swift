@@ -126,6 +126,10 @@ public final class Screen: ScreenObjectContainerConvertible {
         return videoTrackScreenObject.unregisterVideoEffect(effect)
     }
 
+    public func findById(_ id: String) -> ScreenObject? {
+        return root.findById(id)
+    }
+
     func append(_ track: UInt8, buffer: CMSampleBuffer) {
         let screens: [VideoTrackScreenObject] = root.getScreenObjects()
         for screen in screens where screen.track == track {

@@ -13,27 +13,36 @@ import AppKit
 import UIKit
 #endif
 
-/// The ScreenObject class is the abstract class for all objects that are rendered on the screen.
 @ScreenActor
-open class ScreenObject {
+protocol ScreenObjectConvertible {
+    static var type: String { get }
+}
+
+extension ScreenObjectConvertible {
+    static var type: String { "object" }
+}
+
+// The ScreenObject class is the abstract class for all objects that are rendered on the screen.
+@ScreenActor
+open class ScreenObject: ScreenObjectConvertible {
     /// The horizontal alignment for the screen object.
-    public enum HorizontalAlignment {
+    public enum HorizontalAlignment: Int, Sendable {
         /// A guide that marks the left edge of the screen object.
-        case left
+        case left = 0
         /// A guide that marks the borizontal center of the screen object.
-        case center
+        case center = 1
         /// A guide that marks the right edge of the screen object.
-        case right
+        case right = 2
     }
 
     /// The vertical alignment for the screen object.
-    public enum VerticalAlignment {
+    public enum VerticalAlignment: Int, Sendable {
         /// A guide that marks the top edge of the screen object.
-        case top
+        case top = 0
         /// A guide that marks the vertical middle of the screen object.
-        case middle
+        case middle = 1
         /// A guide that marks the bottom edge of the screen object.
-        case bottom
+        case bottom = 2
     }
 
     enum BlendMode {
@@ -53,6 +62,12 @@ open class ScreenObject {
             shouldInvalidateLayout = true
         }
     }
+
+    /// Unique identifier of this screen object.
+    ///
+    /// The identifier must be unique within the owning scene or document
+    /// and is commonly used for lookup and state management.
+    public let id: String
 
     /// The bounds rectangle.
     public internal(set) var bounds: CGRect = .zero
@@ -77,6 +92,14 @@ open class ScreenObject {
     /// Specifies the alignment position along the horizontal axis.
     public var horizontalAlignment: HorizontalAlignment = .left
 
+    public var elements: [String: String] {
+        get {
+            return [:]
+        }
+        set(value) {
+        }
+    }
+
     var blendMode: BlendMode {
         .alpha
     }
@@ -84,7 +107,8 @@ open class ScreenObject {
     var shouldInvalidateLayout = true
 
     /// Creates a screen object.
-    public init() {
+    public init(id: String? = nil) {
+        self.id = id ?? UUID().uuidString
     }
 
     /// Invalidates the current layout and triggers a layout update.
@@ -94,6 +118,23 @@ open class ScreenObject {
 
     /// Makes ciImage for offscreen image.
     open func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
+        return nil
+    }
+
+    /// Finds a screen object with the specified identifier.
+    ///
+    /// This method compares the given identifier with the receiver’s identifier
+    /// and returns the receiver itself if they match.
+    /// Subclasses may override this method to provide recursive or
+    /// hierarchical lookup behavior.
+    ///
+    /// - Parameter id: The unique identifier of the screen object to find.
+    /// - Returns: The screen object whose identifier matches the given value,
+    ///   or `nil` if no match is found.
+    open func findById(_ id: String) -> ScreenObject? {
+        if self.id == id {
+            return self
+        }
         return nil
     }
 

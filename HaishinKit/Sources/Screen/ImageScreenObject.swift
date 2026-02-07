@@ -2,6 +2,8 @@ import CoreImage
 
 /// An object that manages offscreen rendering a cgImage source.
 public final class ImageScreenObject: ScreenObject {
+    public static let type = "image"
+
     /// Specifies the image.
     public var cgImage: CGImage? {
         didSet {

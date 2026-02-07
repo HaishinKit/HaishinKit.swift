@@ -5,6 +5,7 @@ import Foundation
 protocol ScreenObjectContainerConvertible: AnyObject {
     func addChild(_ child: ScreenObject?) throws
     func removeChild(_ child: ScreenObject?)
+    func findById(_ id: String) -> ScreenObject?
 }
 
 /// An object represents a collection of screen objects.
@@ -20,7 +21,7 @@ public class ScreenObjectContainer: ScreenObject, ScreenObjectContainerConvertib
         children.count
     }
 
-    private var children: [ScreenObject] = .init()
+    internal private(set) var children: [ScreenObject] = .init()
 
     /// Adds the specified screen object as a child of the current screen object container.
     public func addChild(_ child: ScreenObject?) throws {
@@ -46,6 +47,19 @@ public class ScreenObjectContainer: ScreenObject, ScreenObjectContainerConvertib
         child.parent = nil
         children.remove(at: indexOf)
         invalidateLayout()
+    }
+
+    override public func findById(_ id: String) -> ScreenObject? {
+        if self.id == id {
+            return self
+        }
+        for child in children {
+            let result = child.findById(id)
+            if result != nil {
+                return result
+            }
+        }
+        return nil
     }
 
     override func layout(_ renderer: some ScreenRenderer) {
