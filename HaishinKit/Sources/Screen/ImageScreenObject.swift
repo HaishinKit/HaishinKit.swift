@@ -54,25 +54,43 @@ private struct DataImageSource: ImageSource {
 public final class ImageScreenObject: ScreenObject {
     public static let type = "image"
 
+    private enum Keys {
+        static let source = "source"
+    }
+
     /// Specifies the image.
-    public var cgImage: CGImage? {
+    public var ciImage: CIImage? {
         didSet {
-            guard cgImage != oldValue else {
+            guard ciImage != oldValue else {
                 return
             }
             invalidateLayout()
         }
     }
 
+    override public var elements: [String: String] {
+        get {
+            return [
+                Keys.source: source ?? ""
+            ]
+        }
+        set {
+            do {
+                try setSource(newValue[Keys.source])
+            } catch {
+                print(error)
+                logger.warn(error)
+            }
+        }
+    }
+
+    private var source: String?
+
     override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
         let intersection = bounds.intersection(renderer.bounds)
 
         guard bounds != intersection else {
-            if let cgImage {
-                return CIImage(cgImage: cgImage)
-            } else {
-                return nil
-            }
+            return ciImage
         }
 
         // Handling when the drawing area is exceeded.
@@ -95,18 +113,23 @@ public final class ImageScreenObject: ScreenObject {
         case .bottom:
             y = abs(bounds.origin.y)
         }
-
-        if let cgImage = cgImage?.cropping(to: .init(origin: .init(x: x, y: y), size: intersection.size)) {
-            return CIImage(cgImage: cgImage)
+        if let ciImage = ciImage?.cropped(to: .init(origin: .init(x: x, y: y), size: intersection.size)) {
+            return ciImage
         } else {
             return nil
         }
     }
 
     override public func makeBounds(_ size: CGSize) -> CGRect {
-        guard let cgImage else {
+        guard let ciImage else {
             return super.makeBounds(size)
         }
-        return super.makeBounds(size == .zero ? cgImage.size : size)
+        return super.makeBounds(size == .zero ? ciImage.extent.size : size)
+    }
+
+    func setSource(_ source: String?) throws {
+        self.source = source
+        let imageSource = try ImageSourceFactory.parse(URL(string: source ?? ""))
+        ciImage = try imageSource.toImage()
     }
 }

@@ -9,8 +9,8 @@ import Testing
     @Test func lookUpVideoTrackScreenObject() {
         let container1 = ScreenObjectContainer()
 
-        let videoTrack1 = VideoTrackScreenObject()
-        let videoTrack2 = VideoTrackScreenObject()
+        let videoTrack1 = VideoScreenObject()
+        let videoTrack2 = VideoScreenObject()
 
         try? container1.addChild(videoTrack1)
         try? container1.addChild(videoTrack2)
@@ -19,7 +19,7 @@ import Testing
         #expect(videoTracks1.count == 2)
 
         let container2 = ScreenObjectContainer()
-        let videoTrack3 = VideoTrackScreenObject()
+        let videoTrack3 = VideoScreenObject()
         try? container2.addChild(videoTrack3)
         try? container1.addChild(container2)
 

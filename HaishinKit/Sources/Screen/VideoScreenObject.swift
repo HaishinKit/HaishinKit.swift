@@ -37,6 +37,17 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
         frameTracker.frameRate
     }
 
+    override public var elements: [String: String] {
+        get {
+            return [
+                Keys.track: track.description
+            ]
+        }
+        set {
+            track = UInt8(newValue[Keys.track]?.description ?? "0") ?? 0
+        }
+    }
+
     override var blendMode: ScreenObject.BlendMode {
         if 0.0 < cornerRadius || chromaKeyColor != nil {
             return .alpha
@@ -122,17 +133,6 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
         super.draw(renderer)
         if queue?.isEmpty == false {
             invalidateLayout()
-        }
-    }
-
-    override public var elements: [String: String] {
-        get {
-            return [
-                Keys.track: track.description
-            ]
-        }
-        set {
-            track = UInt8(newValue[Keys.track]?.description ?? "0") ?? 0
         }
     }
 

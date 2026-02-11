@@ -119,13 +119,13 @@ public final class TextScreenObject: ScreenObject {
             }
             return [
                 "value": string,
-                "size": size ?? "32",
+                "fontSize": size ?? "32",
                 "color": color ?? "#FFFFFFFF"
             ]
         }
         set {
             string = newValue["value"] ?? ""
-            if let size = Double(newValue["size"] ?? "32.0") {
+            if let size = Double(newValue["fontSize"] ?? "32.0") {
                 attributes?[.font] = NSFont.boldSystemFont(ofSize: size)
             }
             if let color = NSColor(hex: newValue["color"] ?? "#FFFFFFFF") {
@@ -156,13 +156,13 @@ public final class TextScreenObject: ScreenObject {
             }
             return [
                 "value": string,
-                "size": size ?? "32",
+                "fontSize": size ?? "32",
                 "color": color ?? "#FFFFFFFF"
             ]
         }
         set {
             string = newValue["value"] ?? ""
-            if let size = Double(newValue["size"] ?? "32.0") {
+            if let size = Double(newValue["fontSize"] ?? "32.0") {
                 attributes?[.font] = UIFont.boldSystemFont(ofSize: size)
             }
             if let color = UIColor(hex: newValue["color"] ?? "#FFFFFFFF") {
