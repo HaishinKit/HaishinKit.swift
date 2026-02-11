@@ -124,7 +124,7 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
             invalidateLayout()
         }
     }
-    
+
     override public var elements: [String: String] {
         get {
             return [

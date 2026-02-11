@@ -37,9 +37,12 @@ public struct ScreenObjectFactory {
             screenObject = ImageScreenObject(id: snapshot.id)
         case TextScreenObject.type:
             screenObject = TextScreenObject(id: snapshot.id)
+        case VideoScreenObject.type:
+            screenObject = VideoScreenObject(id: snapshot.id)
         default:
             break
         }
+        screenObject?.size = snapshot.size.cgSize
         screenObject?.elements = snapshot.elements
         screenObject?.horizontalAlignment = .init(rawValue: snapshot.horizontalAlignment) ?? .left
         screenObject?.verticalAlignment = .init(rawValue: snapshot.verticalAlignment) ?? .top

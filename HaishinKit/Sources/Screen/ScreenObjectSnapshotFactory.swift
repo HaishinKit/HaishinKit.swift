@@ -9,7 +9,7 @@ public struct ScreenObjectSnapshotFactory {
             return ScreenObjectSnapshot(
                 type: type(of: screenObject).type,
                 id: screenObjectContainer.id,
-                frame: .init(x: 0, y: 0, width: Int(screenObject.size.width), height: Int(screenObject.size.height)),
+                size: .init(width: Int(screenObject.size.width), height: Int(screenObject.size.height)),
                 isVisible: screenObjectContainer.isVisible,
                 layoutMargin: .init(
                     top: Int(screenObjectContainer.layoutMargin.top),
@@ -26,7 +26,7 @@ public struct ScreenObjectSnapshotFactory {
             return ScreenObjectSnapshot(
                 type: type(of: screenObject).type,
                 id: screenObject.id,
-                frame: .init(x: 0, y: 0, width: Int(screenObject.size.width), height: Int(screenObject.size.height)),
+                size: .init(width: Int(screenObject.size.width), height: Int(screenObject.size.height)),
                 isVisible: screenObject.isVisible,
                 layoutMargin: .init(
                     top: Int(screenObject.layoutMargin.top),

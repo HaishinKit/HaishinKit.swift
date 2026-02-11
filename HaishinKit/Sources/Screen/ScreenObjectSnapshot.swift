@@ -1,3 +1,5 @@
+import Foundation
+
 /// A snapshot representation of a screen object.
 ///
 /// `ScreenObjectSnapshot` is an immutable, serializable value type that
@@ -7,15 +9,15 @@
 public struct ScreenObjectSnapshot: Codable, Sendable {
     /// A rectangular region that defines the position and size
     /// of a screen object in screen coordinates.
-    public struct Rect: Codable, Sendable {
-        /// The horizontal position of the rectangle's origin.
-        public let x: Int
-        /// The vertical position of the rectangle's origin.
-        public let y: Int
+    public struct Size: Codable, Sendable {
         /// The width of the rectangle.
         public let width: Int
         /// The height of the rectangle.
         public let height: Int
+
+        var cgSize: CGSize {
+            return CGSize(width: width, height: height)
+        }
     }
 
     /// A value type that represents inset distances from each edge.
@@ -51,7 +53,7 @@ public struct ScreenObjectSnapshot: Codable, Sendable {
     public let id: String
 
     /// The frame of the screen object expressed in screen coordinates.
-    public let frame: Rect
+    public let size: Size
 
     /// A Boolean value indicating whether the screen object is visible.
     public let isVisible: Bool
