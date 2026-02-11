@@ -6,7 +6,7 @@ import HaishinKit
 /// an `RTCConfiguration` and applied when creating the underlying
 /// `RTCPeerConnection`.
 ///
-public struct HTTPSessionConfiguration: SessionConfiguration, RTCConfigurationConvertible {
+public struct HTTPSessionConfiguration: StreamSessionConfiguration, RTCConfigurationConvertible {
     public var iceServers: [String] = []
     public var bindAddress: String?
     public var certificateType: RTCCertificateType?

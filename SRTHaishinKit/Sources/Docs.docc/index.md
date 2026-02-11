@@ -99,7 +99,7 @@ try await connection.connect("srt://host:port?key=value")
 ```swift
 import SRTHaishinKit
 
-await SessionBuilderFactory.shared.register(SRTSessionFactory())
+await StreamSessionBuilderFactory.shared.register(SRTSessionFactory())
 ```
 
 ## 🔧 Test

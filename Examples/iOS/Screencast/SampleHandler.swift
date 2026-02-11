@@ -11,15 +11,15 @@ nonisolated let logger = LBLogger.with("com.haishinkit.Screencast")
 
 final class SampleHandler: RPBroadcastSampleHandler, @unchecked Sendable {
     private var slider: UISlider?
-    private var session: Session?
+    private var session: StreamSession?
     private var mixer = MediaMixer(captureSessionMode: .manual, multiTrackAudioMixingEnabled: true)
     private var needVideoConfiguration = true
 
     override init() {
         Task {
-            await SessionBuilderFactory.shared.register(RTMPSessionFactory())
-            await SessionBuilderFactory.shared.register(SRTSessionFactory())
-            await SessionBuilderFactory.shared.register(HTTPSessionFactory())
+            await StreamSessionBuilderFactory.shared.register(RTMPSessionFactory())
+            await StreamSessionBuilderFactory.shared.register(SRTSessionFactory())
+            await StreamSessionBuilderFactory.shared.register(HTTPSessionFactory())
 
             await SRTLogger.shared.setLevel(.debug)
             await RTCLogger.shared.setLevel(.info)
@@ -34,7 +34,7 @@ final class SampleHandler: RPBroadcastSampleHandler, @unchecked Sendable {
         // mixer.audioMixerSettings.tracks[1] = .default
         Task {
             do {
-                session = try await SessionBuilderFactory.shared.make(Preference.default.makeURL()).build()
+                session = try await StreamSessionBuilderFactory.shared.make(Preference.default.makeURL()).build()
                 // ReplayKit is sensitive to memory, so we limit the queue to a maximum of five items.
                 var videoSetting = await mixer.videoMixerSettings
                 videoSetting.mode = .passthrough

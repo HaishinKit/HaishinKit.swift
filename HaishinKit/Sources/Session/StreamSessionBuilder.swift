@@ -1,31 +1,31 @@
 import Foundation
 
 /// An actor that provides builder for Session object.
-public actor SessionBuilder {
-    private let factory: SessionBuilderFactory
+public actor StreamSessionBuilder {
+    private let factory: StreamSessionBuilderFactory
     private let uri: URL
-    private var mode: SessionMode = .publish
-    private var configuration: (any SessionConfiguration)?
+    private var mode: StreamSessionMode = .publish
+    private var configuration: (any StreamSessionConfiguration)?
 
-    init(factory: SessionBuilderFactory, uri: URL) {
+    init(factory: StreamSessionBuilderFactory, uri: URL) {
         self.factory = factory
         self.uri = uri
     }
 
     /// Sets a method.
-    public func setMode(_ mode: SessionMode) -> Self {
+    public func setMode(_ mode: StreamSessionMode) -> Self {
         self.mode = mode
         return self
     }
 
     /// Sets a config.
-    public func setConfiguration(_ configuration: (any SessionConfiguration)?) -> Self {
+    public func setConfiguration(_ configuration: (any StreamSessionConfiguration)?) -> Self {
         self.configuration = configuration
         return self
     }
 
     /// Creates a Session instance with the specified fields.
-    public func build() async throws -> (any Session)? {
+    public func build() async throws -> (any StreamSession)? {
         return try await factory.build(uri, method: mode, configuration: configuration)
     }
 }

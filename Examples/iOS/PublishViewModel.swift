@@ -30,7 +30,7 @@ final class PublishViewModel: ObservableObject {
     @Published var showPreLiveDialog = false
     @Published private(set) var isAudioMuted = false
     @Published private(set) var isTorchEnabled = false
-    @Published private(set) var readyState: SessionReadyState = .closed
+    @Published private(set) var readyState: StreamSessionReadyState = .closed
     @Published var audioSource: AudioSource = .empty {
         didSet {
             guard audioSource != oldValue else {
@@ -70,7 +70,7 @@ final class PublishViewModel: ObservableObject {
     }
     private(set) var mixer = MediaMixer()
     private var tasks: [Task<Void, Swift.Error>] = []
-    private var session: (any Session)?
+    private var session: (any StreamSession)?
     private var recorder: StreamRecorder?
     private var currentPosition: AVCaptureDevice.Position = .back
     private var audioSourceService = AudioSourceService()
@@ -235,7 +235,7 @@ final class PublishViewModel: ObservableObject {
 
     func makeSession(_ preference: PreferenceViewModel) async {
         do {
-            session = try await SessionBuilderFactory.shared.make(preference.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
                 .build()
             guard let session else {

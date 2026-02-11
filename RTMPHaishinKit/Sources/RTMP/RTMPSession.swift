@@ -1,7 +1,7 @@
 import Foundation
 import HaishinKit
 
-actor RTMPSession: Session {
+actor RTMPSession: StreamSession {
     var connected: Bool {
         get async {
             await connection.connected
@@ -9,16 +9,16 @@ actor RTMPSession: Session {
     }
 
     @AsyncStreamed(.closed)
-    private(set) var readyState: AsyncStream<SessionReadyState>
+    private(set) var readyState: AsyncStream<StreamSessionReadyState>
 
     var stream: any StreamConvertible {
         _stream
     }
 
     private let uri: RTMPURL
-    private let mode: SessionMode
+    private let mode: StreamSessionMode
     private var retryCount: Int = 0
-    private var maxRetryCount = kSession_maxRetryCount
+    private var maxRetryCount = kStreamSession_maxRetryCount
     private lazy var connection: RTMPConnection = {
         switch mode {
         case .publish:
@@ -41,7 +41,7 @@ actor RTMPSession: Session {
         }
     }
 
-    init(uri: URL, mode: SessionMode, configuration: (any SessionConfiguration)?) {
+    init(uri: URL, mode: StreamSessionMode, configuration: (any StreamSessionConfiguration)?) {
         self.uri = RTMPURL(url: uri)
         self.mode = mode
     }

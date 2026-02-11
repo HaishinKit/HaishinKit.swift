@@ -8,12 +8,12 @@ import Foundation
 /// import RTMPHaishinKit
 /// import SRTHaishinKit
 ///
-/// await SessionBuilderFactory.shared.register(RTMPSessionFactory())
-/// await SessionBuilderFactory.shared.register(SRTSessionFactory())
+/// await StreamSessionBuilderFactory.shared.register(RTMPSessionFactory())
+/// await StreamSessionBuilderFactory.shared.register(SRTSessionFactory())
 /// ```
-public actor SessionBuilderFactory {
+public actor StreamSessionBuilderFactory {
     /// The shared instance.
-    public static let shared = SessionBuilderFactory()
+    public static let shared = StreamSessionBuilderFactory()
 
     /// The error domain codes.
     public enum Error: Swift.Error {
@@ -23,28 +23,28 @@ public actor SessionBuilderFactory {
         case notFound
     }
 
-    private var factories: [any SessionFactory] = []
+    private var factories: [any StreamSessionFactory] = []
 
     private init() {
     }
 
     /// Makes a new session builder.
-    public func make(_ uri: URL?) throws -> SessionBuilder {
+    public func make(_ uri: URL?) throws -> StreamSessionBuilder {
         guard let uri else {
             throw Error.illegalArgument
         }
-        return SessionBuilder(factory: self, uri: uri)
+        return StreamSessionBuilder(factory: self, uri: uri)
     }
 
     /// Registers a factory.
-    public func register(_ factory: some SessionFactory) {
+    public func register(_ factory: some StreamSessionFactory) {
         guard !factories.contains(where: { $0.supportedProtocols == factory.supportedProtocols }) else {
             return
         }
         factories.append(factory)
     }
 
-    func build(_ uri: URL?, method: SessionMode, configuration: (any SessionConfiguration)?) throws -> (any Session) {
+    func build(_ uri: URL?, method: StreamSessionMode, configuration: (any StreamSessionConfiguration)?) throws -> (any StreamSession) {
         guard let uri else {
             throw Error.illegalArgument
         }

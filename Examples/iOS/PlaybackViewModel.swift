@@ -6,7 +6,7 @@ import SwiftUI
 
 @MainActor
 final class PlaybackViewModel: ObservableObject {
-    @Published private(set) var readyState: SessionReadyState = .closed
+    @Published private(set) var readyState: StreamSessionReadyState = .closed
     @Published private(set) var error: Error?
     @Published var hasError = false
 
@@ -36,7 +36,7 @@ final class PlaybackViewModel: ObservableObject {
     }
 
     private var view: PiPHKView?
-    private var session: (any Session)?
+    private var session: (any StreamSession)?
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
 
@@ -66,7 +66,7 @@ final class PlaybackViewModel: ObservableObject {
 
     func makeSession() async {
         do {
-            session = try await SessionBuilderFactory.shared.make(Preference.default.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(Preference.default.makeURL())
                 .setMode(.playback)
                 .build()
             await session?.setMaxRetryCount(0)

@@ -64,7 +64,7 @@ enum VideoEffectItem: String, CaseIterable, Identifiable, Sendable {
 }
 
 struct StreamButton: View {
-    let readyState: SessionReadyState
+    let readyState: StreamSessionReadyState
     let onStart: () -> Void
     let onStop: () -> Void
 

@@ -4,12 +4,12 @@ import SwiftUI
 
 @MainActor
 final class PlaybackViewModel: ObservableObject {
-    @Published private(set) var readyState: SessionReadyState = .closed
+    @Published private(set) var readyState: StreamSessionReadyState = .closed
     @Published private(set) var error: Error?
     @Published var isShowError = false
 
     private var view: PiPHKView?
-    private var session: (any Session)?
+    private var session: (any StreamSession)?
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
 
@@ -43,7 +43,7 @@ final class PlaybackViewModel: ObservableObject {
 
     private func makeSession(_ preference: PreferenceViewModel) async {
         do {
-            session = try await SessionBuilderFactory.shared.make(preference.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.playback)
                 .build()
             guard let session else {

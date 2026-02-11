@@ -10,10 +10,10 @@ final class PublishViewModel: ObservableObject {
     @Published private(set) var error: Error?
     @Published var isShowError = false
     @Published private(set) var isTorchEnabled = false
-    @Published private(set) var readyState: SessionReadyState = .closed
+    @Published private(set) var readyState: StreamSessionReadyState = .closed
     private(set) var mixer = MediaMixer(captureSessionMode: .multi)
     private var tasks: [Task<Void, Swift.Error>] = []
-    private var session: (any Session)?
+    private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
     @ScreenActor private var currentVideoEffect: VideoEffect?
 
@@ -49,7 +49,7 @@ final class PublishViewModel: ObservableObject {
     func makeSession(_ preference: PreferenceViewModel) async {
         // Make session.
         do {
-            session = try await SessionBuilderFactory.shared.make(preference.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
                 .build()
             guard let session else {

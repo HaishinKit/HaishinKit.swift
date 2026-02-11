@@ -28,9 +28,9 @@ struct HaishinApp: App {
     }
 
     private func initialize() async {
-        await SessionBuilderFactory.shared.register(RTMPSessionFactory())
-        await SessionBuilderFactory.shared.register(SRTSessionFactory())
-        await SessionBuilderFactory.shared.register(HTTPSessionFactory())
+        await StreamSessionBuilderFactory.shared.register(RTMPSessionFactory())
+        await StreamSessionBuilderFactory.shared.register(SRTSessionFactory())
+        await StreamSessionBuilderFactory.shared.register(HTTPSessionFactory())
 
         await RTCLogger.shared.setLevel(.debug)
         await SRTLogger.shared.setLevel(.debug)

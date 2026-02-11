@@ -1,9 +1,9 @@
 import Foundation
 
-package let kSession_maxRetryCount: Int = 3
+package let kStreamSession_maxRetryCount: Int = 3
 
 /// Represents the type of session to establish.
-public enum SessionMode: Sendable {
+public enum StreamSessionMode: Sendable {
     /// A publishing session, used to stream media from the local device to a server or peers.
     case publish
     /// A playback session, used to receive and play media streamed from a server or peers.
@@ -11,7 +11,7 @@ public enum SessionMode: Sendable {
 }
 
 /// Represents the current connection state of a session.
-public enum SessionReadyState: Int, Sendable {
+public enum StreamSessionReadyState: Int, Sendable {
     /// The session is currently attempting to establish a connection.
     case connecting
     /// The session has been successfully established and is ready for communication.
@@ -27,15 +27,15 @@ public enum SessionReadyState: Int, Sendable {
 /// It is designed so that various streaming services can be used through a common API.
 /// While coding with the conventional Connection offered flexibility,
 /// it also required a certain level of maturity in properly handling network communication.
-public protocol Session: NetworkConnection {
+public protocol StreamSession: NetworkConnection {
     /// The current ready state.
-    var readyState: AsyncStream<SessionReadyState> { get }
+    var readyState: AsyncStream<StreamSessionReadyState> { get }
 
     /// The stream instance.
     var stream: any StreamConvertible { get async }
 
     /// Creates a new session with uri.
-    init(uri: URL, mode: SessionMode, configuration: (any SessionConfiguration)?)
+    init(uri: URL, mode: StreamSessionMode, configuration: (any StreamSessionConfiguration)?)
 
     /// Sets a max retry count.
     func setMaxRetryCount(_ maxRetryCount: Int)

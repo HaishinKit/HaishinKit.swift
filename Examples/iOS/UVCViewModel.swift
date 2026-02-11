@@ -15,7 +15,7 @@ final class UVCViewModel: ObservableObject {
         }
     }
     @Published var isShowError = false
-    @Published private(set) var readyState: SessionReadyState = .closed
+    @Published private(set) var readyState: StreamSessionReadyState = .closed
     @Published private(set) var isRecording = false
     @Published var isHDREnabled = false {
         didSet {
@@ -36,7 +36,7 @@ final class UVCViewModel: ObservableObject {
     // let mixer = MediaMixer(captureSesionMode: .multi)
     private(set) var mixer = MediaMixer(captureSessionMode: .single)
     private var tasks: [Task<Void, Swift.Error>] = []
-    private var session: (any Session)?
+    private var session: (any StreamSession)?
     private var recorder: StreamRecorder?
 
     init() {
@@ -136,7 +136,7 @@ final class UVCViewModel: ObservableObject {
     func makeSession(_ preference: PreferenceViewModel) async {
         // Make session.
         do {
-            session = try await SessionBuilderFactory.shared.make(preference.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
                 .build()
             guard let session else {

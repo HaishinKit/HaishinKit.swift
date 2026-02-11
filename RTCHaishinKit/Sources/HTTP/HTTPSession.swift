@@ -1,7 +1,7 @@
 import Foundation
 import HaishinKit
 
-actor HTTPSession: Session {
+actor HTTPSession: StreamSession {
     var connected: Bool {
         get async {
             peerConnection?.connectionState == .connected
@@ -9,7 +9,7 @@ actor HTTPSession: Session {
     }
 
     @AsyncStreamed(.closed)
-    private(set) var readyState: AsyncStream<SessionReadyState>
+    private(set) var readyState: AsyncStream<StreamSessionReadyState>
 
     var stream: any StreamConvertible {
         _stream
@@ -19,11 +19,11 @@ actor HTTPSession: Session {
     private var location: URL?
     private var maxRetryCount: Int = 0
     private var _stream = RTCStream()
-    private var mode: SessionMode
+    private var mode: StreamSessionMode
     private var configuration: HTTPSessionConfiguration?
     private var peerConnection: RTCPeerConnection?
 
-    init(uri: URL, mode: SessionMode, configuration: (any SessionConfiguration)?) {
+    init(uri: URL, mode: StreamSessionMode, configuration: (any StreamSessionConfiguration)?) {
         logger.level = .debug
         self.uri = uri
         self.mode = mode

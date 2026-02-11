@@ -50,7 +50,7 @@ Task {
 }
 ```
 
-### Session API
+### StreamSession API
 Provides a unified API for implementing clients with RTMP and SRT. Retry handling is also performed internally by the API.
 
 #### Preparation
@@ -60,22 +60,22 @@ import RTMPHaishinKit
 import SRTHaishinKit
 
 Task {
-  await SessionBuilderFactory.shared.register(RTMPSessionFactory())
-  await SessionBuilderFactory.shared.register(SRTSessionFactory())
+  await StreamSessionBuilderFactory.shared.register(RTMPSessionFactory())
+  await StreamSessionBuilderFactory.shared.register(SRTSessionFactory())
 }
 ```
 
-#### Make Session
+#### Make StreamSession
 **RTMP**
 Please provide the RTMP connection URL combined with the streamName.
 ```swift
-let session = try await SessionBuilderFactory.shared.make(URL(string: "rtmp://hostname/appName/stramName"))
+let session = try await StreamSessionBuilderFactory.shared.make(URL(string: "rtmp://hostname/appName/stramName"))
   .setMode(.publish)
   .build()
 ```
 **SRT**
 ```swift
-let session = try await SessionBuilderFactory.shared.make(URL(string: "srt://hostname:448?stream=xxxxx"))
+let session = try await StreamSessionBuilderFactory.shared.make(URL(string: "srt://hostname:448?stream=xxxxx"))
   .setMode(.playback)
   .build()
 ```
