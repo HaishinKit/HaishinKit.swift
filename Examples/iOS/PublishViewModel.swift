@@ -74,7 +74,7 @@ final class PublishViewModel: ObservableObject {
     private var recorder: StreamRecorder?
     private var currentPosition: AVCaptureDevice.Position = .back
     private var audioSourceService = AudioSourceService()
-    @ScreenActor private var videoScreenObject: VideoTrackScreenObject?
+    @ScreenActor private var videoScreenObject: VideoScreenObject?
     @ScreenActor private var currentVideoEffect: VideoEffect?
     private var volumeObserver: NSKeyValueObservation?
     private var mtView: MediaMixerOutput?
@@ -94,7 +94,7 @@ final class PublishViewModel: ObservableObject {
         }
 
         Task { @ScreenActor in
-            videoScreenObject = VideoTrackScreenObject()
+            videoScreenObject = VideoScreenObject()
         }
     }
 

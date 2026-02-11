@@ -2,7 +2,11 @@ import AVFoundation
 import CoreImage
 
 /// An object that manages offscreen rendering a video track source.
-public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
+public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
+    private enum Keys {
+        static let track = "track"
+    }
+
     public static let type: String = "video"
     static let capacity: Int = 3
 
@@ -118,6 +122,17 @@ public final class VideoTrackScreenObject: ScreenObject, ChromaKeyProcessable {
         super.draw(renderer)
         if queue?.isEmpty == false {
             invalidateLayout()
+        }
+    }
+    
+    override public var elements: [String: String] {
+        get {
+            return [
+                Keys.track: track.description
+            ]
+        }
+        set {
+            track = UInt8(newValue[Keys.track]?.description ?? "0") ?? 0
         }
     }
 

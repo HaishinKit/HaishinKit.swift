@@ -89,7 +89,7 @@ public final class Screen: ScreenObjectContainerConvertible {
         }
     }
     private(set) var targetTimestamp: TimeInterval = 0.0
-    private(set) var videoTrackScreenObject = VideoTrackScreenObject()
+    private(set) var videoTrackScreenObject = VideoScreenObject()
     private var videoCaptureLatency: TimeInterval = 0.0
     private var root: ScreenObjectContainer = .init()
     private var outputFormat: CMFormatDescription?
@@ -131,7 +131,7 @@ public final class Screen: ScreenObjectContainerConvertible {
     }
 
     func append(_ track: UInt8, buffer: CMSampleBuffer) {
-        let screens: [VideoTrackScreenObject] = root.getScreenObjects()
+        let screens: [VideoScreenObject] = root.getScreenObjects()
         for screen in screens where screen.track == track {
             screen.enqueue(buffer)
         }
@@ -213,7 +213,7 @@ public final class Screen: ScreenObjectContainerConvertible {
     }
 
     func reset() {
-        let screens: [VideoTrackScreenObject] = root.getScreenObjects()
+        let screens: [VideoScreenObject] = root.getScreenObjects()
         for screen in screens {
             screen.reset()
         }
