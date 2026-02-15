@@ -98,13 +98,25 @@ final class PublishViewModel: ObservableObject {
             await makeSession(preference)
         }
         Task { @ScreenActor in
+            await mixer.screen.size = .init(width: 1280, height: 720)
+            await mixer.screen.backgroundColor = NSColor.black.cgColor
+
             let assetScreenObject = AssetScreenObject()
             assetScreenObject.size = .init(width: 180, height: 180)
             assetScreenObject.layoutMargin = .init(top: 16, left: 16, bottom: 0, right: 0)
             try? assetScreenObject.startReading(AVAsset(url: URL(fileURLWithPath: Bundle.main.path(forResource: "SampleVideo_360x240_5mb", ofType: "mp4") ?? "")))
             try? await mixer.screen.addChild(assetScreenObject)
-            await mixer.screen.size = .init(width: 1280, height: 720)
-            await mixer.screen.backgroundColor = NSColor.black.cgColor
+
+            let image = ImageScreenObject()
+            image.size = .init(width: 120, height: 120)
+            image.horizontalAlignment = .right
+            image.verticalAlignment = .bottom
+            image.layoutMargin = .init(top: 0, left: 0, bottom: 16, right: 16)
+            let nsImage = await NSApplication.shared.applicationIconImage
+            if let cgImage = nsImage?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                image.ciImage = CIImage(cgImage: cgImage)
+            }
+            try? await mixer.screen.addChild(image)
         }
     }
 

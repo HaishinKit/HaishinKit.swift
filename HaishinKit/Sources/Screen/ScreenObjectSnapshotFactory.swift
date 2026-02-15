@@ -41,4 +41,8 @@ public struct ScreenObjectSnapshotFactory {
             )
         }
     }
+
+    public func make(_ screen: Screen) -> ScreenObjectSnapshot {
+        return make(screen.root)
+    }
 }

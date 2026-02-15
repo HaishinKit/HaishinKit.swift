@@ -127,7 +127,7 @@ public final class ImageScreenObject: ScreenObject {
         return super.makeBounds(size == .zero ? ciImage.extent.size : size)
     }
 
-    func setSource(_ source: String?) throws {
+    public func setSource(_ source: String?) throws {
         self.source = source
         let imageSource = try ImageSourceFactory.parse(URL(string: source ?? ""))
         ciImage = try imageSource.toImage()

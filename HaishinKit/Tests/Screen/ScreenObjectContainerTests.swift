@@ -15,7 +15,7 @@ import Testing
         try? container1.addChild(videoTrack1)
         try? container1.addChild(videoTrack2)
 
-        let videoTracks1 = container1.getScreenObjects() as [VideoTrackScreenObject]
+        let videoTracks1 = container1.getScreenObjects() as [VideoScreenObject]
         #expect(videoTracks1.count == 2)
 
         let container2 = ScreenObjectContainer()
@@ -23,7 +23,7 @@ import Testing
         try? container2.addChild(videoTrack3)
         try? container1.addChild(container2)
 
-        let videoTracks2 = container1.getScreenObjects() as [VideoTrackScreenObject]
+        let videoTracks2 = container1.getScreenObjects() as [VideoScreenObject]
         #expect(videoTracks2.count == 3)
     }
 }

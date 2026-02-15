@@ -91,7 +91,7 @@ public final class Screen: ScreenObjectContainerConvertible {
     private(set) var targetTimestamp: TimeInterval = 0.0
     private(set) var videoTrackScreenObject = VideoScreenObject()
     private var videoCaptureLatency: TimeInterval = 0.0
-    private var root: ScreenObjectContainer = .init()
+    private(set) var root: ScreenObjectContainer = .init()
     private var outputFormat: CMFormatDescription?
     private var pixelBufferPool: CVPixelBufferPool? {
         didSet {
