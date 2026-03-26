@@ -101,6 +101,16 @@ final actor RTMPSocket {
         }
     }
 
+    func send(_ chunks: [Data]) {
+        guard connected else {
+            return
+        }
+        for data in chunks {
+            queueBytesOut += data.count
+            outputs?.yield(data)
+        }
+    }
+
     func recv() -> AsyncStream<Data> {
         AsyncStream<Data> { continuation in
             Task {
