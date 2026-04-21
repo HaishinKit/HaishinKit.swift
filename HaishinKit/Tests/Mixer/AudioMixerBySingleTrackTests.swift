@@ -109,4 +109,29 @@ import Testing
         let inputFormats = mixer.inputFormats
         #expect(inputFormats[0]?.sampleRate == 48000)
     }
+
+    // Regression test for a bug where AudioMixerBySingleTrack.settings.didSet
+    // fails to rebuild outputFormat when sampleRate/channels change. If even a
+    // single input buffer arrives before the app configures its mixer settings,
+    // outputFormat is locked to the raw input format for the life of the mixer.
+    @Test func settingsChangeAfterFirstBuffer_rebuildsOutputFormat() {
+        let mixer = AudioMixerBySingleTrack()
+        // Starts with AudioMixerSettings.default: sampleRate=0, channels=0 (inherit input)
+
+        // Simulates an external mic delivering buffers before the app has a
+        // chance to configure the mixer.
+        mixer.append(0, buffer: CMAudioSampleBufferFactory.makeSinWave(48000, numSamples: 1024, channels: 2)!)
+        #expect(mixer.outputFormat?.sampleRate == 48000)
+        #expect(mixer.outputFormat?.channelCount == 2)
+
+        // App now applies its intended mixer output format.
+        mixer.settings = .init(sampleRate: 44100, channels: 1)
+
+        // Mic continues delivering at its native format (same input format as before).
+        mixer.append(0, buffer: CMAudioSampleBufferFactory.makeSinWave(48000, numSamples: 1024, channels: 2)!)
+
+        // Expected: outputFormat follows the newly-assigned settings.
+        #expect(mixer.outputFormat?.sampleRate == 44100)
+        #expect(mixer.outputFormat?.channelCount == 1)
+    }
 }

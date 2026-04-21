@@ -5,6 +5,9 @@ final class AudioMixerBySingleTrack: AudioMixer {
     weak var delegate: (any AudioMixerDelegate)?
     var settings = AudioMixerSettings.default {
         didSet {
+            if settings.invalidateOutputFormat(oldValue), let inSourceFormat {
+                outputFormat = settings.makeOutputFormat(inSourceFormat)
+            }
             if let trackSettings = settings.tracks[settings.mainTrack] {
                 track?.settings = trackSettings
             }
