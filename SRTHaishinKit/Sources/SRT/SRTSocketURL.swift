@@ -27,20 +27,20 @@ struct SRTSocketURL {
     let mode: SRTMode
     let options: [SRTSocketOption]
 
-    var remote: sockaddr_in? {
+    var remote: AddrInfo? {
         guard let host = url.host else {
             return nil
         }
-        return .init(host, port: url.port ?? Self.defaultPort)
+        return AddrInfo(host: host, port: url.port ?? Self.defaultPort)
     }
 
-    var local: sockaddr_in? {
+    var local: AddrInfo? {
         let queryItems = Self.getQueryItems(url)
         let adapter = queryItems["adapter"] ?? "0.0.0.0"
         if let port = queryItems["port"] {
-            return .init(adapter, port: Int(port) ?? url.port ?? Self.defaultPort)
+            return AddrInfo(host: adapter, port: Int(port) ?? url.port ?? Self.defaultPort)
         }
-        return .init(adapter, port: url.port ?? Self.defaultPort)
+        return AddrInfo(host: adapter, port: url.port ?? Self.defaultPort)
     }
 
     init?(_ url: URL?) {

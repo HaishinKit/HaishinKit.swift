@@ -8,6 +8,7 @@ final actor SRTSocket {
 
     enum Error: Swift.Error {
         case notConnected
+        case invalidArgument(_ message: String)
         case rejected(_ reason: SRTRejectReason)
         case illegalState(_ message: String)
     }
@@ -128,28 +129,42 @@ final actor SRTSocket {
         let status: Int32 = try {
             switch url.mode {
             case .caller:
-                guard var remote = url.remote else {
-                    return SRT_ERROR
+                guard let remote = url.remote else {
+                    throw Error.invalidArgument("missing remote url")
                 }
-                var remoteaddr = remote.makeSockaddr()
-                return srt_connect(socket, &remoteaddr, Int32(remote.size))
+                return try remote.resolve(AI_ADDRCONFIG) { name, length in
+                    srt_connect(socket, name, length)
+                }
             case .listener:
-                guard var local = url.local else {
-                    return SRT_ERROR
+                guard let local = url.local else {
+                    throw Error.invalidArgument("missing local url")
                 }
-                var localaddr = local.makeSockaddr()
-                let status = srt_bind(socket, &localaddr, Int32(local.size))
-                guard status != SRT_ERROR else {
-                    throw makeSocketError()
+                let _: Int32 = try local.resolve(AI_PASSIVE) { name, length in
+                    let status = srt_bind(socket, name, length)
+                    if status == SRT_ERROR {
+                        return nil
+                    } else {
+                        return status
+                    }
                 }
                 return srt_listen(socket, 1)
             case .rendezvous:
-                guard var remote = url.remote, var local = url.local else {
-                    return SRT_ERROR
+                guard let remote = url.remote else {
+                    throw Error.invalidArgument("missing remote url")
                 }
-                var remoteaddr = remote.makeSockaddr()
-                var localaddr = local.makeSockaddr()
-                return srt_rendezvous(socket, &remoteaddr, Int32(remote.size), &localaddr, Int32(local.size))
+                guard let local = url.local else {
+                    throw Error.invalidArgument("missing local url")
+                }
+                return try remote.resolve(AI_PASSIVE | AI_ADDRCONFIG) { remotename, remotelen in
+                    return try local.resolve(AI_PASSIVE | AI_ADDRCONFIG) { localname, locallen in
+                        let status = srt_rendezvous(socket, localname, locallen, remotename, remotelen)
+                        if status == SRT_ERROR {
+                            return nil
+                        } else {
+                            return status
+                        }
+                    }
+                }
             }
         }()
         guard status != SRT_ERROR else {
