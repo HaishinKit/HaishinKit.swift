@@ -1,6 +1,20 @@
 import Foundation
 import VideoToolbox
 
+/// Per-frame decode failures were previously swallowed (`guard let imageBuffer
+/// else { return }` ignored the status), which made bitstream-level bugs
+/// (e.g. partial access units) invisible. Throttled so a continuously-failing
+/// stream cannot flood the log.
+enum DecodeFailureLog {
+    nonisolated(unsafe) static var count = 0
+    static func log(_ status: OSStatus) {
+        count += 1
+        if count <= 5 || count % 300 == 0 {
+            logger.warn("video decode failed #\(count) status=\(status)")
+        }
+    }
+}
+
 extension VTDecompressionSession: VTSessionConvertible {
     static let defaultDecodeFlags: VTDecodeFrameFlags = [
         ._EnableAsynchronousDecompression,
@@ -18,6 +32,7 @@ extension VTDecompressionSession: VTSessionConvertible {
             infoFlagsOut: &flagsOut,
             outputHandler: { status, _, imageBuffer, presentationTimeStamp, duration in
                 guard let imageBuffer else {
+                    DecodeFailureLog.log(status)
                     return
                 }
                 var status = noErr
