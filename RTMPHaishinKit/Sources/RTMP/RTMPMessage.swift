@@ -659,8 +659,21 @@ struct RTMPUserControlMessage: RTMPMessage {
     init(_ header: RTMPChunkMessageHeader) {
         streamId = header.messageStreamId
         timestamp = header.timestamp
-        event = Event(rawValue: header.payload[1]) ?? .unknown
-        value = Int32(data: header.payload[2..<header.payload.count]).bigEndian
+        // A well-formed user control message is at least 6 bytes: a 2-byte
+        // event type followed by a 4-byte value. A truncated payload from the
+        // peer would otherwise index past the end of `payload` and trap
+        // (EXC_BREAKPOINT / out of bounds), crashing the whole process from
+        // the RTMP receive loop. Re-base to a 0-indexed copy (a Data slice
+        // keeps its parent's indices) and bail out to a safe default when the
+        // payload is too short.
+        let payload = Data(header.payload)
+        guard payload.count >= 6 else {
+            event = .unknown
+            value = 0
+            return
+        }
+        event = Event(rawValue: payload[1]) ?? .unknown
+        value = Int32(data: payload[2..<payload.count]).bigEndian
     }
 
     init(event: Event, value: Int32) {
