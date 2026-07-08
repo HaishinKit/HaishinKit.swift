@@ -311,6 +311,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Creates a two-way connection to an application on RTMP Server.
     public func connect(_ command: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        logger.level = .trace
         guard !connected else {
             throw Error.invalidState
         }
