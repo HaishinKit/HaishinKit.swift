@@ -401,8 +401,10 @@ public final actor MediaMixer {
             return
         }
         if isInBackground {
+            audioIO.suspend()
             videoIO.suspend()
         } else {
+            audioIO.resume()
             videoIO.resume()
             session.startRunningIfNeeded()
         }
