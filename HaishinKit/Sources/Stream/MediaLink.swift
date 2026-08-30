@@ -52,7 +52,14 @@ final actor MediaLink {
         defer {
             duration += timestamp
         }
-        return await audioPlayer?.currentTime ?? duration
+        // Use the audio clock only when it is actually advancing. An attached
+        // AudioPlayerNode that is not playing (video-only stream, or audio not
+        // yet flowing) reports currentTime == 0 forever, which pinned the video
+        // playout position at the first frame.
+        if let audioTime = await audioPlayer?.currentTime, 0 < audioTime {
+            return audioTime
+        }
+        return duration
     }
 }
 
