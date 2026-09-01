@@ -22,6 +22,31 @@ enum AudioSourceServiceMode: String, CaseIterable, Sendable {
     case audioEngine
 }
 
+enum VideoResolution: String, CaseIterable, Identifiable, Sendable {
+    case p720
+    case p1080
+
+    var id: Self { self }
+
+    var displayName: String {
+        switch self {
+        case .p720:
+            return "720p"
+        case .p1080:
+            return "1080p"
+        }
+    }
+
+    var landscapeSize: CGSize {
+        switch self {
+        case .p720:
+            return .init(width: 1280, height: 720)
+        case .p1080:
+            return .init(width: 1920, height: 1080)
+        }
+    }
+}
+
 @MainActor
 final class PreferenceViewModel: ObservableObject {
     private enum Keys {
@@ -29,6 +54,7 @@ final class PreferenceViewModel: ObservableObject {
         static let streamName = "pref_stream_name"
         static let audioFormat = "pref_audio_format"
         static let bitRateMode = "pref_bitrate_mode"
+        static let videoResolution = "pref_video_resolution"
         static let isLowLatencyEnabled = "pref_low_latency"
         static let viewType = "pref_view_type"
         static let audioCaptureMode = "pref_audio_capture_mode"
@@ -62,6 +88,11 @@ final class PreferenceViewModel: ObservableObject {
     @Published var bitRateMode: VideoCodecSettings.BitRateMode = .average {
         didSet {
             UserDefaults.standard.set(bitRateMode.description, forKey: Keys.bitRateMode)
+        }
+    }
+    @Published var videoResolution: VideoResolution = .p720 {
+        didSet {
+            UserDefaults.standard.set(videoResolution.rawValue, forKey: Keys.videoResolution)
         }
     }
     @Published var isLowLatencyRateControlEnabled: Bool = false {
@@ -109,6 +140,11 @@ final class PreferenceViewModel: ObservableObject {
             } else if #available(iOS 16.0, tvOS 16.0, *), savedMode == VideoCodecSettings.BitRateMode.constant.description {
                 self.bitRateMode = .constant
             }
+        }
+
+        if let savedResolution = defaults.string(forKey: Keys.videoResolution),
+           let resolution = VideoResolution(rawValue: savedResolution) {
+            self.videoResolution = resolution
         }
 
         if defaults.object(forKey: Keys.isLowLatencyEnabled) != nil {

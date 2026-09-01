@@ -53,6 +53,7 @@ private struct PreferenceGuideList: View {
             Section("Video Settings") {
                 GuideRow(title: "HDR Video", description: "Captures wider color/brightness range. Requires HDR-capable camera.")
                 GuideRow(title: "Low Latency", description: "Reduces stream delay to ~2-3 seconds. May slightly reduce quality.")
+                GuideRow(title: "Resolution", description: "Choose 720p for performance or 1080p for higher detail.")
                 GuideRow(title: "BitRate Mode", description: "Average: Consistent file size\nConstant: Stable quality\nVariable: Best quality")
             }
             Section("Capture Settings") {
@@ -75,8 +76,8 @@ private struct PublishGuideList: View {
                                  description: "Frames per second. 15 saves battery, 30 is standard, 60 is ultra-smooth.")
                 GuideRowWithIcon(icon: "slider.horizontal.3", title: "Bitrate (kbps)",
                                  description: "Video quality. Higher = better but more data. 1500-2500 recommended.")
-                GuideRowWithIcon(icon: "rectangle.badge.checkmark", title: "720p",
-                                 description: "Video resolution (1280×720). Good balance of quality and performance.")
+                GuideRowWithIcon(icon: "rectangle.badge.checkmark", title: "720p / 1080p",
+                                 description: "Video resolution. 720p = lighter load, 1080p = sharper image but needs more CPU/network.")
             }
             Section("Controls") {
                 GuideRowWithIcon(icon: "record.circle", title: "Record",
