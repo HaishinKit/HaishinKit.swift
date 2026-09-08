@@ -12,11 +12,22 @@ private let kVideoMixer_lockFlags = CVPixelBufferLockFlags(rawValue: .zero)
 final class VideoMixer<T: VideoMixerDelegate> {
     weak var delegate: T?
     var settings: VideoMixerSettings = .default
-    private(set) var inputFormats: [UInt8: CMFormatDescription] = [:]
+    // Written from two queues: append(_:sampleBuffer:) on the capture-output queue for every
+    // frame, and reset(_:) on VideoCaptureUnit's lockQueue during attach/detach. The delegate
+    // callback stays outside the critical section so a re-entrant delegate cannot deadlock.
+    private let inputFormatsLock = NSLock()
+    private var storedInputFormats: [UInt8: CMFormatDescription] = [:]
+    var inputFormats: [UInt8: CMFormatDescription] {
+        inputFormatsLock.lock()
+        defer { inputFormatsLock.unlock() }
+        return storedInputFormats
+    }
     private var currentPixelBuffer: CVPixelBuffer?
 
     func append(_ track: UInt8, sampleBuffer: CMSampleBuffer) {
-        inputFormats[track] = sampleBuffer.formatDescription
+        inputFormatsLock.lock()
+        storedInputFormats[track] = sampleBuffer.formatDescription
+        inputFormatsLock.unlock()
         delegate?.videoMixer(self, track: track, didInput: sampleBuffer)
         switch settings.mode {
         case .offscreen:
@@ -29,7 +40,9 @@ final class VideoMixer<T: VideoMixerDelegate> {
     }
 
     func reset(_ track: UInt8) {
-        inputFormats[track] = nil
+        inputFormatsLock.lock()
+        storedInputFormats[track] = nil
+        inputFormatsLock.unlock()
     }
 
     @inline(__always)
