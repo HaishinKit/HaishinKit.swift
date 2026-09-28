@@ -361,6 +361,19 @@ public actor RTMPStream {
         do {
             audioFormat = nil
             videoFormat = nil
+            // Reset the per-message timestamp trackers along with the format caches above.
+            // Without this, republishing the same RTMPStream instance (a reconnect that
+            // intentionally reuses the RTMPConnection/RTMPStream to keep the same watch URL,
+            // rather than calling createStream again) computes the first post-reconnect
+            // message's timestamp as a delta from whenever these were last updated — often
+            // several seconds earlier, spanning the disconnect — instead of a delta scoped to
+            // the brand-new chunk stream that the config-record message above just started at
+            // timestamp 0. At least one RTMP server (mediamtx) rejects the stream in that case
+            // ("received a packet for video track 0, but track is not set up") even though the
+            // config record and frame are otherwise sent correctly and in order, because the
+            // implied jump breaks its track/timestamp continuity check.
+            videoTimestamp.clear()
+            audioTimestamp.clear()
             let response = try await withCheckedThrowingContinuation { continuation in
                 readyState = .publish
                 expectedResponse = Code.publishStart
