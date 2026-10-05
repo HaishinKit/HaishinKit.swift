@@ -300,6 +300,8 @@ public actor RTMPStream {
         do {
             audioFormat = nil
             videoFormat = nil
+            audioTimestamp.clear()
+            videoTimestamp.clear()
             let response = try await withCheckedThrowingContinuation { continuation in
                 readyState = .play
                 expectedResponse = Code.playStart
@@ -361,6 +363,8 @@ public actor RTMPStream {
         do {
             audioFormat = nil
             videoFormat = nil
+            audioTimestamp.clear()
+            videoTimestamp.clear()
             let response = try await withCheckedThrowingContinuation { continuation in
                 readyState = .publish
                 expectedResponse = Code.publishStart
