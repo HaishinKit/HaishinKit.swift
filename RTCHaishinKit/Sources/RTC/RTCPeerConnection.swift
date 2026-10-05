@@ -77,8 +77,15 @@ a=rtpmap:111 opus/48000/2
 a=fmtp:111 minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1
 """
 
+    // Offer MULTIPLE H264 profile variants like a browser does. MediaMTX/Pion
+    // matches profile-level-id's profile bytes strictly; a single hardcoded
+    // 42e01f offer is rejected ("codecs not supported by client") whenever the
+    // published stream is plain/constrained baseline (42001f/42c01f), main
+    // (4d001f) or high (64001f) — i.e. most drones and third-party encoders.
+    // The server's answer picks exactly one payload; the depacketizer follows
+    // the negotiated description, so extra variants are harmless.
     static let videoMediaDescription = """
-m=video 9 UDP/TLS/RTP/SAVPF 98
+m=video 9 UDP/TLS/RTP/SAVPF 98 99 100 101 102
 a=mid:1
 a=recvonly
 a=rtpmap:98 H264/90000
@@ -86,6 +93,26 @@ a=rtcp-fb:98 goog-remb
 a=rtcp-fb:98 nack
 a=rtcp-fb:98 nack pli
 a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
+a=rtpmap:99 H264/90000
+a=rtcp-fb:99 goog-remb
+a=rtcp-fb:99 nack
+a=rtcp-fb:99 nack pli
+a=fmtp:99 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42c01f
+a=rtpmap:100 H264/90000
+a=rtcp-fb:100 goog-remb
+a=rtcp-fb:100 nack
+a=rtcp-fb:100 nack pli
+a=fmtp:100 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f
+a=rtpmap:101 H264/90000
+a=rtcp-fb:101 goog-remb
+a=rtcp-fb:101 nack
+a=rtcp-fb:101 nack pli
+a=fmtp:101 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d001f
+a=rtpmap:102 H264/90000
+a=rtcp-fb:102 goog-remb
+a=rtcp-fb:102 nack
+a=rtcp-fb:102 nack pli
+a=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=64001f
 """
 
     static let bufferSize: Int = 1024 * 16
@@ -260,6 +287,16 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
     public func createOffer() throws -> String {
         return try CUtil.getString { buffer, size in
             rtcCreateOffer(connection, buffer, size)
+        }
+    }
+
+    /// Returns the CURRENT local description via rtcGetLocalDescription — unlike
+    /// `createOffer()` (which requires disableAutoNegotiation and returns
+    /// RTC_ERR_FAILURE otherwise), this works with auto-negotiation and, when read
+    /// after ICE gathering completes, includes the gathered candidates (vanilla ICE).
+    public func currentLocalDescription() throws -> String {
+        return try CUtil.getString { buffer, size in
+            rtcGetLocalDescription(connection, buffer, size)
         }
     }
 

@@ -129,6 +129,8 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         switch nalUnitType {
         case 1...23:
             decodeSingleNALUnit(packet)
+        case 24:
+            decodeSingleTimeAggregation(packet)
         case 28:
             decodeFragmentUnitA(packet)
         default:
@@ -137,32 +139,60 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
     }
 
     private func decodeSingleNALUnit(_ packet: RTPPacket) {
-        let nalUnitType = packet.payload[0] & 0x1F
+        appendNALUnit(packet.payload)
+        flushIfMarked(packet)
+    }
+
+    /// STAP-A (RFC 6184 §5.7.1): one RTP payload aggregating several NAL units,
+    /// each prefixed by a 2-byte big-endian size. MediaMTX/Pion delivers SPS+PPS
+    /// (and other small NALs) this way — without STAP-A support the decoder never
+    /// receives parameter sets, so no frame is ever emitted.
+    private func decodeSingleTimeAggregation(_ packet: RTPPacket) {
+        let payload = Data(packet.payload)
+        var offset = 1
+        while offset + 2 <= payload.count {
+            let size = Int(payload[offset]) << 8 | Int(payload[offset + 1])
+            offset += 2
+            guard 0 < size, offset + size <= payload.count else {
+                break
+            }
+            appendNALUnit(payload.subdata(in: offset..<offset + size))
+            offset += size
+        }
+        flushIfMarked(packet)
+    }
+
+    private func appendNALUnit(_ nal: Data) {
+        guard !nal.isEmpty else {
+            return
+        }
+        let nalUnitType = nal[nal.startIndex] & 0x1F
         switch nalUnitType {
-        case 5: // idr
-            buffer.append(RTPH264Packetizer_startCode)
-            buffer.append(packet.payload)
         case 7: // sps
             if sequenceParameterSets == nil {
-                sequenceParameterSets = packet.payload
+                sequenceParameterSets = nal
             }
         case 8: // pps
             if pictureParameterSets == nil {
-                pictureParameterSets = packet.payload
+                pictureParameterSets = nal
             }
-        default:
+        default: // idr/non-idr slices and everything else
             buffer.append(RTPH264Packetizer_startCode)
-            buffer.append(packet.payload)
+            buffer.append(nal)
         }
         if formatDescription == nil && sequenceParameterSets != nil && pictureParameterSets != nil {
             formatDescription = makeFormatDescription()
         }
-        if packet.marker {
-            if let sampleBuffer = makeSampleBuffer(&buffer, timestamp: packet.timestamp) {
-                delegate?.packetizer(self, didOutput: sampleBuffer)
-            }
-            buffer.removeAll(keepingCapacity: false)
+    }
+
+    private func flushIfMarked(_ packet: RTPPacket) {
+        guard packet.marker else {
+            return
         }
+        if let sampleBuffer = makeSampleBuffer(&buffer, timestamp: packet.timestamp) {
+            delegate?.packetizer(self, didOutput: sampleBuffer)
+        }
+        buffer.removeAll(keepingCapacity: false)
     }
 
     private func decodeFragmentUnitA(_ packet: RTPPacket) {
@@ -191,12 +221,16 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         }
 
         if end && fragmentedStarted {
-            if let buffer = makeSampleBuffer(&fragmentedBuffer, timestamp: fragmentedTimestamp) {
-                delegate?.packetizer(self, didOutput: buffer)
-            }
-            // flush buffers
+            // A completed FU-A is ONE NAL unit (one slice), not a whole access
+            // unit — multi-slice frames (x264 zerolatency uses several slices per
+            // frame) span several FU-As. Emitting per-fragment hands VideoToolbox
+            // a partial frame → kVTVideoDecoderBadDataErr on every frame. Append
+            // to the AU accumulator and emit only at the RTP marker (end of AU),
+            // same as the single-NAL and STAP-A paths.
+            buffer.append(fragmentedBuffer)
             fragmentedBuffer.removeAll(keepingCapacity: false)
             fragmentedStarted = false
+            flushIfMarked(packet)
         }
     }
 
@@ -207,7 +241,21 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         let presentationTimeStamp: CMTime = self.timestamp.convert(timestamp)
         let units = nalUnitReader.read(&buffer, type: H264NALUnit.self)
         var blockBuffer: CMBlockBuffer?
-        ISOTypeBufferUtil.toNALFileFormat(&buffer)
+        // Build the AVCC (length-prefixed) buffer FORWARD from the parsed units.
+        // The previous in-place ISOTypeBufferUtil.toNALFileFormat conversion is
+        // unsafe here: a written 4-byte length of 256–511 is 00 00 01 xx, which
+        // its continuing reverse scan re-matches as a start code and "converts"
+        // again — corrupting the access unit (VT kVTVideoDecoderBadDataErr -12909
+        // on every frame). NALUnitReader.read returns units last-first, so append
+        // them reversed to preserve decode order.
+        var avcc = Data(capacity: buffer.count)
+        for unit in units.reversed() {
+            let unitData = unit.data
+            var length = UInt32(unitData.count).bigEndian
+            withUnsafeBytes(of: &length) { avcc.append(contentsOf: $0) }
+            avcc.append(unitData)
+        }
+        buffer = avcc
         blockBuffer = buffer.makeBlockBuffer()
         var sampleSizes: [Int] = []
         var sampleBuffer: CMSampleBuffer?
