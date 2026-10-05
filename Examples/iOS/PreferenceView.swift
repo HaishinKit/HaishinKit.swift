@@ -64,6 +64,11 @@ struct PreferenceView: View {
                 Toggle(isOn: $model.isLowLatencyRateControlEnabled) {
                     Text("Low Latency Mode")
                 }
+                Picker("Resolution", selection: $model.videoResolution) {
+                    ForEach(VideoResolution.allCases) { resolution in
+                        Text(resolution.displayName).tag(resolution)
+                    }
+                }
                 Picker("BitRate Mode", selection: $model.bitRateMode) {
                     ForEach(model.bitRateModes, id: \.description) { index in
                         Text(index.description).tag(index)
