@@ -1,15 +1,24 @@
 name: Review
 on: [pull_request]
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 jobs:
   build:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
-      - name: bundle install
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: fastlane
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          bundle install
-          bundle exec fastlane review
+        run: bundle exec fastlane review

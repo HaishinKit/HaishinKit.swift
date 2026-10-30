@@ -14,10 +14,9 @@ jobs:
       issues: write
       pull-requests: write
       models: read
-      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: github/ai-moderator@v1
+      # Built-in prompts are bundled with the action; no repository checkout is needed.
+      - uses: github/ai-moderator@81159c370785e295c97461ade67d7c33576e9319 # v1.1.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           spam-label: 'spam'
@@ -27,4 +26,3 @@ jobs:
           enable-spam-detection: true
           enable-link-spam-detection: true
           # enable-ai-detection: true
-          # custom-prompt-path: '.github/prompts/my-custom.prompt.yml'  # Optional

@@ -3,22 +3,42 @@ on:
   push:
     tags:
       - '*.*.*'
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: macos-26
+    env:
+      RELEASE_VERSION: ${{ github.ref_name }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate documentation version
+        shell: bash
+        run: |
+          # Fastlane also interpolates this value into shell commands and paths.
+          if [[ ! "$RELEASE_VERSION" =~ ^[a-zA-Z0-9][a-zA-Z0-9.+-]*$ ]]; then
+            echo 'Invalid documentation version' >&2
+            exit 1
+          fi
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
       - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
+          umask 077
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-      - name: bundle exec fastlane document
+      - name: fastlane
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          bundle install
-          bundle exec fastlane document version:${{ github.ref_name }}
+        run: bundle exec fastlane document "version:$RELEASE_VERSION"
