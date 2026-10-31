@@ -6,9 +6,9 @@ Find the API changes and code examples for upgrading between HaishinKit versions
 
 Choose the guide for your source and destination versions. When upgrading across several releases, review the applicable guides in version order.
 
-These historical guides were migrated from the GitHub Wiki. Examples describe the versions named in each section, including patch releases where noted; they are not current-release usage examples. For current usage, see the module documentation and examples in this repository.
+Examples describe the versions named in each section, including patch releases where noted. Older guides were migrated from the GitHub Wiki and are preserved as historical references. Guides for unreleased versions identify the source revision they describe. For current usage, see the module documentation and examples in this repository.
 
-The available guides are listed below, newest destination version first. This collection preserves the existing Wiki guides and does not cover every release.
+The available guides are listed below, newest destination version first. This collection does not cover every release.
 
 ### Markdown Sources
 
@@ -16,6 +16,7 @@ Use these links when browsing the repository on GitHub or reading the Markdown f
 
 | From | To | Guide |
 | --- | --- | --- |
+| 2.2.x | 2.3.x (unreleased) | [Moving from 2.2.x APIs to 2.3.x](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-2.2.x-to-2.3.x.md) |
 | 2.0.x | 2.1.0 | [Moving from 2.0.x APIs to 2.1.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-2.0.x-to-2.1.0.md) |
 | 1.9.x | 2.0.0 | [Moving from 1.9.x APIs to 2.0.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-1.9.x-to-2.0.0.md) |
 | 1.8.x | 1.9.0 | [Moving from 1.8.x APIs to 1.9.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-1.8.x-to-1.9.0.md) |
@@ -34,6 +35,7 @@ Use these links when browsing the repository on GitHub or reading the Markdown f
 
 ### Migrating to 2.x
 
+- <doc:migration-2.2.x-to-2.3.x>
 - <doc:migration-2.0.x-to-2.1.0>
 - <doc:migration-1.9.x-to-2.0.0>
 
