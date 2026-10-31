@@ -19,46 +19,57 @@ import libsrt
     }
 
     @Test func string() throws {
-        let socket = srt_create_socket()
-        let expect = try SRTSocketOption(name: .streamid, value: "hello")
-        try? expect.setSockflag(socket)
-        #expect(try SRTSocketOption(name: .streamid, socket: socket).stringValue == "hello")
-        srt_close(socket)
+        try withSocket { socket in
+            let option = try SRTSocketOption(name: .streamid, value: "hello")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .streamid, socket: socket).stringValue == "hello")
+        }
     }
 
     @Test func int32() throws {
-        let socket = srt_create_socket()
-        let expect = try SRTSocketOption(name: .latency, value: "100")
-        try? expect.setSockflag(socket)
-        #expect(try SRTSocketOption(name: .latency, socket: socket).intValue == 100)
-        srt_close(socket)
+        try withSocket { socket in
+            let option = try SRTSocketOption(name: .latency, value: "100")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .latency, socket: socket).intValue == 100)
+        }
     }
 
     @Test func int64() throws {
-        let socket = srt_create_socket()
-        let expect = try SRTSocketOption(name: .inputbw, value: "1000")
-        try? expect.setSockflag(socket)
-        #expect(try SRTSocketOption(name: .inputbw, socket: socket).intValue == 1000)
-        srt_close(socket)
+        try withSocket { socket in
+            let option = try SRTSocketOption(name: .inputbw, value: "1000")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .inputbw, socket: socket).intValue == 1000)
+        }
     }
 
     @Test func bool() throws {
-        let socket = srt_create_socket()
-        let expect = try SRTSocketOption(name: .tlpktdrop, value: "true")
-        try? expect.setSockflag(socket)
-        #expect(try SRTSocketOption(name: .tlpktdrop, socket: socket).boolValue == true)
-        srt_close(socket)
+        try withSocket { socket in
+            let option = try SRTSocketOption(name: .tlpktdrop, value: "true")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .tlpktdrop, socket: socket).boolValue == true)
+        }
     }
 
     @Test func transtype() throws {
-        let socket = srt_create_socket()
-        // The default is true for Live mode, and false for File mode.
-        // It does not support transtype.getOption, so I will test it by observing changes in the surrounding properties.
-        #expect(try SRTSocketOption(name: .nakreport, socket: socket).boolValue == true)
-        let expect = try SRTSocketOption(name: .transtype, value: "file")
-        try? expect.setSockflag(socket)
-        #expect(try SRTSocketOption(name: .nakreport, socket: socket).boolValue == false)
-        srt_close(socket)
+        try withSocket { socket in
+            // The default is true for Live mode, and false for File mode.
+            // It does not support transtype.getOption, so observe the surrounding properties.
+            #expect(try SRTSocketOption(name: .nakreport, socket: socket).boolValue == true)
+            let option = try SRTSocketOption(name: .transtype, value: "file")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .nakreport, socket: socket).boolValue == false)
+        }
+    }
+
+    @Test func socketSurvivesAnotherRuntimeUser() throws {
+        try withSocket { socket in
+            // Simulate another SRTConnection being created and released while this socket is in use.
+            try #require(srt_startup() >= 0)
+            #expect(srt_cleanup() == 0)
+            let option = try SRTSocketOption(name: .inputbw, value: "1000")
+            try option.setSockflag(socket)
+            #expect(try SRTSocketOption(name: .inputbw, socket: socket).intValue == 1000)
+        }
     }
 
     @Test func connection() async throws {
@@ -85,5 +96,20 @@ import libsrt
         #expect(SRTSocketURL(URL(string: "srt://192.168.1.1:9000?mode=server"))?.mode == SRTMode.listener)
         #expect(SRTSocketURL(URL(string: "srt://192.168.1.1:9000"))?.mode == SRTMode.caller)
         #expect(SRTSocketURL(URL(string: "srt://:9000"))?.mode == SRTMode.listener)
+    }
+
+    private func withSocket(_ body: (SRTSOCKET) throws -> Void) throws {
+        // Each raw socket must keep its own runtime reference while other tests
+        // create and release SRTConnections in parallel.
+        try #require(srt_startup() >= 0)
+        defer {
+            srt_cleanup()
+        }
+        let socket = srt_create_socket()
+        try #require(socket != SRT_INVALID_SOCK)
+        defer {
+            srt_close(socket)
+        }
+        try body(socket)
     }
 }
