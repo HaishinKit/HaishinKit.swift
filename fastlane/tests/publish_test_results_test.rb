@@ -63,11 +63,41 @@ class PublishTestResultsTest < Minitest::Test
 
   def test_swift_testing_failure_resolves_source_and_deduplicates_fastlane_output
     log = "[05:12:10]: ▸ \e[35m✘ Test int64() recorded an issue at SRTSocketOptionTests.swift:45:6: Caught error: .invalidOption(\"Invalid socket ID\")\e[0m\n"
-    test = { suite: 'SRTTests', name: 'int64()', status: 'Failed', details: 'Invalid socket ID' }
+    test = { suite: 'SRTTests', name: 'int64()', status: 'Failed', details: 'Caught error: .invalidOption("Invalid socket ID")' }
     commands = Reporter.annotations([test], log + log, ['SRTHaishinKit/Tests/SRT/SRTSocketOptionTests.swift'], '/repo')
     assert_equal [
       '::error title=int64(),file=SRTHaishinKit/Tests/SRT/SRTSocketOptionTests.swift,line=45,col=6::SRTSocketOptionTests.swift:45:6: Caught error: .invalidOption("Invalid socket ID")'
     ], commands
+  end
+
+  def test_located_annotation_retains_issue_comment_from_xml
+    write('tests-swift-testing.xml', <<~XML)
+      <testsuites><testsuite>
+        <testcase classname="HaishinKitTests.CIAnnotationSmokeTests" name="intentionalFailureForAnnotationValidation()">
+          <failure message="Issue recorded (error): Intentional failure to verify GitHub Actions annotations (temporary)." />
+        </testcase>
+      </testsuite></testsuites>
+    XML
+    log = <<~LOG
+      [06:14:43]: ▸ ✘ Test intentionalFailureForAnnotationValidation() recorded an issue at CIAnnotationSmokeTests.swift:5:21: Issue recorded
+      [06:14:43]: ▸ ↳ Intentional failure to verify GitHub Actions annotations (temporary).
+    LOG
+    cases, = Reporter.load_results(@directory)
+    command, = Reporter.annotations(cases, log, ['HaishinKit/Tests/Util/CIAnnotationSmokeTests.swift'], '/repo')
+    assert_includes command, ',file=HaishinKit/Tests/Util/CIAnnotationSmokeTests.swift,line=5,col=21::'
+    assert_includes command, 'Issue recorded (error): Intentional failure to verify GitHub Actions annotations (temporary).'
+  end
+
+  def test_does_not_mix_xml_details_from_tests_with_the_same_name
+    cases = [
+      { suite: 'One', name: 'example()', status: 'Failed', details: 'first failure' },
+      { suite: 'Two', name: 'example()', status: 'Failed', details: 'second failure' }
+    ]
+    log = '✘ Test example() recorded an issue at Tests.swift:2:3: original failure'
+    command, = Reporter.annotations(cases, log, ['One/Tests.swift'], '/repo')
+    assert_includes command, 'original failure'
+    refute_includes command, 'first failure'
+    refute_includes command, 'second failure'
   end
 
   def test_source_resolution_does_not_guess_ambiguous_or_external_paths
