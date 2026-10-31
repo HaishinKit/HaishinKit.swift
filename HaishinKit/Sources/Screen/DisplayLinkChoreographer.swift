@@ -54,7 +54,19 @@ final class DisplayLink: NSObject, @unchecked Sendable {
             }
             if frameInterval == 0 || frameInterval <= inNow.pointee.timestamp - self.timestamp {
                 self.timestamp = Double(inNow.pointee.timestamp)
-                self.targetTimestamp = self.timestamp + frameInterval
+                // With the default preferredFramesPerSecond (0), frameInterval is 0 and
+                // targetTimestamp == timestamp — consumers measuring elapsed time per tick
+                // (MediaLink playout pacing) accumulate zero and never advance. Fall back
+                // to the display's actual refresh period.
+                let interval: Double
+                if 0 < frameInterval {
+                    interval = frameInterval
+                } else if 0 < inNow.pointee.videoTimeScale && 0 < inNow.pointee.videoRefreshPeriod {
+                    interval = Double(inNow.pointee.videoRefreshPeriod) / Double(inNow.pointee.videoTimeScale)
+                } else {
+                    interval = 1.0 / 60.0
+                }
+                self.targetTimestamp = self.timestamp + interval
                 _ = self.delegate?.perform(self.selector, with: self)
             }
             return kCVReturnSuccess
