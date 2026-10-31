@@ -1,10 +1,57 @@
-"""Render SwiftPM's XCTest/Swift Testing XML as standalone HTML and a job summary."""
+"""Publish SwiftPM results as GitHub Actions annotations and a job summary."""
 
 import argparse
 from collections import Counter, defaultdict
 from html import escape
 from pathlib import Path
+import re
+import subprocess
 import xml.etree.ElementTree as ET
+
+
+ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+ISSUE = re.compile(r"✘ Test (.*?) recorded an issue at (.*?):(\d+):(\d+): (.*)")
+
+
+def workflow_escape(value, property=False):
+    value = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    return value.replace(":", "%3A").replace(",", "%2C") if property else value
+
+
+def annotation(title, message, **location):
+    properties = {"title": title, **location}
+    return "::error " + ",".join(
+        f"{key}={workflow_escape(str(value), property=True)}" for key, value in properties.items()
+    ) + "::" + workflow_escape(message)
+
+
+def annotations(cases, log, sources, repository):
+    commands, reported, seen = [], set(), set()
+    # Swift Testing's XML omits source locations; its console diagnostics include them.
+    for match in ISSUE.finditer(ANSI.sub("", log)):
+        name, filename, line, column, message = match.groups()
+        if match.groups() in seen:
+            continue  # fastlane can repeat the command output when it fails.
+        seen.add(match.groups())
+        reported.add(name)
+        path = Path(filename)
+        if path.is_absolute():
+            try:
+                path = path.relative_to(repository)
+            except ValueError:
+                path = None
+        candidates = [] if path is None else [
+            source for source in sources if source == path.as_posix() or source.endswith("/" + path.as_posix())
+        ]
+        location = {}
+        if len(candidates) == 1:
+            location = {"file": candidates[0], "line": line, "col": column}
+        # Keep the original location in the message even if its path is ambiguous.
+        commands.append(annotation(name, f"{filename}:{line}:{column}: {message}", **location))
+    for case in cases:
+        if case["status"] == "Failed" and case["name"] not in reported:
+            commands.append(annotation(f'{case["suite"]}.{case["name"]}', case["details"]))
+    return commands
 
 
 def load_results(directory):
@@ -27,7 +74,6 @@ def load_results(directory):
                 "suite": case.get("classname", path.stem),
                 "name": case.get("name", "Unnamed test"),
                 "status": status,
-                "time": case.get("time", ""),
                 "details": details,
             })
     if not cases:
@@ -35,63 +81,39 @@ def load_results(directory):
     return cases, problems
 
 
-def render(cases, problems, outcome):
+def render(cases, problems, outcome, has_errors=False):
     counts = Counter(case["status"] for case in cases)
-    failed = outcome != "success" or counts["Failed"] > 0 or bool(problems)
+    failed = outcome != "success" or counts["Failed"] > 0 or bool(problems) or has_errors
     status = "Failed / incomplete" if failed else "Passed"
     totals = f'{len(cases)} tests · {counts["Passed"]} passed · {counts["Failed"]} failed · {counts["Skipped"]} skipped'
     notices = list(problems)
     if outcome != "success":
         notices.append("The review command did not succeed. These results may be incomplete; see review.log for build or runner errors.")
 
-    body = [f"<h1>Test results</h1><p class='{('failed' if failed else 'passed')}'><strong>{status}</strong></p><p>{totals}</p>"]
     summary = ["## Test results", "", f"**{status}** — {totals}", ""]
     for notice in notices:
-        body.append(f"<p class='notice'>{escape(notice)}</p>")
         summary.extend([escape(notice), ""])
 
     failures = [case for case in cases if case["status"] == "Failed"]
     if failures:
-        body.append("<h2>Failures</h2>")
         summary.extend(["### Failures", ""])
         for index, case in enumerate(failures):
             name = escape(f'{case["suite"]}.{case["name"]}')
-            details = escape(case["details"] or "No failure details were provided.")
-            body.append(f"<section><h3>{name}</h3><pre>{details}</pre></section>")
-            # Bound the job summary; the HTML retains the complete details.
+            # Bound the job summary; the XML artifact retains the complete details.
             if index < 20:
                 summary.extend([f"<details><summary>{name}</summary>", "", f"<pre>{escape(case['details'][:2000])}</pre>", "", "</details>", ""])
         if len(failures) > 20:
-            summary.extend(["More failures are listed in the HTML report.", ""])
+            summary.extend(["More failures are listed in the test-logs artifact.", ""])
 
     suites = defaultdict(list)
     for case in cases:
         suites[case["suite"]].append(case)
-    body.append("<h2>All tests</h2>")
     summary.extend(["| Suite | Passed | Failed | Skipped |", "| --- | ---: | ---: | ---: |"])
     for suite, tests in sorted(suites.items()):
         suite_counts = Counter(case["status"] for case in tests)
         name = escape(suite)
         summary.append(f"| {name.replace('|', '&#124;').replace(chr(10), ' ')} | {suite_counts['Passed']} | {suite_counts['Failed']} | {suite_counts['Skipped']} |")
-        opened = " open" if suite_counts["Failed"] else ""
-        body.append(f"<details{opened}><summary>{name} — {len(tests)} tests, {suite_counts['Failed']} failed</summary><table><thead><tr><th>Test</th><th>Result</th><th>Seconds</th></tr></thead><tbody>")
-        for case in sorted(tests, key=lambda case: case["name"]):
-            body.append(f"<tr><td>{escape(case['name'])}</td><td class='{case['status'].lower()}'>{case['status']}</td><td>{escape(case['time'])}</td></tr>")
-        body.append("</tbody></table></details>")
-
-    html = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HaishinKit test results</title><style>
-body { font: 16px/1.5 system-ui, sans-serif; color: #1f2328; background: #f6f8fa; margin: 2rem auto; max-width: 1100px; padding: 0 1rem; }
-section, details { background: white; border: 1px solid #d1d9e0; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
-summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-th, td { text-align: left; border-bottom: 1px solid #d1d9e0; padding: .5rem; overflow-wrap: anywhere; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-.passed { color: #116329; } .failed { color: #a40e26; } .skipped { color: #59636e; }
-.notice { border-left: 4px solid #a40e26; padding: .5rem 1rem; background: #fff1f3; }
-</style></head><body>""" + "\n".join(body) + "</body></html>\n"
-    return html, "\n".join(summary) + "\n", failed
+    return "\n".join(summary) + "\n", failed
 
 
 def main():
@@ -101,13 +123,25 @@ def main():
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
     cases, problems = load_results(args.directory)
-    html, summary, failed = render(cases, problems, args.outcome)
-    args.directory.mkdir(parents=True, exist_ok=True)
-    (args.directory / "test-results.html").write_text(html, encoding="utf-8")
+    repository = Path(__file__).resolve().parents[2]
+    sources = subprocess.check_output(
+        ["git", "ls-files", "-z", "--", "*.swift"], cwd=repository, text=True,
+    ).split("\0")
+    log_path = args.directory / "review.log"
+    log = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+    commands = annotations(cases, log, sources, repository)
+    commands.extend(annotation("Test results unavailable", problem) for problem in problems)
+    if args.outcome != "success" and not commands:
+        commands.append(annotation("Review failed", "See review.log for build or runner errors; test results may be incomplete."))
+    summary, failed = render(cases, problems, args.outcome, has_errors=bool(commands))
+    # Actions accepts at most 10 error annotations per step.
+    if len(commands) > 10:
+        summary += "\nOnly the first 10 errors are annotated. See test-logs for all failure details.\n"
+    for command in commands[:10]:
+        print(command)
     if args.summary:
         with args.summary.open("a", encoding="utf-8") as output:
             output.write(summary)
-    print(summary)
     return int(failed)
 
 
