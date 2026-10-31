@@ -74,6 +74,9 @@ module Fastlane
         # fastlane may repeat the command output on failure, so deduplicate diagnostics.
         commands = log.gsub(ANSI, '').scan(ISSUE).uniq.map do |name, filename, line, column, message|
           reported << name
+          # XML retains issue comments that the console prints on subsequent lines.
+          matches = cases.select { |test| test[:status] == 'Failed' && test[:name] == name }
+          message = matches.first[:details] if matches.one? && !matches.first[:details].empty?
           path = filename.delete_prefix("#{repository}/")
           candidates = sources.select { |source| source == path || source.end_with?("/#{path}") }
           location = candidates.one? ? { file: candidates.first, line: line, col: column } : {}
