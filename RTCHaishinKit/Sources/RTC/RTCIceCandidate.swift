@@ -1,5 +1,6 @@
 import Foundation
 
+/// A local ICE candidate delivered by the peer connection delegate.
 public struct RTCIceCandidate: Sendable {
     let candidate: String
     let mid: String

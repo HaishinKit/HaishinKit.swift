@@ -1,15 +1,25 @@
 import Foundation
 import libdatachannel
 
+/// A delegate that receives peer connection state changes, data channels, and ICE candidates.
 public protocol RTCPeerConnectionDelegate: AnyObject {
+    /// Notifies the delegate that the overall connection state changed.
     func peerConnection(_ peerConnection: RTCPeerConnection, connectionStateChanged connectionState: RTCPeerConnection.ConnectionState)
+    /// Notifies the delegate that the ICE candidate gathering state changed.
     func peerConnection(_ peerConnection: RTCPeerConnection, iceGatheringStateChanged iceGatheringState: RTCPeerConnection.IceGatheringState)
+    /// Notifies the delegate that the ICE connection state changed.
     func peerConnection(_ peerConnection: RTCPeerConnection, iceConnectionStateChanged iceConnectionState: RTCPeerConnection.IceConnectionState)
+    /// Notifies the delegate that the SDP signaling state changed.
     func peerConnection(_ peerConnection: RTCPeerConnection, signalingStateChanged signalingState: RTCPeerConnection.SignalingState)
+    /// Delivers a data channel created by the remote peer.
+    ///
+    /// Assign its delegate to receive messages and channel state changes.
     func peerConnection(_ peerConneciton: RTCPeerConnection, didOpen dataChannel: RTCDataChannel)
+    /// Delivers a newly generated local ICE candidate.
     func peerConnection(_ peerConnection: RTCPeerConnection, gotIceCandidate candidated: RTCIceCandidate)
 }
 
+/// Manages WebRTC negotiation, media tracks, and data channels using libdatachannel.
 public final class RTCPeerConnection {
     /// Represents the state of a connection.
     public enum ConnectionState: Sendable {
@@ -90,9 +100,9 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
 
     static let bufferSize: Int = 1024 * 16
 
-    /// Specifies the delegate of an RTCPeerConnection.
+    /// The delegate that receives connection events.
     public weak var delegate: (any RTCPeerConnectionDelegate)?
-    /// The current state of connection.
+    /// The current overall connection state.
     public private(set) var connectionState: ConnectionState = .new {
         didSet {
             guard connectionState != oldValue else {
@@ -101,7 +111,7 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
             delegate?.peerConnection(self, connectionStateChanged: connectionState)
         }
     }
-    /// The current state of ice connection.
+    /// The current ICE connection state.
     public private(set) var iceConnectionState: IceConnectionState = .new {
         didSet {
             guard iceConnectionState != oldValue else {
@@ -110,7 +120,7 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
             delegate?.peerConnection(self, iceConnectionStateChanged: iceConnectionState)
         }
     }
-    /// The current state of ice gathering.
+    /// The current ICE candidate gathering state.
     public private(set) var iceGatheringState: IceGatheringState = .new {
         didSet {
             guard iceGatheringState != oldValue else {
@@ -119,7 +129,7 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
             delegate?.peerConnection(self, iceGatheringStateChanged: iceGatheringState)
         }
     }
-    /// The current state of signaling.
+    /// The current SDP signaling state.
     public private(set) var signalingState: SignalingState = .stable {
         didSet {
             guard signalingState != oldValue else {
@@ -131,7 +141,10 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
     private let connection: Int32
     private(set) var localDescription: String = ""
 
-    /// Creates a peerConnection instance.
+    /// Creates a peer connection and registers its event callbacks.
+    ///
+    /// - Parameter config: The connection settings, or `nil` to use the default configuration.
+    /// - Throws: `RTCError` if connection creation or callback registration fails.
     public init(_ config: (some RTCConfigurationConvertible)? = nil) throws {
         if let config {
             connection = config.createPeerConnection()
@@ -201,11 +214,15 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
         rtcDeletePeerConnection(connection)
     }
 
-    /// Adds a `MediaStreamTrack` to the peer connection and associates it with the given `MediaStream`.
+    /// Adds an audio or video track and schedules its association with a stream.
+    ///
+    /// Only `AudioStreamTrack` and `VideoStreamTrack` are handled; other conforming
+    /// types are ignored. Track association with the stream runs asynchronously.
     ///
     /// - Parameters:
-    ///   - track: The media track to add (audio or video).
-    ///   - stream: The `MediaStream` that the track belongs to.
+    ///   - track: The track descriptor and its codec settings.
+    ///   - stream: The stream that will provide media for the track.
+    /// - Throws: `RTCError` if the underlying track cannot be added.
     public func addTrack(_ track: some RTCStreamTrack, stream: RTCStream) throws {
         let msid = stream.id
         switch track {
@@ -243,6 +260,12 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
         return track
     }
 
+    /// Applies a remote session description.
+    ///
+    /// - Parameters:
+    ///   - sdp: The remote peer’s SDP text.
+    ///   - type: The description type.
+    /// - Throws: `RTCError` if the library rejects the description.
     public func setRemoteDesciption(_ sdp: String, type: SDPSessionDescriptionType) throws {
         logger.debug(sdp, type.rawValue)
         try RTCError.check([sdp, type.rawValue].withCStrings { cStrings in
@@ -250,6 +273,10 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
         })
     }
 
+    /// Requests a local session description of the specified type.
+    ///
+    /// - Parameter type: The description type to set.
+    /// - Throws: `RTCError` if the library cannot set the description.
     public func setLocalDesciption(_ type: SDPSessionDescriptionType) throws {
         logger.debug(type.rawValue)
         try RTCError.check([type.rawValue].withCStrings { cStrings in
@@ -257,18 +284,31 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
         })
     }
 
+    /// Generates an SDP offer for signaling.
+    ///
+    /// - Returns: The offer as SDP text.
+    /// - Throws: `RTCError` if the offer cannot be generated or retrieved.
     public func createOffer() throws -> String {
         return try CUtil.getString { buffer, size in
             rtcCreateOffer(connection, buffer, size)
         }
     }
 
+    /// Generates an SDP answer for signaling.
+    ///
+    /// - Returns: The answer as SDP text.
+    /// - Throws: `RTCError` if the answer cannot be generated or retrieved.
     public func createAnswer() throws -> String {
         return try CUtil.getString { buffer, size in
             rtcCreateAnswer(connection, buffer, size)
         }
     }
 
+    /// Creates a data channel with the specified label.
+    ///
+    /// - Parameter label: The channel’s application-defined name.
+    /// - Returns: A channel whose delegate can receive state changes and messages.
+    /// - Throws: `RTCError` if creation or callback registration fails.
     public func createDataChannel(_ label: String) throws -> RTCDataChannel {
         let result = try RTCError.check([label].withCStrings { cStrings in
             rtcCreateDataChannel(connection, cStrings[0])
@@ -276,6 +316,7 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
         return try RTCDataChannel(id: result)
     }
 
+    /// Closes the underlying peer connection. Errors are written to the log.
     public func close() {
         do {
             try RTCError.check(rtcClosePeerConnection(connection))

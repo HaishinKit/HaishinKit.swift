@@ -3,27 +3,29 @@ import Foundation
 import HaishinKit
 import libsrt
 
-/// An actor that provides the interface to control a SRT connection.
+/// Manages an SRT connection for publishing or receiving media.
 ///
-/// Supports a one-to-one connection. Multiple connections cannot be established.
+/// Each instance supports one peer connection at a time.
 public actor SRTConnection: NetworkConnection {
-    /// The error domain codes.
+    /// Errors that can occur when connecting or configuring an SRT connection.
     public enum Error: Swift.Error {
-        /// An invalid internal stare.
+        /// The operation is invalid in the current state, or connection setup failed without a rejection reason.
         case invalidState
-        /// The uri isn’t supported.
+        /// The endpoint URL is missing or does not use the `srt` scheme.
         case unsupportedUri(_ uri: URL?)
-        /// The failed to connect.
+        /// Connection setup failed with the associated SRT rejection reason.
         case failedToConnect(_ reason: SRTRejectReason)
     }
 
-    /// The SRT Library version.
+    /// The version of the underlying SRT library.
     public static let version: String = SRT_VERSION_STRING
-    /// The URI passed to the `connect()` method.
+    /// The endpoint URL recorded during connection setup, or `nil` after closing.
     public private(set) var uri: URL?
-    /// This instance connect to server(true) or not(false)
+    /// A Boolean value that indicates whether the SRT connection is established.
     @Published public private(set) var connected = false
-    /// The performance data.
+    /// The latest socket statistics, or `nil` if no socket exists.
+    ///
+    /// Reading this property returns the cached snapshot; it does not request a new measurement.
     public var performanceData: SRTPerformanceData? {
         get async {
             return await socket?.performanceData
@@ -35,7 +37,7 @@ public actor SRTConnection: NetworkConnection {
     private var listener: SRTSocket?
     private var networkMonitor: NetworkMonitor?
 
-    /// Creates an object.
+    /// Creates a connection and initializes the SRT library.
     public init() {
         srt_startup()
         socket = SRTSocket()
@@ -46,12 +48,24 @@ public actor SRTConnection: NetworkConnection {
         srt_cleanup()
     }
 
-    /// Gets a SRTSocketOption.
+    /// Reads an option from the current socket.
+    ///
+    /// - Parameter name: The option to read.
+    /// - Returns: The option value, or `nil` if no socket exists.
+    /// - Throws: `SRTSocketOption.Error.invalidOption` if the library cannot read the option.
     public func getSocketOption(_ name: SRTSocketOption.Name) async throws -> SRTSocketOption? {
         try await socket?.getSocketOption(name)
     }
 
-    /// Sets a SRTSocketOption.
+    /// Applies an option to the current socket.
+    ///
+    /// Before connecting, this method accepts only `.pre` options. After connecting,
+    /// it accepts only `.post` options. Supply options that require `.preBind` through
+    /// the connection URL.
+    ///
+    /// - Parameter option: The option and value to apply.
+    /// - Throws: `Error.invalidState` if the option is not allowed in the current state,
+    ///   or `SRTSocketOption.Error.invalidOption` if the library rejects the option.
     public func setSocketOption(_ option: SRTSocketOption) async throws {
         if connected {
             guard option.name.restriction == .post else {
@@ -66,15 +80,15 @@ public actor SRTConnection: NetworkConnection {
         }
     }
 
-    /// Creates a connection to the server or waits for an incoming connection.
+    /// Connects to a peer or waits for an incoming connection.
     ///
-    /// - Parameters:
-    ///   - uri: You can specify connection options in the URL. This follows the standard SRT format.
+    /// Specify the mode and socket options as URL query parameters:
+    /// - `srt://192.168.1.1:9000?mode=caller` connects to the specified peer.
+    /// - `srt://:9000?mode=listener` waits for a peer on the specified port.
     ///
-    /// - srt://192.168.1.1:9000?mode=caller
-    ///   - Connect to the specified server.
-    /// - srt://:9000?mode=listener
-    ///   - Wait for connections as a server.
+    /// - Parameter uri: The SRT endpoint URL.
+    /// - Throws: `Error.unsupportedUri` for an invalid URL, `Error.failedToConnect`
+    ///   for an SRT rejection, or `Error.invalidState` for other setup failures.
     public func connect(_ uri: URL?) async throws {
         guard let url = SRTSocketURL(uri) else {
             throw Error.unsupportedUri(uri)
@@ -129,7 +143,7 @@ public actor SRTConnection: NetworkConnection {
         }
     }
 
-    /// Closes a connection.
+    /// Closes the connection and its streams, stops network monitoring, and resets the socket.
     public func close() async {
         guard uri != nil else {
             return

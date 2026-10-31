@@ -1,156 +1,159 @@
 import Foundation
 import libsrt
 
-/// The SRTPerformanceData represents the SRT's performance statistics. This struct is wrapper for an CBytePerfMon.
-/// - seealso: https://github.com/Haivision/srt/blob/master/srtcore/srt.h
+/// A snapshot of SRT socket performance statistics.
+///
+/// This structure wraps the library’s `CBytePerfMon` values. Fields ending in
+/// `Total` are cumulative; other counters describe the library’s measurement interval.
+/// Rates, buffer sizes, and timing values describe the sampled state.
 public struct SRTPerformanceData: Sendable {
-    /// The time since the UDT entity is started, in milliseconds.
+    /// The elapsed time since the socket started, in milliseconds.
     public let msTimeStamp: Int64
     /// The total number of sent data packets, including retransmissions.
     public let pktSentTotal: Int64
     /// The total number of received packets.
     public let pktRecvTotal: Int64
-    /// The total number of lost packets (sender side)
+    /// The total number of lost packets (sender side).
     public let pktSndLossTotal: Int32
-    /// The total number of lost packets (receiver side)
+    /// The total number of lost packets (receiver side).
     public let pktRcvLossTotal: Int32
-    /// The total number of retransmitted packets
+    /// The total number of retransmitted packets.
     public let pktRetransTotal: Int32
-    /// The total number of sent ACK packets
+    /// The total number of sent ACK packets.
     public let pktSentACKTotal: Int32
-    /// The total number of received ACK packets
+    /// The total number of received ACK packets.
     public let pktRecvACKTotal: Int32
-    /// The total number of sent NAK packets
+    /// The total number of sent NAK packets.
     public let pktSentNAKTotal: Int32
-    /// The total number of received NAK packets
+    /// The total number of received NAK packets.
     public let pktRecvNAKTotal: Int32
-    /// The total time duration when UDT is sending data (idle time exclusive)
+    /// The cumulative time spent sending data, excluding idle time, in microseconds.
     public let usSndDurationTotal: Int64
-    /// The number of too-late-to-send dropped packets
+    /// The number of packets dropped because they were too late to send.
     public let pktSndDropTotal: Int32
-    /// The number of too-late-to play missing packets
+    /// The number of packets dropped because they were too late to play.
     public let pktRcvDropTotal: Int32
-    /// The number of undecrypted packets
+    /// The number of packets that could not be decrypted.
     public let pktRcvUndecryptTotal: Int32
-    /// The total number of sent data bytes, including retransmissions
+    /// The total number of sent data bytes, including retransmissions.
     public let byteSentTotal: UInt64
-    /// The total number of received bytes
+    /// The total number of received bytes.
     public let byteRecvTotal: UInt64
-    /// The total number of lost bytes
+    /// The total number of lost bytes.
     public let byteRcvLossTotal: UInt64
-    /// The total number of retransmitted bytes
+    /// The total number of retransmitted bytes.
     public let byteRetransTotal: UInt64
-    /// The number of too-late-to-send dropped bytes
+    /// The number of bytes dropped because they were too late to send.
     public let byteSndDropTotal: UInt64
-    /// The number of too-late-to play missing bytes (estimate based on average packet size)
+    /// The number of bytes dropped because they were too late to play, estimated from the average packet size.
     public let byteRcvDropTotal: UInt64
-    /// The number of undecrypted bytes
+    /// The number of bytes that could not be decrypted.
     public let byteRcvUndecryptTotal: UInt64
-    /// The number of sent data packets, including retransmissions
+    /// The number of sent data packets, including retransmissions.
     public let pktSent: Int64
-    /// The number of received packets
+    /// The number of received packets.
     public let pktRecv: Int64
-    /// The number of lost packets (sender side)
+    /// The number of lost packets (sender side).
     public let pktSndLoss: Int32
-    /// The number of lost packets (receiver side)
+    /// The number of lost packets (receiver side).
     public let pktRcvLoss: Int32
-    /// The number of retransmitted packets
+    /// The number of retransmitted packets.
     public let pktRetrans: Int32
-    /// The number of retransmitted packets received
+    /// The number of retransmitted packets received.
     public let pktRcvRetrans: Int32
-    /// The number of sent ACK packets
+    /// The number of sent ACK packets.
     public let pktSentACK: Int32
-    /// The number of received ACK packets
+    /// The number of received ACK packets.
     public let pktRecvACK: Int32
-    /// The number of sent NAK packets
+    /// The number of sent NAK packets.
     public let pktSentNAK: Int32
-    /// The number of received NAK packets
+    /// The number of received NAK packets.
     public let pktRecvNAK: Int32
-    /// The sending rate in Mb/s
+    /// The sending rate, in megabits per second.
     public let mbpsSendRate: Double
-    /// The receiving rate in Mb/s
+    /// The receiving rate, in megabits per second.
     public let mbpsRecvRate: Double
-    /// The busy sending time (i.e., idle time exclusive)
+    /// The time spent sending data during the measurement interval, excluding idle time, in microseconds.
     public let usSndDuration: Int64
-    /// The size of order discrepancy in received sequences
+    /// The sequence-number distance of reordered received packets.
     public let pktReorderDistance: Int32
-    /// The average time of packet delay for belated packets (packets with sequence past the ACK)
+    /// The average delay of late packets whose sequence numbers precede the acknowledged position.
     public let pktRcvAvgBelatedTime: Double
-    /// The number of received AND IGNORED packets due to having come too late
+    /// The number of received packets ignored because they arrived too late.
     public let pktRcvBelated: Int64
-    /// The number of too-late-to-send dropped packets
+    /// The number of packets dropped because they were too late to send.
     public let pktSndDrop: Int32
-    /// The number of too-late-to play missing packets
+    /// The number of packets dropped because they were too late to play.
     public let pktRcvDrop: Int32
-    /// The number of undecrypted packets
+    /// The number of packets that could not be decrypted.
     public let pktRcvUndecrypt: Int32
-    /// The number of sent data bytes, including retransmissions
+    /// The number of sent data bytes, including retransmissions.
     public let byteSent: UInt64
-    /// The number of received bytes
+    /// The number of received bytes.
     public let byteRecv: UInt64
-    /// The number of retransmitted bytes
+    /// The number of lost bytes reported by the receiver.
     public let byteRcvLoss: UInt64
-    /// The number of retransmitted bytes
+    /// The number of retransmitted bytes.
     public let byteRetrans: UInt64
-    /// The number of too-late-to-send dropped bytes
+    /// The number of bytes dropped because they were too late to send.
     public let byteSndDrop: UInt64
-    /// The number of too-late-to play missing bytes (estimate based on average packet size)
+    /// The number of bytes dropped because they were too late to play, estimated from the average packet size.
     public let byteRcvDrop: UInt64
-    /// The number of undecrypted bytes
+    /// The number of bytes that could not be decrypted.
     public let byteRcvUndecrypt: UInt64
-    /// The packet sending period, in microseconds
+    /// The packet sending period, in microseconds.
     public let usPktSndPeriod: Double
-    /// The flow window size, in number of packets
+    /// The flow window size, in number of packets.
     public let pktFlowWindow: Int32
-    /// The congestion window size, in number of packets
+    /// The congestion window size, in number of packets.
     public let pktCongestionWindow: Int32
-    /// The number of packets on flight
+    /// The number of packets in flight.
     public let pktFlightSize: Int32
-    /// The RTT, in milliseconds
+    /// The round-trip time, in milliseconds.
     public let msRTT: Double
-    /// The estimated bandwidth, in Mb/s
+    /// The estimated available bandwidth, in megabits per second.
     public let mbpsBandwidth: Double
-    /// The available UDT sender buffer size
+    /// The available space in the send buffer, in bytes.
     public let byteAvailSndBuf: Int32
-    /// The available UDT receiver buffer size
+    /// The available space in the receive buffer, in bytes.
     public let byteAvailRcvBuf: Int32
-    /// The transmit Bandwidth ceiling (Mbps)
+    /// The transmission bandwidth limit, in megabits per second.
     public let mbpsMaxBW: Double
-    /// The MTU
+    /// The maximum transmission unit, in bytes.
     public let byteMSS: Int32
-    /// The UnACKed packets in UDT sender
+    /// The number of unacknowledged packets in the send buffer.
     public let pktSndBuf: Int32
-    /// The UnACKed bytes in UDT sender
+    /// The number of unacknowledged bytes in the send buffer.
     public let byteSndBuf: Int32
-    /// The UnACKed timespan (msec) of UDT sender
+    /// The time span of unacknowledged data in the send buffer, in milliseconds.
     public let msSndBuf: Int32
-    /// Timestamp-based Packet Delivery Delay
+    /// The sender’s timestamp-based packet delivery delay, in milliseconds.
     public let msSndTsbPdDelay: Int32
-    /// Undelivered packets in UDT receiver
+    /// The number of packets awaiting delivery in the receive buffer.
     public let pktRcvBuf: Int32
-    /// The undelivered bytes of UDT receiver
+    /// The number of bytes awaiting delivery in the receive buffer.
     public let byteRcvBuf: Int32
-    /// The undelivered timespan (msec) of UDT receiver
+    /// The time span of data awaiting delivery in the receive buffer, in milliseconds.
     public let msRcvBuf: Int32
-    /// The Timestamp-based Packet Delivery Delay
+    /// The receiver’s timestamp-based packet delivery delay, in milliseconds.
     public let msRcvTsbPdDelay: Int32
-    /// The number of control packets supplied by packet filter
+    /// The number of control packets supplied by packet filter.
     public let pktSndFilterExtraTotal: Int32
-    /// The number of control packets received and not supplied back
+    /// The number of filter control packets received and consumed by the packet filter.
     public let pktRcvFilterExtraTotal: Int32
-    /// The number of packets that the filter supplied extra (e.g. FEC rebuilt)
+    /// The number of packets recovered by the packet filter, such as through forward error correction.
     public let pktRcvFilterSupplyTotal: Int32
-    /// The number of packet loss not coverable by filter
+    /// The number of lost packets that the packet filter could not recover.
     public let pktRcvFilterLossTotal: Int32
-    /// The number of control packets supplied by packet filter
+    /// The number of control packets supplied by packet filter.
     public let pktSndFilterExtra: Int32
-    /// The number of control packets received and not supplied back
+    /// The number of filter control packets received and consumed by the packet filter.
     public let pktRcvFilterExtra: Int32
-    /// The number of packets that the filter supplied extra (e.g. FEC rebuilt)
+    /// The number of packets recovered by the packet filter, such as through forward error correction.
     public let pktRcvFilterSupply: Int32
-    /// The number of packet loss not coverable by filter
+    /// The number of lost packets that the packet filter could not recover.
     public let pktRcvFilterLoss: Int32
-    /// The packet reorder tolerance value
+    /// The packet reordering tolerance, measured in packets.
     public let pktReorderTolerance: Int32
 
     init(mon: CBytePerfMon) {

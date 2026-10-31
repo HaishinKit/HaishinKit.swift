@@ -1,12 +1,12 @@
 import Foundation
 import libdatachannel
 
-/// Delegate for receiving RTCDataChannel events.
+/// A delegate that receives data channel messages and state changes.
 public protocol RTCDataChannelDelegate: AnyObject {
-    /// Called when the readyState of the data channel changes.
+    /// Called when the data channel’s state changes.
     /// - Parameters:
     ///   - dataChannel: The RTCDataChannel instance.
-    ///   - readyState: The updated readyState.
+    ///   - readyState: The updated channel state.
     func dataChannel(_ dataChannel: RTCDataChannel, readyStateChanged readyState: RTCDataChannel.ReadyState)
 
     /// Called when a binary message is received.
@@ -22,6 +22,10 @@ public protocol RTCDataChannelDelegate: AnyObject {
     func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessage message: String)
 }
 
+/// A WebRTC data channel for exchanging messages with a peer.
+///
+/// Create a channel with `RTCPeerConnection.createDataChannel(_:)`, or receive one
+/// through the peer connection delegate.
 public final class RTCDataChannel: RTCChannel {
     /// Represents the ready state of an RTCDataChannel.
     public enum ReadyState {
@@ -35,9 +39,10 @@ public final class RTCDataChannel: RTCChannel {
         case closed
     }
 
+    /// The delegate that receives messages and channel state changes.
     public weak var delegate: (any RTCDataChannelDelegate)?
 
-    /// The label.
+    /// The channel’s label, or an empty string if the library cannot retrieve it.
     public var label: String {
         do {
             return try CUtil.getString { buffer, size in
@@ -49,11 +54,12 @@ public final class RTCDataChannel: RTCChannel {
         }
     }
 
-    /// The stream id.
+    /// The SCTP stream identifier returned by the underlying library.
     public var stream: Int {
         Int(rtcGetDataChannelStream(id))
     }
 
+    /// The channel state reported by its callbacks.
     public private(set) var readyState: ReadyState = .connecting {
         didSet {
             delegate?.dataChannel(self, readyStateChanged: readyState)
@@ -98,6 +104,10 @@ public final class RTCDataChannel: RTCChannel {
         rtcDeleteDataChannel(id)
     }
 
+    /// Sends a text message over the data channel.
+    ///
+    /// - Parameter message: The text to send.
+    /// - Throws: `RTCError` if the library rejects the send operation.
     public func send(_ message: String) throws {
         guard let buffer = message.data(using: .utf8) else {
             return

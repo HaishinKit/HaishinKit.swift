@@ -1,3 +1,4 @@
+/// An error reported by the libdatachannel C API.
 public enum RTCError: RawRepresentable, Swift.Error {
     @discardableResult
     static func check(_ result: Int32) throws -> Int32 {
@@ -7,14 +8,21 @@ public enum RTCError: RawRepresentable, Swift.Error {
         return result
     }
 
+    /// The underlying library result code.
     public typealias RawValue = Int32
 
+    /// An argument is invalid.
     case invalid
+    /// The operation failed at runtime.
     case failure
+    /// The requested element is unavailable.
     case notAvail
+    /// The supplied buffer is too small.
     case tooSmall
+    /// A result code without a named case in this enumeration.
     case undefined(value: Int32)
 
+    /// The corresponding libdatachannel result code.
     public var rawValue: Int32 {
         switch self {
         case .invalid:
@@ -30,6 +38,11 @@ public enum RTCError: RawRepresentable, Swift.Error {
         }
     }
 
+    /// Creates an error from a library result code.
+    ///
+    /// Codes other than `-1` through `-4` are preserved in `undefined(value:)`.
+    ///
+    /// - Parameter rawValue: The result code to represent.
     public init(rawValue: Int32) {
         switch rawValue {
         case -1:

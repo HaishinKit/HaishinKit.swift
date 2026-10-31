@@ -1,8 +1,12 @@
 import libdatachannel
 
+/// The certificate algorithm used for a WebRTC connection.
 public enum RTCCertificateType: Sendable, Encodable {
+    /// Use the underlying library’s default certificate type.
     case `default`
+    /// Use an ECDSA certificate.
     case ECDSA
+    /// Use an RSA certificate.
     case RSA
 }
 

@@ -1,11 +1,13 @@
 import Foundation
 import libsrt
 
-/// A structure that represents a Key-Value-Object for the SRTSocket.
+/// An SRT socket option paired with a value encoded for the underlying library.
 public struct SRTSocketOption: Sendable {
-    /// The error domain codes.
+    /// Errors that can occur when converting, reading, or applying an option.
     public enum Error: Swift.Error {
+        /// The option is invalid or the SRT library rejected the operation.
         case invalidOption(_ message: String)
+        /// The value cannot be converted to the option’s underlying type.
         case invalidArgument(_ message: String)
     }
 
@@ -23,11 +25,15 @@ public struct SRTSocketOption: Sendable {
         "false": false
     ]
 
-    /// Constants that indicate the sockopt c-types.
+    /// The underlying value type of an SRT socket option.
     public enum CType: Int, Sendable {
+        /// A UTF-8 string.
         case string
+        /// A signed 32-bit integer.
         case int32
+        /// A signed 64-bit integer.
         case int64
+        /// A Boolean value.
         case bool
 
         var size: Int {
@@ -69,22 +75,34 @@ public struct SRTSocketOption: Sendable {
         }
     }
 
-    /// Constants that indicate the sockopt binding timings.
+    /// The stage at which an SRT socket option can be configured.
     public enum Restriction: Int, Sendable {
+        /// The option must be applied before the socket is bound.
         case preBind
+        /// The option is configured before a connection is established.
         case pre
+        /// The option can be configured after a connection is established.
         case post
     }
 
-    /// A structure that defines the name of a SRTSocket option.
+    /// The name, underlying type, and configuration restriction of an SRT socket option.
     public struct Name: Sendable {
+        /// The string representation of an option name.
         public typealias RawValue = String
 
+        /// The option name used in URL query parameters.
         public let rawValue: String
         let symbol: SRT_SOCKOPT
         let restriction: Restriction?
         let type: CType
 
+        /// Creates a socket option descriptor.
+        ///
+        /// - Parameters:
+        ///   - rawValue: The option’s string name.
+        ///   - symbol: The corresponding SRT library constant.
+        ///   - restriction: When the option may be configured, or `nil` for no writable stage.
+        ///   - type: The type used to encode and decode values.
         public init(rawValue: String, symbol: SRT_SOCKOPT, restriction: Restriction?, type: CType) {
             self.rawValue = rawValue
             self.symbol = symbol
@@ -96,7 +114,7 @@ public struct SRTSocketOption: Sendable {
     /// The socket option's name.
     public let name: Name
 
-    /// The socket option's value expressed as a String value.
+    /// The option value formatted as a string.
     public var stringValue: String {
         switch name.type {
         case .string:
@@ -110,7 +128,9 @@ public struct SRTSocketOption: Sendable {
         }
     }
 
-    /// The socket option's value expressed as a Int value.
+    /// The option value as an integer, or `-1` for a string option.
+    ///
+    /// Boolean values are represented as `0` or `1`.
     public var intValue: Int {
         switch name.type {
         case .string:
@@ -124,7 +144,9 @@ public struct SRTSocketOption: Sendable {
         }
     }
 
-    /// The socket option's value expressed as a Boolean value.
+    /// The option value interpreted as a Boolean.
+    ///
+    /// Integer values are `true` only when equal to `1`. String options return `false`.
     public var boolValue: Bool {
         switch name.type {
         case .string:
@@ -140,7 +162,15 @@ public struct SRTSocketOption: Sendable {
 
     private let data: Data
 
-    /// Creates an option.
+    /// Creates an option by parsing a string.
+    ///
+    /// Boolean options accept `1`, `on`, `yes`, and `true`, or `0`, `off`, `no`, and
+    /// `false`, ignoring case. The transmission type option accepts `live` or `file`.
+    ///
+    /// - Parameters:
+    ///   - name: The option descriptor.
+    ///   - value: The value to parse.
+    /// - Throws: `Error.invalidOption` or `Error.invalidArgument` if conversion fails.
     public init(name: Name, value: String) throws {
         self.name = name
         switch name.type {
@@ -174,7 +204,14 @@ public struct SRTSocketOption: Sendable {
         }
     }
 
-    /// Creates an option.
+    /// Creates an option from an integer.
+    ///
+    /// For Boolean options, only `1` becomes `true`. String options use the decimal
+    /// representation. The value must fit the option’s underlying integer type.
+    ///
+    /// - Parameters:
+    ///   - name: The option descriptor.
+    ///   - value: The value to encode.
     public init(name: Name, value: Int) throws {
         self.name = name
         switch name.type {

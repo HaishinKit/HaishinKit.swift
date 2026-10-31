@@ -1,10 +1,16 @@
 import libdatachannel
 
+/// The direction of media flow relative to the local peer.
 public enum RTCDirection: Sendable {
+    /// The direction is unspecified.
     case unknown
+    /// Send and receive media.
     case sendrecv
+    /// Send media without receiving.
     case sendonly
+    /// Receive media without sending.
     case recvonly
+    /// Neither send nor receive media.
     case inactive
 
     var cValue: rtcDirection {

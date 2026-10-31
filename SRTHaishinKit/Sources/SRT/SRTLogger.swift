@@ -1,21 +1,22 @@
 import Foundation
 import libsrt
 
-/// An actor for writing interpolated string messages to srt logging system.
+/// Configures logging levels and functional areas in the SRT library.
 public actor SRTLogger {
     /// The singleton logger instance.
     public static let shared = SRTLogger()
 
+    /// The severity levels supported by the SRT logger.
     public enum Level: Sendable {
-        /// Highly detailed and very frequent messages.
+        /// Detailed diagnostic messages.
         case debug
-        /// Occasionally displayed information.
+        /// Informational messages.
         case notice
-        /// Unusual behavior.
+        /// Potential problems or unusual behavior.
         case warning
-        /// Abnormal behavior
+        /// Errors encountered during operation.
         case error
-        /// Error that makes the current socket unusabl
+        /// Critical errors that make the current socket unusable.
         case crit
 
         var value: Int32 {
@@ -34,63 +35,63 @@ public actor SRTLogger {
         }
     }
 
-    /// Constants that indicate the addition to levels the logging system has functional areas.
+    /// The SRT subsystems whose logging can be enabled.
     public enum FunctionalArea: Int32, Sendable {
-        /// General uncategorized log, for serious issues only
+        /// Serious issues that do not belong to a specific subsystem.
         case general = 0
-        /// Socket create/open/close/configure activities
+        /// Socket creation, opening, closing, and configuration.
         case bstats = 1
-        /// Connection establishment and handshake
+        /// Connection establishment and handshakes.
         case control = 2
-        /// The checkTimer and around activities
+        /// Timer checks and related activity.
         case data = 3
-        /// The TsBPD thread
+        /// Timestamp-based packet delivery.
         case tsbpd = 4
-        /// System resource allocation and management
+        /// System resource allocation and management.
         case rsrc = 5
-        /// Haicrypt module area
+        /// The HaiCrypt encryption module.
         case haicrypt = 6
-        /// Congestion control module
+        /// Congestion control.
         case congest = 7
-        /// Packet filter module
+        /// Packet filtering.
         case pfilter = 8
-        /// Applications
+        /// Application logging.
         case applog
-        /// API part for socket and library managmenet
+        /// Socket and library management API calls.
         case apiCtrl = 11
-        /// Queue control activities
+        /// Queue control.
         case queCtrl = 13
-        /// EPoll, internal update activities
+        /// Internal epoll updates.
         case epollUpd = 16
-        /// API part for receiving
+        /// Receive API calls.
         case apiRecv = 21
-        /// Buffer, receiving side
+        /// Receive buffers.
         case bufRecv = 22
-        /// Queue, receiving side
+        /// Receive queues.
         case queRecv = 23
-        /// CChannel, receiving side
+        /// Receive channels.
         case chanRecv = 24
-        /// Group, receiving side
+        /// Receive groups.
         case grpRecv = 25
-        /// API part for sending
+        /// Send API calls.
         case apiSend = 31
-        /// Buffer, sending side
+        /// Send buffers.
         case bufSend = 32
-        /// Queue, sending side
+        /// Send queues.
         case queSend = 33
-        /// CChannel, sending side
+        /// Send channels.
         case chnSend = 34
-        /// Group, sending side
+        /// Send groups.
         case grpSend = 35
-        /// Internal activities not connected directly to a socket
+        /// Internal activity not associated with a specific socket.
         case `internal` = 41
-        /// Queue, management part
+        /// Queue management.
         case queMgmt = 43
-        /// CChannel, management part
+        /// Channel management.
         case chnMgmt = 44
-        /// Group, management part
+        /// Group management.
         case grpMgmt = 45
-        /// EPoll, API part
+        /// Epoll API calls.
         case epollApi = 46
 
         func addLogFA() {
@@ -116,7 +117,10 @@ public actor SRTLogger {
         }
     }
 
-    /// The current logging functional areas.
+    /// The functional areas managed by this logger.
+    ///
+    /// Changing this set adds newly selected areas and removes previously selected areas
+    /// from the library’s logging configuration.
     public private(set) var functionalAreas: Set<FunctionalArea> = [] {
         didSet {
             for area in oldValue.subtracting(functionalAreas) {
@@ -128,12 +132,12 @@ public actor SRTLogger {
         }
     }
 
-    /// Sets the current logging level.
+    /// Sets the severity level used by the SRT library.
     public func setLevel(_ level: Level) {
         self.level = level
     }
 
-    /// Sets the current logging functional areas.
+    /// Updates the set of functional areas managed by this logger.
     public func setFunctionalAreas(_ functionalAreas: Set<FunctionalArea>) {
         self.functionalAreas = functionalAreas
     }
