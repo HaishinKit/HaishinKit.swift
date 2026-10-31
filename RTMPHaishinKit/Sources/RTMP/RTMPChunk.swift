@@ -40,6 +40,8 @@ final class RTMPChunkMessageHeader {
     static let maxTimestamp: UInt32 = 0xFFFFFF
 
     var timestamp: UInt32 = 0
+    // Type 3 chunks inherit this flag even after timestamp is decoded or the message is reset.
+    var hasExtendedTimestamp = false
     var messageLength: Int = 0 {
         didSet {
             guard payload.count != messageLength else {
@@ -170,17 +172,26 @@ final class RTMPChunkBuffer {
     }
 
     func getBasicHeader() throws -> (RTMPChunkType, UInt16) {
+        if remaining < 1 {
+            throw RTMPChunkError.bufferUnderflow
+        }
         let rawValue = (data[position] & 0b11000000) >> 6
         guard let type = RTMPChunkType(rawValue: rawValue) else {
             throw RTMPChunkError.unknowChunkType(value: rawValue)
         }
         switch data[position] & 0b00111111 {
         case 0:
+            if remaining < 2 {
+                throw RTMPChunkError.bufferUnderflow
+            }
             defer {
                 position += 2
             }
             return (type, UInt16(data[position + 1]) + 64)
         case 1:
+            if remaining < 3 {
+                throw RTMPChunkError.bufferUnderflow
+            }
             defer {
                 position += 3
             }
@@ -216,7 +227,10 @@ final class RTMPChunkBuffer {
             break
         }
 
-        if messageHeader.timestamp == RTMPChunkMessageHeader.maxTimestamp {
+        if type != .three {
+            messageHeader.hasExtendedTimestamp = messageHeader.timestamp == RTMPChunkMessageHeader.maxTimestamp
+        }
+        if messageHeader.hasExtendedTimestamp {
             if remaining < kRTMPExtendTimestampSize {
                 throw RTMPChunkError.bufferUnderflow
             }
