@@ -95,7 +95,7 @@ Please make sure to contains `Info.plist` the following values when accessing th
 
 ## 📃 Documentation
 - [API Documentation](https://docs.haishinkit.com/swift/latest/documentation/)
-- [Migration Guide](https://github.com/HaishinKit/HaishinKit.swift/wiki#-migration-guide)
+- [Migration Guide](HaishinKit/Sources/Docs.docc/migration-guide.md)
 
 ## 🌏 Related projects
 Project name    |Notes       |License

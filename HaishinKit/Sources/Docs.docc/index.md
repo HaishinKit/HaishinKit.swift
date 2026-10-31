@@ -88,3 +88,9 @@ try session.connect {
 }
 ```
 
+## Topics
+
+### Migration
+
+- <doc:migration-guide>
+
