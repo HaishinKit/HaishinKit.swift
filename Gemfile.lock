@@ -431,6 +431,8 @@ DEPENDENCIES
   danger
   danger-privacymanifest!
   fastlane (~> 2.241, >= 2.241.2)
+  minitest (~> 5.0)
+  rexml (~> 3.4)
   rubocop
 
 RUBY VERSION
