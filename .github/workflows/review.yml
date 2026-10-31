@@ -28,23 +28,9 @@ jobs:
           mkdir -p test-results
           set -o pipefail
           bundle exec fastlane review 2>&1 | tee test-results/review.log
-      - name: Generate test report
+      - name: Annotate test failures and summarize results
         if: always() && (steps.review.outcome == 'success' || steps.review.outcome == 'failure')
         run: python3 .github/scripts/test_report.py test-results --outcome '${{ steps.review.outcome }}' --summary "$GITHUB_STEP_SUMMARY"
-      - name: Upload HTML report
-        id: html
-        if: always() && hashFiles('test-results/test-results.html') != ''
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: test-results/test-results.html
-          archive: false
-          retention-days: 14
-          if-no-files-found: error
-      - name: Link HTML report
-        if: always() && steps.html.outcome == 'success'
-        env:
-          REPORT_URL: ${{ steps.html.outputs.artifact-url }}
-        run: printf '\n[Open HTML test report](%s)\n' "$REPORT_URL" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload test logs and XML
         if: always() && (steps.review.outcome == 'success' || steps.review.outcome == 'failure')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
