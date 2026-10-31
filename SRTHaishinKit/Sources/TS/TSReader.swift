@@ -115,7 +115,8 @@ final class TSReader {
         case .h264:
             let units = nalUnitReader.read(&pes.data, type: H264NALUnit.self)
             var annexB = Data()
-            for unit in units where unit.type == .idr || unit.type == .slice {
+            // NALUnitReader returns units in reverse byte-stream order.
+            for unit in units.reversed() where unit.type == .idr || unit.type == .slice {
                 annexB.append(contentsOf: [0x00, 0x00, 0x00, 0x01])
                 annexB.append(unit.data)
             }
