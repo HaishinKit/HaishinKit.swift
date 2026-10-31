@@ -1,11 +1,15 @@
 desc 'Review PullRequest.'
 lane :review do
 
-  # All targets belong to the root package. Run it once and keep machine-readable results.
-  Dir.chdir('..') do
-    FileUtils.mkdir_p('test-results')
-    sh 'swift test --xunit-output test-results/tests.xml'
-  end
+  spm(
+    command: 'test',
+    package_path: 'HaishinKit'
+  )
+
+  spm(
+    command: 'test',
+    package_path: 'SRTHaishinKit'
+  )
 
   begin
     danger(
