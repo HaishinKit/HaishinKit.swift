@@ -16,7 +16,7 @@ Use these links when browsing the repository on GitHub or reading the Markdown f
 
 | From | To | Guide |
 | --- | --- | --- |
-| 2.2.x | 2.3.x (unreleased) | [Moving from 2.2.x APIs to 2.3.x](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-2.2.x-to-2.3.x.md) |
+| 2.2.x | 2.3.x | [Moving from 2.2.x APIs to 2.3.x](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-2.2.x-to-2.3.x.md) |
 | 2.0.x | 2.1.0 | [Moving from 2.0.x APIs to 2.1.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-2.0.x-to-2.1.0.md) |
 | 1.9.x | 2.0.0 | [Moving from 1.9.x APIs to 2.0.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-1.9.x-to-2.0.0.md) |
 | 1.8.x | 1.9.0 | [Moving from 1.8.x APIs to 1.9.0](https://github.com/HaishinKit/HaishinKit.swift/blob/main/HaishinKit/Sources/Docs.docc/migration-1.8.x-to-1.9.0.md) |
