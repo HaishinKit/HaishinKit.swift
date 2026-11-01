@@ -13,11 +13,11 @@ package final actor IncomingStream {
     private lazy var mediaLink = MediaLink()
     private lazy var audioCodec = AudioCodec()
     private lazy var videoCodec = VideoCodec()
-    private weak var stream: (any StreamConvertible)?
+    private weak var stream: (any _Stream)?
     private var audioPlayerNode: AudioPlayerNode?
 
     /// Creates a new instance.
-    public init(_ stream: some StreamConvertible) {
+    package init(_ stream: some _Stream) {
         self.stream = stream
     }
 
@@ -64,7 +64,7 @@ extension IncomingStream: AsyncRunner {
         Task {
             await mediaLink.startRunning()
             for await video in await mediaLink.dequeue {
-                await stream?.append(video)
+                await stream?.didReceive(video)
             }
         }
         Task {
@@ -76,7 +76,7 @@ extension IncomingStream: AsyncRunner {
             await audioPlayerNode?.startRunning()
             for await audio in audioCodec.outputStream {
                 await audioPlayerNode?.enqueue(audio.0, when: audio.1)
-                await stream?.append(audio.0, when: audio.1)
+                await stream?.didReceive(audio.0, when: audio.1)
             }
         }
     }

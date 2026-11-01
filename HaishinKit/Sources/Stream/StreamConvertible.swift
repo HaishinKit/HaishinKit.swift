@@ -54,6 +54,8 @@ public protocol StreamConvertible: Actor, MediaMixerOutput {
 }
 
 package protocol _Stream: StreamConvertible {
+    func didReceive(_ buffer: CMSampleBuffer)
+    func didReceive(_ buffer: AVAudioBuffer, when: AVAudioTime)
     var incoming: IncomingStream { get }
     var outgoing: OutgoingStream { get }
     var outputs: [any StreamOutput] { get set }
@@ -61,6 +63,14 @@ package protocol _Stream: StreamConvertible {
 }
 
 extension _Stream {
+    package func didReceive(_ buffer: CMSampleBuffer) {
+        append(buffer)
+    }
+
+    package func didReceive(_ buffer: AVAudioBuffer, when: AVAudioTime) {
+        append(buffer, when: when)
+    }
+
     public var soundTransform: SoundTransform? {
         get async {
             await incoming.soundTransfrom

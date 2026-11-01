@@ -30,62 +30,72 @@ public actor RTCStream {
     }()
     package var outputs: [any StreamOutput] = []
     package var bitRateStrategy: (any StreamBitRateStrategy)?
-    private var direction: RTCDirection = .sendonly
+    private var direction: RTCDirection = .inactive
+    private var sendingTasks: [Task<Void, Never>] = []
 
     /// Creates a WebRTC media stream with default encoding settings.
     public init() {
     }
 
-    /// Selects the media direction and starts the corresponding processing.
-    ///
-    /// `.recvonly` starts incoming media processing. `.sendonly` and `.sendrecv` start
-    /// outgoing encoding. `.unknown` and `.inactive` do not start or stop processing.
-    ///
-    /// - Parameter direction: The media direction to use.
-    public func setDirection(_ direction: RTCDirection) {
+    /// Starts sending, receiving, or both. Inactive/unknown stops both pipelines.
+    /// Reapplying a direction does not create additional encoder consumers.
+    public func setDirection(_ direction: RTCDirection) async {
         self.direction = direction
         switch direction {
-        case .recvonly:
-            Task {
-                await incoming.startRunning()
-            }
         case .sendonly, .sendrecv:
-            outgoing.startRunning()
-            Task {
-                for await audio in outgoing.audioOutputStream {
-                    append(audio.0, when: audio.1)
-                }
-            }
-            Task {
-                for await video in outgoing.videoOutputStream {
-                    append(video)
-                }
-            }
-            Task {
-                for await video in outgoing.videoInputStream {
-                    outgoing.append(video: video)
-                }
-            }
+            startSending()
         default:
-            break
+            stopSending()
+        }
+        switch direction {
+        case .recvonly, .sendrecv:
+            await incoming.startRunning()
+        default:
+            await incoming.stopRunning()
         }
     }
 
-    /// Removes associated tracks and stops processing for a send-only or receive-only stream.
-    ///
+    /// Removes associated tracks and stops both media pipelines.
     /// This method does not close the peer connection.
     public func close() async {
+        await setDirection(.inactive)
         tracks.removeAll()
-        switch direction {
-        case .sendonly:
-            outgoing.stopRunning()
-        case .recvonly:
+    }
+
+    private func startSending() {
+        guard sendingTasks.isEmpty else { return }
+        outgoing.startRunning()
+        // Obtain the streams before launching consumers so a later restart cannot
+        // replace their continuations before the tasks have started.
+        let audioOutput = outgoing.audioOutputStream
+        let videoOutput = outgoing.videoOutputStream
+        let videoInput = outgoing.videoInputStream
+        sendingTasks = [
             Task {
-                await incoming.stopRunning()
+                for await audio in audioOutput {
+                    guard !Task.isCancelled else { break }
+                    append(audio.0, when: audio.1)
+                }
+            },
+            Task {
+                for await video in videoOutput {
+                    guard !Task.isCancelled else { break }
+                    append(video)
+                }
+            },
+            Task {
+                for await video in videoInput {
+                    guard !Task.isCancelled else { break }
+                    outgoing.append(video: video)
+                }
             }
-        default:
-            break
-        }
+        ]
+    }
+
+    private func stopSending() {
+        sendingTasks.forEach { $0.cancel() }
+        sendingTasks.removeAll()
+        outgoing.stopRunning()
     }
 
     func addTrack(_ track: RTCSendableStreamTrack) async {
@@ -95,6 +105,16 @@ public actor RTCStream {
 }
 
 extension RTCStream: _Stream {
+    // Decoded remote media is playback output, never microphone/camera input.
+    // Feeding it back through append would encode and send it to the peer again.
+    package func didReceive(_ buffer: CMSampleBuffer) {
+        outputs.forEach { $0.stream(self, didOutput: buffer) }
+    }
+
+    package func didReceive(_ buffer: AVAudioBuffer, when: AVAudioTime) {
+        outputs.forEach { $0.stream(self, didOutput: buffer, when: when) }
+    }
+
     /// Sets the outgoing audio encoding settings.
     ///
     /// - Parameter audioSettings: Settings that select Opus encoding.
