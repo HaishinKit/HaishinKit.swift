@@ -61,9 +61,13 @@ public struct VideoCodecSettings: Codable, Sendable {
     }
 
     /// The type of the VideoCodec supports format.
-    package enum Format: Codable, Sendable, CaseIterable {
+    public enum Format: Codable, Sendable, CaseIterable, Hashable {
         case h264
         case hevc
+        /// VP8 requires a registered codec provider.
+        case vp8
+        /// VP9 requires a registered codec provider.
+        case vp9
 
         #if os(macOS)
         var encoderID: NSString {
@@ -76,16 +80,22 @@ public struct VideoCodecSettings: Codable, Sendable {
                 #endif
             case .hevc:
                 return NSString(string: "com.apple.videotoolbox.videoencoder.ave.hevc")
+            case .vp8, .vp9:
+                return ""
             }
         }
         #endif
 
-        var codecType: UInt32 {
+        public var codecType: UInt32 {
             switch self {
             case .h264:
                 return kCMVideoCodecType_H264
             case .hevc:
                 return kCMVideoCodecType_HEVC
+            case .vp8:
+                return 0x76703038 // vp08
+            case .vp9:
+                return kCMVideoCodecType_VP9
             }
         }
     }
@@ -94,9 +104,12 @@ public struct VideoCodecSettings: Codable, Sendable {
     public var videoSize: CGSize
     /// Specifies the bitrate.
     public var bitRate: Int
-    /// Specifies the H264 profileLevel.
+    /// The H.264 or HEVC profile level. Software VP8/VP9 providers ignore this value.
     public var profileLevel: String {
         didSet {
+            guard format == .h264 || format == .hevc else {
+                return
+            }
             if profileLevel.contains("HEVC") {
                 format = .hevc
             } else {
@@ -123,7 +136,17 @@ public struct VideoCodecSettings: Codable, Sendable {
     /// Specifies the expected frame rate for an encoder. It may optimize power consumption.
     public var expectedFrameRate: Double?
 
-    package var format: Format = .h264
+    /// The codec to use. Additional formats require a registered provider.
+    public var format: Format = .h264 {
+        didSet {
+            guard format != oldValue else { return }
+            if format == .hevc && !profileLevel.contains("HEVC") {
+                profileLevel = kVTProfileLevel_HEVC_Main_AutoLevel as String
+            } else if format == .h264 && profileLevel.contains("HEVC") {
+                profileLevel = kVTProfileLevel_H264_Baseline_3_1 as String
+            }
+        }
+    }
 
     /// Creates a new VideoCodecSettings instance.
     public init(
@@ -139,7 +162,8 @@ public struct VideoCodecSettings: Codable, Sendable {
         dataRateLimits: [Double]? = [0.0, 0.0],
         isLowLatencyRateControlEnabled: Bool = false,
         isHardwareAcceleratedEnabled: Bool = true,
-        expectedFrameRate: Double? = nil
+        expectedFrameRate: Double? = nil,
+        format: Format? = nil
     ) {
         self.videoSize = videoSize
         self.bitRate = bitRate
@@ -155,10 +179,18 @@ public struct VideoCodecSettings: Codable, Sendable {
         if profileLevel.contains("HEVC") {
             self.format = .hevc
         }
+        if let format {
+            self.format = format
+            if format == .hevc && !profileLevel.contains("HEVC") {
+                self.profileLevel = kVTProfileLevel_HEVC_Main_AutoLevel as String
+            } else if format == .h264 && profileLevel.contains("HEVC") {
+                self.profileLevel = kVTProfileLevel_H264_Baseline_3_1 as String
+            }
+        }
     }
 
     func invalidateSession(_ rhs: VideoCodecSettings) -> Bool {
-        return !(videoSize == rhs.videoSize &&
+        return !(format == rhs.format && videoSize == rhs.videoSize &&
                     maxKeyFrameIntervalDuration == rhs.maxKeyFrameIntervalDuration &&
                     scalingMode == rhs.scalingMode &&
                     allowFrameReordering == rhs.allowFrameReordering &&
@@ -170,19 +202,10 @@ public struct VideoCodecSettings: Codable, Sendable {
         )
     }
 
-    func apply(_ codec: VideoCodec, rhs: VideoCodecSettings) {
-        if bitRate != rhs.bitRate {
-            logger.info("bitRate change from ", rhs.bitRate, " to ", bitRate)
-            let option = VTSessionOption(key: bitRateMode.key, value: NSNumber(value: bitRate))
-            _ = codec.session?.setOption(option)
-        }
+    func apply(_ codec: VideoCodec, rhs: VideoCodecSettings) throws {
+        try codec.session?.update(self)
         if frameInterval != rhs.frameInterval {
             codec.frameInterval = frameInterval
-        }
-        if expectedFrameRate != rhs.expectedFrameRate {
-            let value = if let expectedFrameRate { expectedFrameRate } else { 0.0 }
-            let option = VTSessionOption(key: .expectedFrameRate, value: value as CFNumber)
-            _ = codec.session?.setOption(option)
         }
     }
 

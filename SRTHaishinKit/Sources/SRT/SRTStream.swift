@@ -7,7 +7,7 @@ import libsrt
 /// Publishes or plays an MPEG-2 transport stream over an SRT connection.
 public actor SRTStream {
     static let supportedAudioCodecs: [AudioCodecSettings.Format] = [.aac]
-    static let supportedVideoCodecs: [VideoCodecSettings.Format] = VideoCodecSettings.Format.allCases
+    static let supportedVideoCodecs: [VideoCodecSettings.Format] = [.h264, .hevc]
 
     /// The media types expected in the outgoing transport stream.
     public var expectedMedias: Set<AVMediaType> {
