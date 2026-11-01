@@ -1,9 +1,16 @@
 import Foundation
+import Network
 import Testing
 
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPConnectionTests {
+    @Test func requiredInterfaceType() async {
+        #expect(await RTMPConnection().requiredInterfaceType == nil)
+        let connection = RTMPConnection(requiredInterfaceType: .cellular)
+        #expect(await connection.requiredInterfaceType == .cellular)
+    }
+
     @Test(arguments: ["rtmp:/", "rtmps:/", "rtmp:/localhost/live", "rtmps:/localhost/live", "rtmp:///live", "rtmps://"])
     func rejectsMalformedURL(_ command: String) async {
         let connection = RTMPConnection()
