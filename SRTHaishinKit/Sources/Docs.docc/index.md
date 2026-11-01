@@ -1,6 +1,11 @@
 # ``SRTHaishinKit``
 This module supports the SRT protocol.
 
+@Metadata {
+    @PageImage(purpose: icon, source: "srthaishinkit-icon.svg", alt: "Secure reliable transport")
+    @PageImage(purpose: card, source: "srthaishinkit-card.svg", alt: "Secure reliable transport")
+}
+
 ## 🔍 Overview
 SRTHaishinKit is SRT protocols stack in Swift. It internally uses a library that is built from [libsrt](https://github.com/Haivision/srt) and converted into an xcframework.
 

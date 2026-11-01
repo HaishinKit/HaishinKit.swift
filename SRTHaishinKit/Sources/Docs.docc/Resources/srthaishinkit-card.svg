@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <title>Secure reliable transport</title>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#047857"/>
+      <stop offset="1" stop-color="#064E3B"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="0" fill="url(#background)"/>
+  <g transform="translate(320 180) scale(1.65)" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 -46 36 -31V-3C36 20 20 36 0 46-20 36-36 20-36 -3V-31Z"/><path d="M-20 0H20M8 -12 20 0 8 12"/>
+  </g>
+</svg>

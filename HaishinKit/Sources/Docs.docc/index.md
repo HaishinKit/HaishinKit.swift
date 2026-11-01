@@ -1,6 +1,11 @@
 # ``HaishinKit``
 This is the main module.
 
+@Metadata {
+    @PageImage(purpose: icon, source: "haishinkit-app-icon.png", alt: "HaishinKit app icon")
+    @PageImage(purpose: card, source: "haishinkit-card.svg", alt: "HaishinKit app icon")
+}
+
 ## 🔍 Overview
 Provides camera and microphone mixing functionality required for live streaming.  
 It also offers common processing across each module.

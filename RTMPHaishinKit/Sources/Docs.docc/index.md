@@ -1,6 +1,11 @@
 # ``RTMPHaishinKit``
 This module supports the RTMP protocol.
 
+@Metadata {
+    @PageImage(purpose: icon, source: "rtmphaishinkit-icon.svg", alt: "Live broadcasting")
+    @PageImage(purpose: card, source: "rtmphaishinkit-card.svg", alt: "Live broadcasting")
+}
+
 ## 🔍 Overview
 RTMPHaishinKit is RTMP protocols stack in Swift. 
 
