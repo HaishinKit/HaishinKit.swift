@@ -8,18 +8,31 @@ final package class NALUnitReader {
     package init() {
     }
 
+    /// Reads Annex B NAL units in byte-stream order.
     package func read<T: NALUnit>(_ data: inout Data, type: T.Type) -> [T] {
-        var units: [T] = .init()
-        var lastIndexOf = data.count - 1
-        for i in (2..<data.count).reversed() {
-            guard data[i] == 1 && data[i - 1] == 0 && data[i - 2] == 0 else {
-                continue
-            }
-            let startCodeLength = 0 <= i - 3 && data[i - 3] == 0 ? 4 : 3
-            units.append(T.init(data.subdata(in: (i + 1)..<lastIndexOf + 1)))
-            lastIndexOf = i - startCodeLength
+        guard 3 <= data.count else {
+            return []
         }
-        return units
+        return data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+            var units: [T] = .init()
+            var startIndex = bytes.count
+            let offset = data.startIndex
+            for i in 2..<bytes.count {
+                guard bytes[i] == 1 && bytes[i - 1] == 0 && bytes[i - 2] == 0 else {
+                    continue
+                }
+                let startCodeLength = 0 <= i - 3 && bytes[i - 3] == 0 ? 4 : 3
+                let endIndex = i - startCodeLength + 1
+                if startIndex < endIndex {
+                    units.append(T.init(data.subdata(in: offset + startIndex..<offset + endIndex)))
+                }
+                startIndex = i + 1
+            }
+            if startIndex < bytes.count {
+                units.append(T.init(data.subdata(in: offset + startIndex..<data.endIndex)))
+            }
+            return units
+        }
     }
 
     package func read(_ buffer: CMSampleBuffer) -> [Data] {

@@ -4,8 +4,8 @@ import HaishinKit
 extension [H264NALUnit] {
     func makeFormatDescription(_ nalUnitHeaderLength: Int32 = 4) -> CMFormatDescription? {
         guard
-            let pps = first(where: { $0.type == .pps }),
-            let sps = first(where: { $0.type == .sps }) else {
+            let pps = last(where: { $0.type == .pps }),
+            let sps = last(where: { $0.type == .sps }) else {
             return nil
         }
         var formatDescription: CMFormatDescription?
