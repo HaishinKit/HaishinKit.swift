@@ -25,6 +25,7 @@ Carthage/*
 docs/undocumented.json
 fastlane/report.xml
 test-results/
+documentation-results/
 libdatachannel.xcframework
 docs/docsets/HaishinKit.docset/Contents/Resources/Documents/undocumented.json
 HaishinKit.json

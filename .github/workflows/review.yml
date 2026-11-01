@@ -19,7 +19,9 @@ jobs:
           ruby-version: .ruby-version
           bundler-cache: true
       - name: Test report checks
-        run: bundle exec ruby fastlane/tests/publish_test_results_test.rb
+        run: |
+          bundle exec ruby fastlane/tests/publish_test_results_test.rb
+          bundle exec ruby fastlane/tests/publish_documentation_results_test.rb
       - name: fastlane
         id: review
         env:

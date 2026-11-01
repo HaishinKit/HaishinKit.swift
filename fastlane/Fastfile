@@ -25,6 +25,9 @@ lane :document do |options|
   end
 
   version = options[:version]
+  # Document public modules, not dependency wrappers such as RTC.
+  document_targets = %w[HaishinKit RTMPHaishinKit SRTHaishinKit MoQTHaishinKit RTCHaishinKit]
+                     .map { |target| "--target #{target}" }.join(' ')
 
   Dir.chdir('..') do
     sh 'git clone git@github.com:HaishinKit/docs.haishinkit.com.git'
@@ -36,7 +39,7 @@ lane :document do |options|
 
     sh "rm -rf ./docs.haishinkit.com/swift/#{version}"
     sh <<COMMAND
- swift package --allow-writing-to-directory ./docs.haishinkit.com/ generate-documentation --hosting-base-path swift/#{version}\
+ swift package --allow-writing-to-directory ./docs.haishinkit.com/ generate-documentation #{document_targets} --hosting-base-path swift/#{version}\
  --output-path ./docs.haishinkit.com/swift/#{version}\
  --transform-for-static-hosting\
  --enable-experimental-combined-documentation
@@ -44,7 +47,7 @@ COMMAND
 
     sh 'rm -rf ./docs.haishinkit.com/swift/latest'
     sh <<COMMAND
- swift package --allow-writing-to-directory ./docs.haishinkit.com/ generate-documentation --hosting-base-path swift/latest\
+ swift package --allow-writing-to-directory ./docs.haishinkit.com/ generate-documentation #{document_targets} --hosting-base-path swift/latest\
  --output-path ./docs.haishinkit.com/swift/latest\
  --transform-for-static-hosting\
  --enable-experimental-combined-documentation

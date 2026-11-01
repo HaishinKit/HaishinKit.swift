@@ -3,13 +3,19 @@ on:
   push:
     tags:
       - '*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Documentation version to generate and publish'
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
   build:
     runs-on: macos-26
     env:
-      RELEASE_VERSION: ${{ github.ref_name }}
+      RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,6 +35,8 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
+      - name: Documentation report checks
+        run: bundle exec ruby fastlane/tests/publish_documentation_results_test.rb
       - name: Setup SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -39,6 +47,21 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan github.com >> ~/.ssh/known_hosts
       - name: fastlane
+        id: document
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bundle exec fastlane document "version:$RELEASE_VERSION"
+        run: |
+          mkdir -p documentation-results
+          set -o pipefail
+          bundle exec fastlane document "version:$RELEASE_VERSION" 2>&1 | tee documentation-results/document.log
+      - name: Annotate documentation failures and summarize results
+        if: always() && (steps.document.outcome == 'success' || steps.document.outcome == 'failure')
+        run: bundle exec fastlane run publish_documentation_results outcome:'${{ steps.document.outcome }}'
+      - name: Upload documentation logs
+        if: always() && (steps.document.outcome == 'success' || steps.document.outcome == 'failure')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documentation-logs
+          path: documentation-results/document.log
+          retention-days: 14
+          if-no-files-found: error
