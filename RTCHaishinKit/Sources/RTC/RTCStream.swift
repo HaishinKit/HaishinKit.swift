@@ -15,7 +15,7 @@ public actor RTCStream {
     static let supportedVideoCodecs: [VideoCodecSettings.Format] = [.h264]
 
     let id: String = UUID().uuidString
-    private(set) var tracks: [RTCSendableStreamTrack] = []
+    private(set) var tracks: [RTCMediaTrack] = []
     /// The readiness state reported by the stream.
     public private(set) var readyState: StreamReadyState = .idle
     /// The selected mixer video track. `UInt8.max` selects mixed output; `nil` disables video delivery.
@@ -98,7 +98,7 @@ public actor RTCStream {
         outgoing.stopRunning()
     }
 
-    func addTrack(_ track: RTCSendableStreamTrack) async {
+    func addTrack(_ track: RTCMediaTrack) async {
         await track.setDelegate(self)
         tracks.append(track)
     }
