@@ -4,9 +4,9 @@ import HaishinKit
 extension [HEVCNALUnit] {
     func makeFormatDescription(_ nalUnitHeaderLength: Int32 = 4) -> CMFormatDescription? {
         guard
-            let vps = first(where: { $0.type == .vps }),
-            let sps = first(where: { $0.type == .sps }),
-            let pps = first(where: { $0.type == .pps }) else {
+            let vps = last(where: { $0.type == .vps }),
+            let sps = last(where: { $0.type == .sps }),
+            let pps = last(where: { $0.type == .pps }) else {
             return nil
         }
         return vps.data.withUnsafeBytes { (vpsBuffer: UnsafeRawBufferPointer) -> CMFormatDescription? in
