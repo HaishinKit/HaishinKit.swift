@@ -25,6 +25,9 @@ extension ScreenObjectConvertible {
 // The ScreenObject class is the abstract class for all objects that are rendered on the screen.
 @ScreenActor
 open class ScreenObject: ScreenObjectConvertible {
+    /// The logical type used when serializing a screen object.
+    open class var type: String { "object" }
+
     /// The horizontal alignment for the screen object.
     public enum HorizontalAlignment: Int, Sendable {
         /// A guide that marks the left edge of the screen object.

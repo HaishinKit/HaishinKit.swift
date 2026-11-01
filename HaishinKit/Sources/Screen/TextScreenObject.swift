@@ -27,7 +27,10 @@ extension NSColor {
         var b: CGFloat = 0
         var a: CGFloat = 0
 
-        self.getRed(&r, green: &g, blue: &b, alpha: &a)
+        guard let color = usingColorSpace(.sRGB) else {
+            return nil
+        }
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
 
         let ri = Int(round(r * 255))
         let gi = Int(round(g * 255))
@@ -84,7 +87,7 @@ extension UIColor {
 
 /// An object that manages offscreen rendering a text source.
 public final class TextScreenObject: ScreenObject {
-    public static let type: String = "text"
+    override public class var type: String { "text" }
 
     /// Specifies the text value.
     public var string: String = "" {
@@ -110,7 +113,7 @@ public final class TextScreenObject: ScreenObject {
     override public var elements: [String: String] {
         get {
             var size: String?
-            if let font = attributes?[.foregroundColor] as? NSFont {
+            if let font = attributes?[.font] as? NSFont {
                 size = font.pointSize.description
             }
             var color: String?
@@ -147,7 +150,7 @@ public final class TextScreenObject: ScreenObject {
     override public var elements: [String: String] {
         get {
             var size: String?
-            if let font = attributes?[.foregroundColor] as? UIFont {
+            if let font = attributes?[.font] as? UIFont {
                 size = font.pointSize.description
             }
             var color: String?

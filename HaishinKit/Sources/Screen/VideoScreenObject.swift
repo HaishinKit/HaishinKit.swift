@@ -7,7 +7,7 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
         static let track = "track"
     }
 
-    public static let type: String = "video"
+    override public class var type: String { "video" }
     static let capacity: Int = 3
 
     public var chromaKeyColor: CGColor?
@@ -67,9 +67,7 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
         } catch {
             logger.error(error)
         }
-        Task {
-            horizontalAlignment = .center
-        }
+        horizontalAlignment = .center
     }
 
     /// Registers a video effect.

@@ -1,0 +1,105 @@
+{
+  "type": "container",
+  "id": "root",
+  "size": {
+    "width": 320,
+    "height": 180
+  },
+  "isVisible": false,
+  "layoutMargin": {
+    "top": 11,
+    "left": 22,
+    "bottom": 33,
+    "right": 44
+  },
+  "horizontalAlignment": 2,
+  "verticalAlignment": 1,
+  "elements": {},
+  "children": [
+    {
+      "type": "video",
+      "id": "camera",
+      "size": {
+        "width": 320,
+        "height": 180
+      },
+      "isVisible": false,
+      "layoutMargin": {
+        "top": 11,
+        "left": 22,
+        "bottom": 33,
+        "right": 44
+      },
+      "horizontalAlignment": 2,
+      "verticalAlignment": 1,
+      "elements": {
+        "track": "1"
+      },
+      "children": []
+    },
+    {
+      "type": "container",
+      "id": "overlay",
+      "size": {
+        "width": 320,
+        "height": 180
+      },
+      "isVisible": false,
+      "layoutMargin": {
+        "top": 11,
+        "left": 22,
+        "bottom": 33,
+        "right": 44
+      },
+      "horizontalAlignment": 2,
+      "verticalAlignment": 1,
+      "elements": {},
+      "children": [
+        {
+          "type": "text",
+          "id": "caption",
+          "size": {
+            "width": 320,
+            "height": 180
+          },
+          "isVisible": false,
+          "layoutMargin": {
+            "top": 11,
+            "left": 22,
+            "bottom": 33,
+            "right": 44
+          },
+          "horizontalAlignment": 2,
+          "verticalAlignment": 1,
+          "elements": {
+            "value": "字幕 🎥\nHaishinKit",
+            "fontSize": "24.5",
+            "color": "#8044AAFF"
+          },
+          "children": []
+        },
+        {
+          "type": "image",
+          "id": "logo",
+          "size": {
+            "width": 320,
+            "height": 180
+          },
+          "isVisible": false,
+          "layoutMargin": {
+            "top": 11,
+            "left": 22,
+            "bottom": 33,
+            "right": 44
+          },
+          "horizontalAlignment": 2,
+          "verticalAlignment": 1,
+          "elements": {
+            "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="
+          },
+          "children": []
+        }
+      ]
+    }
+  ]
+}

@@ -33,6 +33,12 @@ public struct ScreenObjectFactory {
     public func make(_ snapshot: ScreenObjectSnapshot) -> ScreenObject? {
         var screenObject: ScreenObject?
         switch snapshot.type {
+        case "screen", ScreenObjectContainer.type:
+            let container = ScreenObjectContainer(id: snapshot.id)
+            for child in snapshot.children {
+                try? container.addChild(make(child))
+            }
+            screenObject = container
         case ImageScreenObject.type:
             screenObject = ImageScreenObject(id: snapshot.id)
         case TextScreenObject.type:
@@ -42,6 +48,7 @@ public struct ScreenObjectFactory {
         default:
             break
         }
+        screenObject?.isVisible = snapshot.isVisible
         screenObject?.size = snapshot.size.cgSize
         screenObject?.elements = snapshot.elements
         screenObject?.horizontalAlignment = .init(rawValue: snapshot.horizontalAlignment) ?? .left

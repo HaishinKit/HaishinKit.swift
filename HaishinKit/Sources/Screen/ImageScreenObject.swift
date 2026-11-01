@@ -52,7 +52,7 @@ private struct DataImageSource: ImageSource {
 
 /// An object that manages offscreen rendering a cgImage source.
 public final class ImageScreenObject: ScreenObject {
-    public static let type = "image"
+    override public class var type: String { "image" }
 
     private enum Keys {
         static let source = "source"

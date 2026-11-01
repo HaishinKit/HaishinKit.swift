@@ -10,6 +10,8 @@ protocol ScreenObjectContainerConvertible: AnyObject {
 
 /// An object represents a collection of screen objects.
 public class ScreenObjectContainer: ScreenObject, ScreenObjectContainerConvertible {
+    override public class var type: String { "container" }
+
     /// The error domain codes.
     public enum Error: Swift.Error {
         /// An error the screen object registry throws when the app registers a screen object twice by the same instance.
