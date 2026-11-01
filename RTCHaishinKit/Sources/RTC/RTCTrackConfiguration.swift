@@ -51,23 +51,20 @@ extension RTCTrackConfiguration {
 
 extension RTCTrackConfiguration {
     func addTrack(_ connection: Int32, direction: RTCDirection) throws -> Int32 {
-        var rtcTrackInit = makeRtcTrackInit(direction)
-        let result = try RTCError.check(rtcAddTrackEx(connection, &rtcTrackInit))
-        return result
-    }
-
-    private func makeRtcTrackInit(_ direction: RTCDirection) -> rtcTrackInit {
-        // TODO: Fix memory leak
-        return rtcTrackInit(
-            direction: direction.cValue,
-            codec: codec,
-            payloadType: pt,
-            ssrc: ssrc,
-            mid: strdup(mid),
-            name: strdup(name),
-            msid: strdup(msid),
-            trackId: strdup(trackId),
-            profile: profile == nil ? nil : strdup(profile)
-        )
+        let strings = [mid, name, msid, trackId, profile ?? ""]
+        return try RTCError.check(strings.withCStrings { pointers in
+            var config = rtcTrackInit(
+                direction: direction.cValue,
+                codec: codec,
+                payloadType: pt,
+                ssrc: ssrc,
+                mid: pointers[0],
+                name: pointers[1],
+                msid: pointers[2],
+                trackId: pointers[3],
+                profile: profile == nil ? nil : pointers[4]
+            )
+            return rtcAddTrackEx(connection, &config)
+        })
     }
 }
