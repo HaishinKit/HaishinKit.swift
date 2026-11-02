@@ -39,13 +39,16 @@ final actor RTMPSocket {
     init() {
     }
 
-    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel) {
+    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel, requiredInterfaceType: NWInterface.InterfaceType? = nil) {
         self.qualityOfService = qualityOfService
         switch securityLevel {
         case .ssLv2, .ssLv3, .tlSv1, .negotiatedSSL:
             parameters = .tls
         default:
             parameters = .tcp
+        }
+        if let requiredInterfaceType {
+            parameters.requiredInterfaceType = requiredInterfaceType
         }
     }
 

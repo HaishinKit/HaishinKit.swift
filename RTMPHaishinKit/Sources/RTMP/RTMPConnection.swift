@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import HaishinKit
+import Network
 
 // MARK: -
 /// The RTMPConnection class create a two-way RTMP connection.
@@ -177,6 +178,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     public let chunkSize: Int
     /// The dispatchQos for socket.
     public let qualityOfService: DispatchQoS
+    /// The network interface type the socket must use, such as `.wifi` or `.cellular`. The default value is nil, the system chooses the route.
+    public let requiredInterfaceType: NWInterface.InterfaceType?
     /// The URI passed to the Self.connect() method.
     public private(set) var uri: URL?
     /// The instance connected to server(true) or not(false).
@@ -254,6 +257,12 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     ///  capsEx: 0
     /// )
     /// ```
+    ///
+    /// The requiredInterfaceType parameter keeps the socket on one network interface. A device that has both Wi-Fi and cellular
+    /// uses Wi-Fi by default; pass `.cellular` to publish over mobile data while the Wi-Fi stays available to other connections.
+    /// ```swift
+    /// let connection = RTMPConnection(requiredInterfaceType: .cellular)
+    /// ```
     public init(
         swfUrl: String? = nil,
         pageUrl: String? = nil,
@@ -265,7 +274,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         timeout: Int = RTMPConnection.defaultTimeout,
         requestTimeout: UInt64 = RTMPConnection.defaultRequestTimeout,
         chunkSize: Int = RTMPConnection.defaultChunkSizeS,
-        qualityOfService: DispatchQoS = .userInitiated) {
+        qualityOfService: DispatchQoS = .userInitiated,
+        requiredInterfaceType: NWInterface.InterfaceType? = nil) {
         self.swfUrl = swfUrl
         self.pageUrl = pageUrl
         self.flashVer = flashVer
@@ -277,6 +287,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         self.requestTimeout = requestTimeout
         self.chunkSize = chunkSize
         self.qualityOfService = qualityOfService
+        self.requiredInterfaceType = requiredInterfaceType
     }
 
     deinit {
@@ -327,7 +338,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         chunkSizeC = RTMPChunkMessageHeader.chunkSize
         chunkSizeS = RTMPChunkMessageHeader.chunkSize
         currentTransactionId = Self.connectTransactionId
-        socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
+        socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none, requiredInterfaceType: requiredInterfaceType)
         networkMonitor = await socket?.makeNetworkMonitor()
         guard let socket, let networkMonitor else {
             throw Error.invalidState
