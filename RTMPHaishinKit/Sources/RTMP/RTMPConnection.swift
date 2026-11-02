@@ -189,6 +189,12 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     }
     /// The object encoding for this RTMPConnection instance.
     public let objectEncoding = RTMPConnection.defaultObjectEncoding
+    /// The TCP statistics.
+    public var transportStatistics: RTMPTransportStatistics? {
+        get async {
+            return await socket?.transportStatistics
+        }
+    }
 
     var newTransaction: Int {
         currentTransactionId += 1
