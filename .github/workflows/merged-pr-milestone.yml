@@ -1,0 +1,56 @@
+name: Assign merged PR milestone
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+permissions:
+  pull-requests: write
+jobs:
+  assign:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    steps:
+      # Use only the trusted workflow; never check out or execute PR code.
+      - name: Assign latest open milestone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          /usr/bin/ruby -rjson -ropen3 -rtime <<'RUBY'
+          def api(*arguments)
+            output, error, status = Open3.capture3('gh', 'api', *arguments)
+            raise "GitHub API request failed (#{arguments.join(' ')}): #{error}" unless status.success?
+
+            JSON.parse(output)
+          end
+
+          begin
+            event = JSON.parse(File.read(ENV.fetch('GITHUB_EVENT_PATH')))
+            pr = event.fetch('pull_request')
+            exit unless pr['merged'] && pr.dig('base', 'ref') == 'main'
+
+            repository = ENV.fetch('GITHUB_REPOSITORY')
+            issue_path = "repos/#{repository}/issues/#{Integer(pr.fetch('number'))}"
+            issue = api(issue_path)
+            if issue['milestone']
+              puts 'PR already has a milestone; keeping the existing assignment.'
+              exit
+            end
+
+            pages = api('--paginate', '--slurp', "repos/#{repository}/milestones?state=open&per_page=100")
+            milestone = pages.flatten.select { |item| item['state'] == 'open' }.max_by do |item|
+              [Time.iso8601(item.fetch('created_at')), item.fetch('number')]
+            end
+            unless milestone
+              puts '::notice::No open milestone exists; the merged PR was left unchanged.'
+              exit
+            end
+
+            api('--method', 'PATCH', issue_path, '-F', "milestone=#{milestone.fetch('number')}")
+            puts "Assigned milestone ##{milestone.fetch('number')} to PR ##{pr.fetch('number')}."
+          rescue StandardError => error
+            message = error.message.gsub('%', '%25').gsub("\r", '%0D').gsub("\n", '%0A')
+            puts "::error title=Milestone assignment failed::#{message}"
+            exit 1
+          end
+          RUBY
