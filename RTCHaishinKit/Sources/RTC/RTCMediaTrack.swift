@@ -2,8 +2,19 @@ import AVFoundation
 import HaishinKit
 import libdatachannel
 
-actor RTCSendableStreamTrack: RTCStreamTrack {
-    let id: String
+/// A media track that can be associated with a stream.
+public actor RTCMediaTrack: RTCStreamTrack {
+    /// The identifier of this track.
+    public let id: String
+
+    /// The media identifier used in SDP.
+    public var mid: String { track.mid }
+
+    /// Associates the track with a stream for media delivery and transmission.
+    public func setStream(_ stream: RTCStream) async {
+        await stream.addTrack(self)
+    }
+
     private let track: RTCTrack
 
     init(_ tid: Int32, id: String) throws {
