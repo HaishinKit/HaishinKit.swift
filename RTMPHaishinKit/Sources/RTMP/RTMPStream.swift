@@ -172,7 +172,7 @@ public actor RTMPStream {
 
     static let defaultID: UInt32 = 0
     static let supportedAudioCodecs: [AudioCodecSettings.Format] = [.aac, .opus]
-    static let supportedVideoCodecs: [VideoCodecSettings.Format] = VideoCodecSettings.Format.allCases
+    static let supportedVideoCodecs: [VideoCodecSettings.Format] = [.h264, .hevc]
 
     /// The RTMPStream metadata.
     public private(set) var metadata: AMFArray = .init(count: 0)

@@ -69,12 +69,15 @@ enum RTMPAudioChannelOrder: Int {
 }
 
 enum RTMPVideoFourCC: UInt32, CustomStringConvertible {
+    case vp8 = 0x76703038 // vp08
     case av1 = 0x61763031 // av01
     case vp9 = 0x76703039 // vp09
     case hevc = 0x68766331 // hvc1
 
     var description: String {
         switch self {
+        case .vp8:
+            return "vp08"
         case .av1:
             return "av01"
         case .vp9:
@@ -86,6 +89,8 @@ enum RTMPVideoFourCC: UInt32, CustomStringConvertible {
 
     var isSupported: Bool {
         switch self {
+        case .vp8:
+            return false
         case .av1:
             return false
         case .vp9:
@@ -125,6 +130,10 @@ extension VideoCodecSettings.Format {
             return Int(RTMPVideoCodec.avc.rawValue)
         case .hevc:
             return Int(RTMPVideoFourCC.hevc.rawValue)
+        case .vp8:
+            return Int(RTMPVideoFourCC.vp8.rawValue)
+        case .vp9:
+            return Int(RTMPVideoFourCC.vp9.rawValue)
         }
     }
 }

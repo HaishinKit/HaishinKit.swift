@@ -55,6 +55,22 @@ Task {
 }
 ```
 
+### Optional video codecs
+
+Add the `VPXHaishinKit` product and explicitly register its provider to enable
+software VP8/VP9 conversion. Importing the module alone does not enable it.
+
+```swift
+import HaishinKit
+import VPXHaishinKit
+
+await VideoCodecFactory.shared.register(VPXVideoCodecFactory())
+let settings = VideoCodecSettings(format: .vp9)
+```
+
+Codec registration is separate from transport registration. This version adds
+the codec backend; RTC, RTMP, and SRT retain their existing codec restrictions.
+
 ### StreamSession API
 Provides a unified API for implementing clients with RTMP and SRT. Retry handling is also performed internally by the API.
 

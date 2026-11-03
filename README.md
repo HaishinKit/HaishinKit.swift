@@ -19,6 +19,7 @@ Sponsor: [$50 per month](https://github.com/sponsors/shogo4405): Technical suppo
 - **Multi Camera access** ✨[Support multitasking camera access.](https://developer.apple.com/documentation/avkit/accessing-the-camera-while-multitasking-on-ipad)
 - **Multi Streaming** ✨Allowing live streaming to separate services. Views also support this, enabling the verification of raw video data.
 - **Strict Concurrency** ✨Supports Swift's Strict Concurrency compliance.
+- **Optional codecs** [VPXHaishinKit](VPXHaishinKit/Sources/Docs.docc/index.md) adds explicitly registered software VP8/VP9 conversion. Transport framing support is separate.
 - **Screen Capture** ✨Supports ReplayKit(iOS) and ScreenCaptureKit(macOS) api.
 - **Video mixing** ✨Possible to display any text or bitmap on a video during broadcasting or viewing. This allows for various applications such as watermarking and time display.
   |Publish|Playback|

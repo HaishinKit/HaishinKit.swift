@@ -14,7 +14,12 @@ final class VideoCodec {
             if invalidateSession {
                 self.invalidateSession = invalidateSession
             } else {
-                settings.apply(self, rhs: oldValue)
+                do {
+                    try settings.apply(self, rhs: oldValue)
+                } catch {
+                    self.invalidateSession = true
+                    logger.warn(error)
+                }
             }
         }
     }
@@ -39,13 +44,18 @@ final class VideoCodec {
             outputFormat = nil
         }
     }
-    private(set) var session: (any VTSessionConvertible)? {
+    private let factory: VideoCodecFactory
+    private(set) var session: (any VideoCodecSession)? {
         didSet {
             oldValue?.invalidate()
             invalidateSession = false
         }
     }
     private(set) var outputFormat: CMFormatDescription?
+
+    init(factory: VideoCodecFactory = .shared) {
+        self.factory = factory
+    }
 
     func append(_ sampleBuffer: CMSampleBuffer) {
         guard isRunning else {
@@ -54,11 +64,13 @@ final class VideoCodec {
         do {
             inputFormat = sampleBuffer.formatDescription
             if invalidateSession {
-                if sampleBuffer.formatDescription?.isCompressed == true {
-                    session = try VTSessionMode.decompression.makeSession(self)
-                } else {
-                    session = try VTSessionMode.compression.makeSession(self)
-                }
+                guard let inputFormat else { return }
+                session = try factory.makeSession(
+                    mode: inputFormat.isCompressed ? .decompression : .compression,
+                    settings: settings,
+                    inputFormat: inputFormat
+                )
+                frameInterval = settings.frameInterval
             }
             guard let session, let continuation else {
                 return
@@ -73,23 +85,6 @@ final class VideoCodec {
             }
         } catch {
             logger.warn(error)
-        }
-    }
-
-    func makeImageBufferAttributes(_ mode: VTSessionMode) -> [NSString: AnyObject]? {
-        switch mode {
-        case .compression:
-            var attributes: [NSString: AnyObject] = [:]
-            if let inputFormat {
-                // Specify the pixel format of the uncompressed video.
-                attributes[kCVPixelBufferPixelFormatTypeKey] = inputFormat.mediaType.rawValue as CFNumber
-            }
-            return attributes.isEmpty ? nil : attributes
-        case .decompression:
-            return [
-                kCVPixelBufferIOSurfacePropertiesKey: NSDictionary(),
-                kCVPixelBufferMetalCompatibilityKey: kCFBooleanTrue
-            ]
         }
     }
 
