@@ -370,7 +370,7 @@ struct PublishView: View {
                         }
 
                         if !model.isLoading {
-                            Text("720p")
+                            Text(preference.videoResolution.displayName)
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
@@ -576,7 +576,10 @@ struct PublishView: View {
             model.stopRunning()
         }
         .onChange(of: horizontalSizeClass) { _ in
-            model.orientationDidChange()
+            model.orientationDidChange(preference)
+        }
+        .onChange(of: preference.videoResolution) { _ in
+            model.orientationDidChange(preference)
         }.alert(isPresented: $model.isShowError) {
             Alert(
                 title: Text("Error"),
