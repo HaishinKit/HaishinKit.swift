@@ -4,6 +4,7 @@ import Network
 
 final actor RTMPSocket {
     static let defaultWindowSizeC = Int(UInt8.max)
+    typealias ReceivedData = (data: Data, receivedAt: DispatchTime)
 
     enum Error: Swift.Error {
         case invalidState
@@ -83,12 +84,15 @@ final actor RTMPSocket {
         }
     }
 
-    func send(_ data: Data) {
-        guard connected else {
-            return
+    @discardableResult
+    func send(_ data: Data) -> DispatchTime? {
+        guard connected, let outputs else {
+            return nil
         }
         queueBytesOut += data.count
-        outputs?.yield(data)
+        let queuedAt = DispatchTime.now()
+        outputs.yield(data)
+        return queuedAt
     }
 
     func send(_ iterator: AnyIterator<Data>) {
@@ -111,14 +115,14 @@ final actor RTMPSocket {
         }
     }
 
-    func recv() -> AsyncStream<Data> {
-        AsyncStream<Data> { continuation in
+    func recv() -> AsyncStream<ReceivedData> {
+        AsyncStream<ReceivedData> { continuation in
             Task {
                 do {
                     while connected {
-                        let data = try await recv()
-                        continuation.yield(data)
-                        totalBytesIn += data.count
+                        let received = try await recv()
+                        continuation.yield(received)
+                        totalBytesIn += received.data.count
                     }
                 } catch {
                     continuation.finish()
@@ -198,7 +202,7 @@ final actor RTMPSocket {
         }
     }
 
-    private func recv() async throws -> Data {
+    private func recv() async throws -> ReceivedData {
         return try await withCheckedThrowingContinuation { continuation in
             guard let connection else {
                 continuation.resume(throwing: Error.invalidState)
@@ -210,7 +214,7 @@ final actor RTMPSocket {
                     return
                 }
                 if let content {
-                    continuation.resume(returning: content)
+                    continuation.resume(returning: (content, .now()))
                 } else {
                     continuation.resume(throwing: Error.endOfStream)
                 }

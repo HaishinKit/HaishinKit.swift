@@ -350,12 +350,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                     }
                     do {
                         readyState = .versionSent
-                        let c0c1Packet = handshake.c0c1packet
-                        handshakeStartedAt = .now()
-                        await socket.send(c0c1Packet)
+                        handshakeStartedAt = await socket.send(handshake.c0c1packet)
                         operations[Self.connectTransactionId] = continutation
-                        for await data in await socket.recv() {
-                            try await listen(data)
+                        for await (data, receivedAt) in await socket.recv() {
+                            try await listen(data, receivedAt: receivedAt)
                         }
                         try? await close()
                     } catch {
@@ -455,7 +453,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         streams.append(stream)
     }
 
-    private func listen(_ data: Data) async throws {
+    private func listen(_ data: Data, receivedAt: DispatchTime) async throws {
         switch readyState {
         case .versionSent:
             handshake.put(data)
@@ -464,14 +462,14 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             }
             await socket?.send(handshake.c2packet())
             readyState = .ackSent
-            try await listen(.init())
+            try await listen(.init(), receivedAt: receivedAt)
         case .ackSent:
             handshake.put(data)
             guard handshake.hasS2Packet else {
                 return
             }
-            if let handshakeStartedAt {
-                let elapsedNanoseconds = DispatchTime.now().uptimeNanoseconds - handshakeStartedAt.uptimeNanoseconds
+            if let handshakeStartedAt, receivedAt >= handshakeStartedAt {
+                let elapsedNanoseconds = receivedAt.uptimeNanoseconds - handshakeStartedAt.uptimeNanoseconds
                 handshakeDuration = TimeInterval(elapsedNanoseconds) / 1_000_000_000
             }
             readyState = .handshakeDone
