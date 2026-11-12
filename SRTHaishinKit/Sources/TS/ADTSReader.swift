@@ -23,13 +23,20 @@ struct ADTSReaderIterator: IteratorProtocol {
     }
 
     mutating func next() -> Int? {
-        guard cursor < data.count else {
+        guard cursor + ADTSHeader.size <= data.count else {
             return nil
         }
-        header.data = data.advanced(by: cursor)
-        defer {
-            cursor += Int(header.aacFrameLength)
+        let bytes = data.advanced(by: cursor)
+        header.data = bytes
+        let length = Int(header.aacFrameLength)
+        // Stops at a broken frame (lost or corrupted packets) instead of trusting its length.
+        guard
+            bytes[0] == ADTSHeader.sync, bytes[1] & 0xF0 == 0xF0,
+            (header.protectionAbsent ? ADTSHeader.size : ADTSHeader.sizeWithCrc) < length,
+            cursor + length <= data.count else {
+            return nil
         }
-        return Int(header.aacFrameLength)
+        cursor += length
+        return length
     }
 }

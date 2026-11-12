@@ -65,6 +65,11 @@ final class AudioCodec {
                 }
                 let sampleSize = CMSampleBufferGetSampleSize(sampleBuffer, at: i)
                 let byteCount = sampleSize - ADTSHeader.size
+                // A malformed frame (for example, from packet loss) is dropped instead of overflowing the buffer.
+                guard 0 < byteCount, byteCount <= Int(buffer.byteCapacity) else {
+                    offset += sampleSize
+                    continue
+                }
                 buffer.packetDescriptions?.pointee = AudioStreamPacketDescription(mStartOffset: 0, mVariableFramesInPacket: 0, mDataByteSize: UInt32(byteCount))
                 buffer.packetCount = 1
                 buffer.byteLength = UInt32(byteCount)
@@ -98,7 +103,10 @@ final class AudioCodec {
             outputStatus = audioConverter.convert(to: outputBuffer, error: &error) { inNumberFrames, inputStatus in
                 switch self.inputBuffer {
                 case let inputBuffer as AVAudioCompressedBuffer:
-                    inputBuffer.copy(audioBuffer)
+                    guard inputBuffer.copy(audioBuffer) else {
+                        inputStatus.pointee = .noDataNow
+                        return nil
+                    }
                     inputStatus.pointee = .haveData
                     return inputBuffer
                 case let inputBuffer as AVAudioPCMBuffer:
@@ -144,7 +152,8 @@ final class AudioCodec {
             buffer?.frameLength = Self.defaultFrameCapacity
             return buffer
         default:
-            return AVAudioCompressedBuffer(format: inputFormat, packetCapacity: 1, maximumPacketSize: 1024)
+            // An AAC frame holds at most 6144 bits (768 bytes) per channel.
+            return AVAudioCompressedBuffer(format: inputFormat, packetCapacity: 1, maximumPacketSize: 1024 * max(1, Int(inputFormat.channelCount)))
         }
     }
 

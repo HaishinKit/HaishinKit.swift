@@ -16,6 +16,52 @@ import Testing
         try await expectH264Slices(startCodeLength: startCodeLength, nalHeader: nalHeader, sliceCount: 1)
     }
 
+    @Test func incompleteAudioPESIsDropped() async throws {
+        // The last TS packet of the first PES is lost.
+        var lost = try Self.audioPES(ADTSReaderTests.frame(length: 100) + ADTSReaderTests.frame(length: 300)).arrayOfPackets(Self.audioPID, PCR: nil)
+        lost.removeLast()
+        let next = try Self.audioPES(ADTSReaderTests.frame(length: 300)).arrayOfPackets(Self.audioPID, PCR: nil)
+        let samples = await Self.readAudio(lost + next)
+        #expect(samples == [[300]])
+    }
+
+    @Test func audioPESWithDecodeTimeStampIsComplete() async throws {
+        let pes = try Self.audioPES(ADTSReaderTests.frame(length: 300), timestamps: [0x31, 0, 1, 0, 1, 0x11, 0, 1, 0, 1])
+        let samples = await Self.readAudio(pes.arrayOfPackets(Self.audioPID, PCR: nil))
+        #expect(samples == [[300]])
+    }
+
+    private static let audioPID: UInt16 = 257
+
+    private static func audioPES(_ frames: Data, timestamps: [UInt8] = [0x21, 0, 1, 0, 1]) throws -> PacketizedElementaryStream {
+        let length = 3 + timestamps.count + frames.count
+        let header = Data([0, 0, 1, 0xc0, UInt8(length >> 8), UInt8(length & 0xff), 0x80, timestamps.count == 5 ? 0x80 : 0xc0, UInt8(timestamps.count)] + timestamps)
+        return try #require(PacketizedElementaryStream(header + frames))
+    }
+
+    /// Returns the sample sizes of each audio sample buffer the reader yields.
+    private static func readAudio(_ audioPackets: [TSPacket]) async -> [[Int]] {
+        let programMapPID: UInt16 = 4096
+        let pat = TSProgramAssociation()
+        pat.programs = [1: programMapPID]
+        let pmt = TSProgramMap()
+        pmt.PCRPID = audioPID
+        var audio = ESSpecificData()
+        audio.streamType = .adtsAac
+        audio.elementaryPID = audioPID
+        pmt.elementaryStreamSpecificData = [audio]
+        let packets = pat.arrayOfPackets(0) + pmt.arrayOfPackets(programMapPID) + audioPackets
+        let reader = TSReader()
+        var output = reader.output.makeAsyncIterator()
+        _ = reader.read(packets.reduce(into: Data()) { $0.append($1.data) })
+        reader.clear()
+        var samples: [[Int]] = []
+        while let sampleBuffer = await output.next()?.1 {
+            samples.append((0..<sampleBuffer.numSamples).map { CMSampleBufferGetSampleSize(sampleBuffer, at: $0) })
+        }
+        return samples
+    }
+
     private func expectH264Slices(startCodeLength: Int, nalHeader: UInt8, sliceCount: Int) async throws {
         let programMapPID: UInt16 = 4096
         let videoPID: UInt16 = 256

@@ -2,14 +2,14 @@ import CoreMedia
 import Foundation
 
 package struct ADTSHeader: Equatable {
-    static let size: Int = 7
-    static let sizeWithCrc = 9
-    static let sync: UInt8 = 0xFF
+    package static let size: Int = 7
+    package static let sizeWithCrc = 9
+    package static let sync: UInt8 = 0xFF
 
     var sync = Self.sync
     var id: UInt8 = 0
     var layer: UInt8 = 0
-    var protectionAbsent = false
+    package var protectionAbsent = false
     var profile: UInt8 = 0
     var sampleFrequencyIndex: UInt8 = 0
     var channelConfiguration: UInt8 = 0
