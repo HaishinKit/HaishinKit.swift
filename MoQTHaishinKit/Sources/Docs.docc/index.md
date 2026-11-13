@@ -38,12 +38,21 @@ receive namespace discovery updates. Both throw `MoQTRequestError` when the
 peer rejects the request. For authenticated requests, supply a
 `MoQTAuthorizationToken` with the token type and bytes expected by the peer.
 
-This client supports outgoing track subscriptions, track status queries, and namespace requests.
-Incoming track requests are rejected with `NOT_SUPPORTED`. The subgroup
-sending API writes objects to a unidirectional QUIC stream using a
-caller-supplied track alias. WebTransport, FETCH, request updates, automatic
-session migration, and relay behavior are outside the implemented subset.
+Use `fetch(_:name:range:authorizationToken:)` to retrieve stored objects in
+ascending group order. Each fetch returns its own asynchronous object stream.
 
-The wire codecs also cover FETCH, PUBLISH, PUBLISH_DONE, PUBLISH_STATE_NOTIFY,
-PUBLISH_SKIPPED, REQUEST_UPDATE, and SUBSCRIBE_TRACKS. Session APIs currently
-expose track status queries and the existing subscription and namespace operations.
+Use `subscribeTracks(_:authorizationToken:)` to subscribe by namespace prefix.
+The client accepts matching PUBLISH requests associated with the prefix
+subscription and reports them through the returned event stream. Live objects
+arrive on `objectStream` and carry the assigned track alias.
+
+Use `setPaused(_:trackAlias:)` to change an active subscription's pause state
+with REQUEST_UPDATE. The local state changes after the peer acknowledges it.
+For outgoing publications, use `publish(_:name:trackAlias:authorizationToken:)`,
+send subgroup objects using that alias, and call `finishPublishing(trackAlias:)`.
+Incoming REQUEST_UPDATE messages can pause or resume those publications.
+
+This client supports pause and resume updates. Other update parameters,
+unsolicited incoming publications, serving incoming FETCH and SUBSCRIBE_TRACKS
+requests, WebTransport, automatic session migration, and relay behavior are
+outside the implemented subset.

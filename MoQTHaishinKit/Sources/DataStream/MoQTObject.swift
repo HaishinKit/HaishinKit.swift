@@ -27,7 +27,7 @@ public struct MoQTObject: Sendable {
         self.init(id: id, status: status, data: data, trackAlias: nil, groupId: nil, subgroupId: nil, properties: [])
     }
 
-    private init(id: UInt64, status: UInt64?, data: Data, trackAlias: UInt64?, groupId: UInt64?,
+    init(id: UInt64, status: UInt64?, data: Data, trackAlias: UInt64?, groupId: UInt64?,
                  subgroupId: UInt64?, properties: [MoQTKeyValue]) {
         self.id = id
         self.status = status

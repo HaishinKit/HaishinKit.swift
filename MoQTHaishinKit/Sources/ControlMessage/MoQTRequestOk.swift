@@ -10,8 +10,8 @@ public struct MoQTRequestOk: Sendable {
     /// The track properties included in the response.
     public let trackProperties: [MoQTKeyValue]
 
-    init(_ payload: inout MoQTPayload, includesTrackInformation: Bool = false) throws {
-        let parameters = try MoQTResponseParameters(&payload, allowsLargestObject: includesTrackInformation)
+    init(_ payload: inout MoQTPayload, includesTrackInformation: Bool = false, allowsLargestObject: Bool = false) throws {
+        let parameters = try MoQTResponseParameters(&payload, allowsLargestObject: includesTrackInformation || allowsLargestObject)
         expires = parameters.expires
         largestGroupId = parameters.largestGroupId
         largestObjectId = parameters.largestObjectId
