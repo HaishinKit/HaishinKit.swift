@@ -1,240 +1,440 @@
 import Foundation
+import Network
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+public enum MoQTSetupRole: Int, Sendable {
+    case publisher = 1
+    case subscriber = 2
+    case pubSub = 3
+}
+
+public struct MoQTGoAway: Sendable {
+    public let newSessionURI: String?
+    public let timeoutMilliseconds: UInt64
+
+    init(_ body: inout MoQTPayload) throws {
+        let uri = try body.getBytes(limit: 8192)
+        newSessionURI = uri.isEmpty ? nil : String(decoding: uri, as: UTF8.self)
+        timeoutMilliseconds = try body.getInt()
+        guard body.bytesAvailable == 0 else { throw MoQTPayload.Error.invalidField }
+    }
+}
+
+public enum MoQTNamespaceUpdate: Sendable {
+    case available([Data])
+    case unavailable([Data])
+}
+
+@available(iOS 26.0, macOS 26.0, tvOS 26.0, visionOS 26.0, *)
 public actor MoQTConnection {
-    public static let defaultPort = 4433
-    /// The supported protocols are moqt.
+    public static let defaultPort = 443
     public static let supportedProtocols = ["moqt"]
-    /// The supported protocol versions.
-    public static let supportedVersions: [MoQTVersion] = [.draft07Exp2]
-    /// The default a control request time out value (ms).
     public static let defaultRequestTimeout: UInt64 = 3000
 
-    /// The error domain code.
     public enum Error: Swift.Error {
-        /// An invalid internal stare.
         case invalidState
-        /// The command isn’t supported.
-        case unsupportedCommand(_ command: String)
-        /// The connected operation timed out.
-        case connectionTimedOut
-        /// The general socket error.
-        case socketErrorOccurred(_ error: any Swift.Error)
-        /// The requested operation timed out.
+        case unsupportedCommand(String)
         case requestTimedOut
         case unknownResponse
+        case connectionClosed
     }
 
     public let role: MoQTSetupRole
-    /// The control message  request timeout value. Defaul value is 500 msec.
     public let requestTimeout: UInt64
+    public private(set) var goAway: MoQTGoAway?
 
     public var objectStream: AsyncStream<MoQTObject> {
-        AsyncStream<MoQTObject> { continuation in
-            self.objectStreamContinuation = continuation
-        }
+        let (stream, continuation) = AsyncStream<MoQTObject>.makeStream()
+        objectStreamContinuation?.finish()
+        objectStreamContinuation = continuation
+        return stream
     }
 
     private var socket: MoQTSocket?
-    private var inputBuffer = MoQTPayload()
-    private var outputBuffer = MoQTPayload()
-    private var datagramBuffer = MoQTPayload()
-    private var continuation: CheckedContinuation<any MoQTControlMessage, any Swift.Error>?
-    private var currentTrackAlias = 0
-    private var currentSubscribeId = 0
+    private var isReady = false
+    private var setupContinuation: AsyncThrowingStream<MoQTSetup, any Swift.Error>.Continuation?
+    private var outgoingControl: MoQTQUICStream?
+    private var incomingControl: MoQTQUICStream?
+    private var nextRequestId: UInt64 = 0
+    private var receivedRequestIds: Set<UInt64> = []
+    private var streamTasks: [UUID: Task<Void, Never>] = [:]
+    private var requestCancellations: [UUID: @Sendable () -> Void] = [:]
+    private var incomingTask: Task<Void, Never>?
+    private var datagramTask: Task<Void, Never>?
     private var objectStreamContinuation: AsyncStream<MoQTObject>.Continuation?
 
-    /// Creates a new connection.
     public init(_ role: MoQTSetupRole, requestTimeOut: UInt64 = MoQTConnection.defaultRequestTimeout) {
-        self.role = .subscriber
-        self.requestTimeout = requestTimeOut
+        self.role = role
+        requestTimeout = requestTimeOut
     }
 
-    /// Creates a two-way connection to an application on MoQT Server.
-    public func connect(_ uri: String) async throws -> MoQTServerSetup {
-        guard let uri = URL(string: uri), let scheme = uri.scheme, let host = uri.host, Self.supportedProtocols.contains(scheme) else {
+    public func connect(_ uri: String) async throws -> MoQTSetup {
+        guard socket == nil else { throw Error.invalidState }
+        guard let url = URLComponents(string: uri), url.scheme == "moqt",
+              url.user == nil, url.password == nil, let authorityHost = url.percentEncodedHost,
+              let host = url.host, !host.isEmpty,
+              let portNumber = UInt16(exactly: url.port ?? Self.defaultPort), portNumber != 0,
+              let port = NWEndpoint.Port(rawValue: portNumber) else {
             throw Error.unsupportedCommand(uri)
         }
-        socket = .init()
-        guard let socket else {
-            throw Error.invalidState
-        }
+        let authority = authorityHost + (url.port.map { ":\($0)" } ?? "")
+        let path = url.percentEncodedPath + (url.percentEncodedQuery.map { "?\($0)" } ?? "")
+        let socket = MoQTSocket(host: host, port: port)
+        self.socket = socket
+        let (setup, continuation) = AsyncThrowingStream<MoQTSetup, any Swift.Error>.makeStream()
+        setupContinuation = continuation
         do {
-            try await socket.connect(host, port: uri.port ?? Self.defaultPort)
-            Task {
-                for await data in await socket.incoming {
-                    await didReceiveControlMessage(data)
-                }
+            let message = MoQTSetup.clientMessage(authority: authority, path: path)
+            guard message.body.count <= 65_535 else { throw MoQTPayload.Error.invalidField }
+            let serverSetup = try await withTimeout {
+                socket.start()
+                try await self.startSession(socket, message: message)
+                var iterator = setup.makeAsyncIterator()
+                guard let setup = try await iterator.next() else { throw Error.connectionClosed }
+                return setup
             }
-            Task {
-                for await data in await socket.datagram {
-                    await didReceiveDataStream(data)
-                }
-            }
-            guard let serverSetup = try await send(MoQTClientSetup(supportedVersions: Self.supportedVersions, role: role, path: uri.path())) as? MoQTServerSetup else {
-                throw Error.unknownResponse
-            }
+            guard self.socket === socket else { throw Error.connectionClosed }
+            isReady = true
             return serverSetup
         } catch {
-            logger.error(error)
+            if self.socket === socket { close() }
             throw error
         }
     }
 
-    public func annouce(_ namespace: [String], authInfo: String?) async throws -> Result<MoQTAnnounceOk, MoQTAnnounceError> {
-        var subscribeParameters: [MoQTVersionSpecificParameter] = .init()
-        if let authInfo {
-            subscribeParameters.append(.init(key: .authorizationInfo, value: authInfo))
-        }
-        let message = MoQTAnnounce(trackNamespace: namespace, subscribeParameters: subscribeParameters)
-        switch try await send(message) {
-        case let result as MoQTAnnounceOk:
-            return .success(result)
-        case let result as MoQTAnnounceError:
-            return .failure(result)
-        default:
-            throw Error.unknownResponse
-        }
-    }
-
-    public func subscribe(_ namespace: [String], name: String, authInfo: String? = nil) async throws -> Result<MoQTSubscribeOk, MoQTSubscribeError> {
-        defer {
-            currentTrackAlias += 1
-            currentSubscribeId += 1
-        }
-        var subscribeParameters: [MoQTVersionSpecificParameter] = .init()
-        if let authInfo {
-            subscribeParameters.append(.init(key: .authorizationInfo, value: authInfo))
-        }
-        let message = MoQTSubscribe(
-            subscribeId: currentSubscribeId,
-            trackAlias: currentTrackAlias,
-            trackNamespace: namespace,
-            trackName: name,
-            subscribePriority: 0,
-            groupOrder: .descending,
-            filterType: .latestGroup,
-            startGroup: nil,
-            startObject: nil,
-            endGroup: nil,
-            endObject: nil,
-            subscribeParameters: subscribeParameters
-        )
-        switch try await send(message) {
-        case let result as MoQTSubscribeOk:
-            return .success(result)
-        case let result as MoQTSubscribeError:
-            return .failure(result)
-        default:
-            throw Error.unknownResponse
+    public func subscribe(_ namespace: [String], name: String,
+                          authorizationToken: MoQTAuthorizationToken? = nil) async throws -> MoQTSubscribeOk {
+        let (response, reader, id) = try await request(.subscribe, namespace: namespace, name: name,
+                                                       authorizationToken: authorizationToken)
+        do {
+            guard response.type == MoQTMessageType.subscribeOK.rawValue else { throw Error.unknownResponse }
+            var body = MoQTPayload(response.body)
+            let ok = try MoQTSubscribeOk(&body)
+            streamTasks[id] = Task { await drainRequest(reader, id: id) }
+            return ok
+        } catch {
+            finishStream(id)
+            close()
+            throw error
         }
     }
 
-    public func subscribeAnnouces(_ namespace: [String], authInfo: String? = nil) async throws -> Result<MoQTSubscribeAnnouncesOk, MoQTSubscribeAnnouncesError> {
-        var subscribeParameters: [MoQTVersionSpecificParameter] = .init()
-        if let authInfo {
-            subscribeParameters.append(.init(key: .authorizationInfo, value: authInfo))
-        }
-        let message = MoQTSubscribeAnnounces(
-            trackNamespacePrefix: namespace,
-            parameters: subscribeParameters
-        )
-        switch try await send(message) {
-        case let result as MoQTSubscribeAnnouncesOk:
-            return .success(result)
-        case let result as MoQTSubscribeAnnouncesError:
-            return .failure(result)
-        default:
-            throw Error.unknownResponse
-        }
+    public func publishNamespace(_ namespace: [String],
+                                 authorizationToken: MoQTAuthorizationToken? = nil) async throws -> MoQTRequestOk {
+        let (ok, reader, id) = try await namespaceRequest(.publishNamespace, namespace, authorizationToken)
+        streamTasks[id] = Task { await drainRequest(reader, id: id) }
+        return ok
     }
 
-    /// Closes the connection from the server.
-    public func close() async {
-        await socket?.close()
+    public func subscribeNamespace(_ namespace: [String], authorizationToken: MoQTAuthorizationToken? = nil)
+        async throws -> (response: MoQTRequestOk, updates: AsyncThrowingStream<MoQTNamespaceUpdate, any Swift.Error>) {
+        let (ok, reader, id) = try await namespaceRequest(.subscribeNamespace, namespace, authorizationToken)
+        let (updates, continuation) = AsyncThrowingStream<MoQTNamespaceUpdate, any Swift.Error>.makeStream()
+        continuation.onTermination = { [weak self] _ in
+            Task { await self?.finishStream(id) }
+        }
+        streamTasks[id] = Task { await drainRequest(reader, id: id, updates: continuation) }
+        return (ok, updates)
     }
 
     public func send(_ objects: [MoQTObject], header: MoQTStreamHeaderSubgroup) async throws {
-        var buffer = MoQTPayload()
-        buffer.putData(try header.payload)
+        guard isReady, let socket else { throw Error.invalidState }
+        var payload = MoQTPayload(header.payload)
+        var previous: UInt64?
         for object in objects {
-            buffer.putData(try object.payload)
+            try object.encode(after: previous, into: &payload)
+            previous = object.id
         }
-        buffer.position = 0
-        await socket?.sendDatagram(buffer.data)
+        let data = payload.data
+        try await withTimeout {
+            let stream = try await socket.openStream(.unidirectional)
+            try await stream.send(data, endOfStream: true)
+        }
     }
 
-    private func send(_ message: some MoQTControlMessage) async throws -> any MoQTControlMessage {
-        let content = try message.payload
-        outputBuffer.position = 0
-        outputBuffer.putInt(message.type.rawValue)
-        outputBuffer.putInt(content.count)
-        outputBuffer.putData(content)
-        return try await withCheckedThrowingContinuation { continutation in
-            self.continuation = continutation
-            Task {
-                try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
-                self.continuation.map {
-                    $0.resume(throwing: Error.requestTimedOut)
+    public func close() {
+        isReady = false
+        goAway = nil
+        nextRequestId = 0
+        receivedRequestIds.removeAll()
+        socket = nil
+        setupContinuation?.finish(throwing: Error.connectionClosed)
+        setupContinuation = nil
+        outgoingControl = nil
+        incomingControl = nil
+        incomingTask?.cancel()
+        incomingTask = nil
+        datagramTask?.cancel()
+        datagramTask = nil
+        for task in streamTasks.values { task.cancel() }
+        streamTasks.removeAll()
+        for cancel in requestCancellations.values { cancel() }
+        requestCancellations.removeAll()
+        objectStreamContinuation?.finish()
+        objectStreamContinuation = nil
+    }
+
+    private func startSession(_ socket: MoQTSocket, message: MoQTControlMessage) async throws {
+        guard self.socket === socket else { throw Error.connectionClosed }
+        incomingTask = Task { [weak self] in
+            do {
+                try await socket.receiveStreams { [weak self] stream in
+                    await self?.acceptStream(stream, socket: socket)
                 }
-                self.continuation = nil
+                await self?.sessionEnded(socket, error: Error.connectionClosed)
+            } catch {
+                await self?.sessionEnded(socket, error: error)
             }
-            Task {
-                await socket?.send(outputBuffer.data)
+        }
+        datagramTask = Task { [weak self] in
+            try? await socket.receiveDatagrams { [weak self] datagram in
+                await self?.receiveDatagram(datagram, socket: socket)
             }
+        }
+        let control = try await socket.openStream(.unidirectional)
+        guard self.socket === socket else { throw Error.connectionClosed }
+        outgoingControl = control
+        try await control.send(message.data)
+    }
+
+    private func sessionEnded(_ socket: MoQTSocket, error: any Swift.Error) {
+        guard self.socket === socket else { return }
+        setupContinuation?.finish(throwing: error)
+        close()
+    }
+
+    private func acceptStream(_ stream: MoQTQUICStream, socket: MoQTSocket) {
+        guard self.socket === socket else { return }
+        let id = UUID()
+        streamTasks[id] = Task { await receiveStream(stream, id: id, socket: socket) }
+    }
+
+    private func receiveDatagram(_ data: Data, socket: MoQTSocket) {
+        guard self.socket === socket, isReady else { return }
+        do {
+            var payload = MoQTPayload(data)
+            if let object = try MoQTObject.readDatagram(&payload) { objectStreamContinuation?.yield(object) }
+        } catch {
+            close()
         }
     }
 
-    private func didReceiveControlMessage(_ data: Data) async {
+    private func request(_ type: MoQTMessageType, namespace: [String], name: String? = nil,
+                         authorizationToken: MoQTAuthorizationToken?) async throws -> (MoQTControlMessage, MoQTStreamReader, UUID) {
+        guard isReady, goAway == nil, let socket, nextRequestId <= UInt64.max - 2 else {
+            throw Error.invalidState
+        }
+        var body = MoQTPayload()
+        body.putInt(nextRequestId)
+        try body.putNamespace(namespace)
+        if let name {
+            guard namespace.reduce(name.utf8.count, { $0 + $1.utf8.count }) <= 4096 else {
+                throw MoQTPayload.Error.invalidField
+            }
+            body.putBytes(Data(name.utf8))
+        }
+        let tokenCount: UInt64 = authorizationToken == nil ? 0 : 1
+        body.putInt(tokenCount + (type == .subscribe ? 3 : 0))
+        authorizationToken?.encodeParameter(in: &body)
+        if type == .subscribe {
+            body.putInt(0x20 - (tokenCount == 0 ? 0 : 3)) // SUBSCRIBER_PRIORITY
+            body.putByte(0)
+            body.putInt(1) // LOCATION_FILTER
+            body.putInt(1) // Relative Start
+            body.putInt(1) // Current group
+            body.putInt(1) // GROUP_ORDER
+            body.putByte(2) // Descending
+        }
+        guard body.data.count <= 65_535 else { throw MoQTPayload.Error.invalidField }
+        let data = MoQTControlMessage(type, body.data).data
+        let id = UUID()
+        nextRequestId += 2
+        let pending = Task {
+            try await withTimeout {
+                let stream = try await socket.openStream(.bidirectional)
+                try await stream.send(data, endOfStream: true)
+                var reader = MoQTStreamReader(stream)
+                guard let message = try await reader.read(MoQTControlMessage.init) else { throw Error.connectionClosed }
+                return (message, reader)
+            }
+        }
+        requestCancellations[id] = { pending.cancel() }
+        defer { requestCancellations[id] = nil }
+        let (response, reader) = try await withTaskCancellationHandler {
+            try await pending.value
+        } onCancel: {
+            pending.cancel()
+        }
+        try Task.checkCancellation()
+        guard self.socket === socket else { throw Error.connectionClosed }
+        if response.type == MoQTMessageType.requestError.rawValue {
+            var body = MoQTPayload(response.body)
+            let rejection: MoQTRequestError
+            do {
+                rejection = try MoQTRequestError(&body)
+            } catch {
+                close()
+                throw error
+            }
+            throw rejection
+        }
+        return (response, reader, id)
+    }
+
+    private func namespaceRequest(_ type: MoQTMessageType, _ namespace: [String], _ token: MoQTAuthorizationToken?)
+        async throws -> (MoQTRequestOk, MoQTStreamReader, UUID) {
+        let (response, reader, id) = try await request(type, namespace: namespace, authorizationToken: token)
         do {
-            inputBuffer.position = 0
-            inputBuffer.putData(data)
-            inputBuffer.position = 0
-            let type = try inputBuffer.getInt()
-            let length = try inputBuffer.getInt()
-            guard let message = try MoQTMessageType(rawValue: type)?.makeMessage(&inputBuffer) else {
-                _ = try? inputBuffer.getData(length)
-                continuation?.resume(throwing: MoQTControlMessageError.notImplemented)
-                continuation = nil
+            guard response.type == MoQTMessageType.requestOK.rawValue else { throw Error.unknownResponse }
+            var body = MoQTPayload(response.body)
+            return (try MoQTRequestOk(&body), reader, id)
+        } catch {
+            finishStream(id)
+            close()
+            throw error
+        }
+    }
+
+    private func receiveStream(_ stream: MoQTQUICStream, id: UUID, socket: MoQTSocket) async {
+        defer { finishStream(id) }
+        var reader = MoQTStreamReader(stream)
+        do {
+            guard let type = try await reader.read({ try $0.getInt() }) else { return }
+            guard self.socket === socket else { return }
+            if stream.directionality == .bidirectional {
+                try await rejectIncomingRequest(type, reader: &reader, socket: socket)
                 return
             }
-            switch message {
-            case let message as MoQTSubscribe:
-                let ok = MoQTSubscribeOk(
-                    subscribeId: currentSubscribeId,
-                    expires: 0,
-                    groupOrder: message.groupOrder,
-                    contentExists: true,
-                    largestGroupId: 0,
-                    largestObjectId: 0,
-                    subscribeParameters: message.subscribeParameters)
-                _ = try? await send(ok)
+            switch type {
+            case MoQTMessageType.setup.rawValue:
+                guard incomingControl == nil, let continuation = setupContinuation else { throw Error.unknownResponse }
+                incomingControl = stream
+                guard let setup = try await reader.read({ payload in
+                    var body = MoQTPayload(try payload.getBytes(limit: 65_535))
+                    return try MoQTSetup(&body)
+                }) else { throw Error.connectionClosed }
+                continuation.yield(setup)
+                continuation.finish()
+                setupContinuation = nil
+                while let message = try await reader.read(MoQTControlMessage.init) {
+                    guard self.socket === socket else { return }
+                    guard message.type == MoQTMessageType.goaway.rawValue, goAway == nil else {
+                        throw Error.unknownResponse
+                    }
+                    var body = MoQTPayload(message.body)
+                    goAway = try MoQTGoAway(&body)
+                }
+                if self.socket === socket { close() }
+            case 0x132b3e28:
+                break
+            case 5:
+                // This endpoint does not initiate FETCH requests.
+                break
+            case 0..<128 where type & 0x10 != 0:
+                guard isReady, let header = try await reader.read({ try MoQTStreamHeaderSubgroup(flags: type, payload: &$0) }) else {
+                    return
+                }
+                var previous: UInt64?
+                var subgroupId = header.subgroupId
+                while let object = try await reader.read({ try MoQTObject.readSubgroup(&$0, header: header, previous: previous, subgroupId: subgroupId) }) {
+                    guard self.socket === socket else { return }
+                    objectStreamContinuation?.yield(object)
+                    previous = object.id
+                    subgroupId = object.subgroupId
+                }
             default:
-                continuation?.resume(returning: message)
-                continuation = nil
+                throw Error.unknownResponse
             }
         } catch {
-            logger.warn(error, data.bytes)
+            if self.socket === socket, incomingControl === stream || !(error is NWError) {
+                setupContinuation?.finish(throwing: error)
+                close()
+            }
         }
     }
 
-    private func didReceiveDataStream(_ data: Data) async {
+    private func rejectIncomingRequest(_ type: UInt64, reader: inout MoQTStreamReader, socket: MoQTSocket) async throws {
+        guard [0x03, 0x06, 0x0d, 0x16, 0x1d, 0x50, 0x51].contains(type) else {
+            throw Error.unknownResponse
+        }
+        guard let requestId = try await reader.read({ payload in
+            var body = MoQTPayload(try payload.getBytes(limit: 65_535))
+            return try body.getInt()
+        }), self.socket === socket, !requestId.isMultiple(of: 2),
+              receivedRequestIds.insert(requestId).inserted else { throw MoQTPayload.Error.invalidField }
+        var body = MoQTPayload()
+        body.putInt(3) // NOT_SUPPORTED
+        body.putInt(0)
+        body.putBytes(Data())
+        try await reader.stream.send(MoQTControlMessage(.requestError, body.data).data, endOfStream: true)
+    }
+
+    private func drainRequest(_ initialReader: MoQTStreamReader, id: UUID,
+                              updates: AsyncThrowingStream<MoQTNamespaceUpdate, any Swift.Error>.Continuation? = nil) async {
+        var reader = initialReader
+        var receivedGoAway = false
+        var namespaces: Set<[Data]> = []
+        defer { finishStream(id) }
         do {
-            datagramBuffer.position = 0
-            datagramBuffer.putData(data)
-            datagramBuffer.position = 0
-            let type = try datagramBuffer.getInt()
-            switch MoQTDataStreamType(rawValue: type) {
-            case .streamHeaderSubgroup:
-                _ = try MoQTStreamHeaderSubgroup(&datagramBuffer)
-                while 0 < datagramBuffer.bytesAvailable {
-                    objectStreamContinuation?.yield(try .init(&datagramBuffer))
+            while let message = try await reader.read(MoQTControlMessage.init) {
+                var body = MoQTPayload(message.body)
+                switch MoQTMessageType(rawValue: message.type) {
+                case .namespace where updates != nil:
+                    let suffix = try body.getNamespace()
+                    try decodeNamespaceParameters(&body)
+                    namespaces.insert(suffix)
+                    updates?.yield(.available(suffix))
+                case .namespaceDone where updates != nil:
+                    let suffix = try body.getNamespace()
+                    guard body.bytesAvailable == 0, namespaces.remove(suffix) != nil else {
+                        throw MoQTPayload.Error.invalidField
+                    }
+                    updates?.yield(.unavailable(suffix))
+                case .publishDone where updates == nil:
+                    _ = try body.getInt() // Status code
+                    _ = try body.getInt() // Stream count
+                    _ = try body.getBytes(limit: 1024)
+                    guard body.bytesAvailable == 0 else { throw MoQTPayload.Error.invalidField }
+                case .goaway:
+                    guard !receivedGoAway else { throw Error.unknownResponse }
+                    _ = try MoQTGoAway(&body)
+                    receivedGoAway = true
+                default:
+                    throw Error.unknownResponse
                 }
-            default:
-                break
             }
+            updates?.finish()
         } catch {
-            logger.warn(error)
+            updates?.finish(throwing: error)
+        }
+    }
+
+    private func decodeNamespaceParameters(_ body: inout MoQTPayload) throws {
+        let count = try body.getInt()
+        var type: UInt64 = 0
+        for _ in 0..<count {
+            let (next, overflow) = type.addingReportingOverflow(try body.getInt())
+            guard !overflow, next == 3 else { throw MoQTPayload.Error.invalidField }
+            type = next
+            _ = try body.getBytes() // AUTHORIZATION_TOKEN
+        }
+        guard body.bytesAvailable == 0 else { throw MoQTPayload.Error.invalidField }
+    }
+
+    private func finishStream(_ id: UUID) {
+        streamTasks.removeValue(forKey: id)?.cancel()
+    }
+
+    private func withTimeout<Value: Sendable>(_ operation: @escaping @Sendable () async throws -> Value) async throws -> Value {
+        let timeout = requestTimeout
+        return try await withThrowingTaskGroup(of: Value.self) { group in
+            group.addTask(operation: operation)
+            group.addTask {
+                try await Task.sleep(for: .milliseconds(timeout))
+                throw Error.requestTimedOut
+            }
+            defer { group.cancelAll() }
+            guard let value = try await group.next() else { throw CancellationError() }
+            return value
         }
     }
 }

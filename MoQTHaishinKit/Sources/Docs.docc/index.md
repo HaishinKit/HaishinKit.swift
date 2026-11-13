@@ -7,32 +7,39 @@ This module supports the MoQT protocol.
 }
 
 ## Overview
-- This is a Swift implementation of MoQT, based on draft7. It is being developed for research and testing purposes.
-- The features for live streaming and viewing have not been implemented yet, so testing is not possible at this time.
 
-## Control Messages
-- [x] 6.2. CLIENT_SETUP
-- [x] 6.2. SERVER_SETUP
-- [ ] 6.3. GOAWAY
-- [x] 6.4. SUBSCRIBE
-- [x] 6.5. SUBSCRIBE_UPDATE
-- [ ] 6.6. UNSUBSCRIBE
-- [ ] 6.7. FETCH
-- [ ] 6.8. FETCH_CANCEL
-- [x] 6.9. ANNOUNCE_OK
-- [x] 6.10. ANNOUNCE_ERROR
-- [ ] 6.11. ANNOUNCE_CANCEL
-- [ ] 6.12. TRACK_STATUS_REQUEST 
-- [ ] 6.13. SUBSCRIBE_ANNOUNCES 
-- [ ] 6.14. UNSUBSCRIBE_ANNOUNCES
-- [x] 6.15. SUBSCRIBE_OK
-- [x] 6.16. SUBSCRIBE_ERROR
-- [ ] 6.17. FETCH_OK
-- [ ] 6.18. FETCH_ERROR
-- [ ] 6.19. SUBSCRIBE_DONE
-- [ ] 6.20. MAX_SUBSCRIBE_ID
-- [x] 6.21. ANNOUNCE
-- [ ] 6.22. UNANNOUNCE
-- [ ] 6.23. TRACK_STATUS
-- [x] 6.24. SUBSCRIBE_ANNOUNCES_OK
-- [x] 6.25. SUBSCRIBE_ANNOUNCES_ERROR
+MoQTHaishinKit implements the native QUIC client subset of
+[draft-ietf-moq-transport-23](https://datatracker.ietf.org/doc/html/draft-ietf-moq-transport-23).
+Connection APIs require iOS 26, macOS 26, tvOS 26, or visionOS 26.
+
+Connect to a `moqt://` endpoint and consume `objectStream` for incoming
+subgroup objects and datagrams.
+
+```swift
+let connection = MoQTConnection(.subscriber)
+let objects = await connection.objectStream
+_ = try await connection.connect("moqt://relay.example/live")
+
+do {
+    let subscription = try await connection.subscribe(["live"], name: "video")
+    print(subscription.trackAlias)
+} catch let rejection as MoQTRequestError {
+    print(rejection.code, rejection.reasonPhrase)
+}
+
+for await object in objects {
+    // Use object.trackAlias to identify the subscription.
+    print(object.id)
+}
+```
+
+Use `publishNamespace` to advertise a namespace and `subscribeNamespace` to
+receive namespace discovery updates. Both throw `MoQTRequestError` when the
+peer rejects the request. For authenticated requests, supply a
+`MoQTAuthorizationToken` with the token type and bytes expected by the peer.
+
+This client supports outgoing track subscriptions and namespace requests.
+Incoming track requests are rejected with `NOT_SUPPORTED`. The subgroup
+sending API writes objects to a unidirectional QUIC stream using a
+caller-supplied track alias. WebTransport, FETCH, request updates, automatic
+session migration, and relay behavior are outside the implemented subset.

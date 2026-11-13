@@ -56,7 +56,6 @@ let package = Package(
         ),
         .target(
             name: "MoQTHaishinKit",
-            dependencies: ["HaishinKit"],
             path: "MoQTHaishinKit/Sources",
             swiftSettings: swiftSettings
         ),
@@ -85,6 +84,12 @@ let package = Package(
             name: "SRTHaishinKitTests",
             dependencies: ["SRTHaishinKit"],
             path: "SRTHaishinKit/Tests",
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "MoQTHaishinKitTests",
+            dependencies: ["MoQTHaishinKit"],
+            path: "MoQTHaishinKit/Tests",
             swiftSettings: swiftSettings
         ),
         .testTarget(
