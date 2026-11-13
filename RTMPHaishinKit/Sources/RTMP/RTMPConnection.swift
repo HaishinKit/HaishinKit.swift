@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import HaishinKit
+import Network
 
 // MARK: -
 /// The RTMPConnection class create a two-way RTMP connection.
@@ -193,10 +194,12 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     }
     /// The object encoding for this RTMPConnection instance.
     public let objectEncoding = RTMPConnection.defaultObjectEncoding
-    /// The TCP statistics.
-    public var transportStatistics: RTMPTransportStatistics? {
+    /// The TCP statistics of the connection.
+    ///
+    /// The value is `nil` until the first report is available and is reset when the next connection attempt starts.
+    public var transportStatistics: NWConnection.DataTransferReport.PathReport? {
         get async {
-            return await socket?.transportStatistics
+            return await socket?.pathReport
         }
     }
 

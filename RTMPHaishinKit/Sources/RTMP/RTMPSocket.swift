@@ -13,10 +13,7 @@ final actor RTMPSocket {
         case connectionNotEstablished(_ error: NWError?)
     }
 
-    var transportStatistics: RTMPTransportStatistics? {
-        pathReport.map { .init(report: $0) }
-    }
-
+    private(set) var pathReport: NWConnection.DataTransferReport.PathReport?
     private var timeout: UInt64 = 15
     private var connected = false
     private var windowSizeC = RTMPSocket.defaultWindowSizeC
@@ -25,7 +22,6 @@ final actor RTMPSocket {
     private var queueBytesOut = 0
     private var totalBytesOut = 0
     private var parameters: NWParameters = .tcp
-    private var pathReport: NWConnection.DataTransferReport.PathReport?
     private var dataTransferReport: NWConnection.PendingDataTransferReport?
     private var connection: NWConnection? {
         didSet {
