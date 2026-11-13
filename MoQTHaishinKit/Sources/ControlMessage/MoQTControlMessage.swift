@@ -2,6 +2,13 @@ import Foundation
 
 enum MoQTMessageType: UInt64 {
     case setup = 0x2f00
+    case requestUpdate = 0x02
+    case trackStatus = 0x0d
+    case publishSkipped = 0x0f
+    case fetch = 0x16
+    case publish = 0x1d
+    case publishStateNotify = 0x22
+    case subscribeTracks = 0x51
     case goaway = 0x10
     case subscribe = 0x03
     case subscribeOK = 0x04

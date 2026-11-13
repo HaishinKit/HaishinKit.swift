@@ -29,4 +29,16 @@ public struct MoQTKeyValue: Sendable {
         }
         return fields
     }
+
+    static func encode(_ fields: [Self], into payload: inout MoQTPayload) {
+        var previous: UInt64 = 0
+        for field in fields {
+            payload.putInt(field.type - previous)
+            switch field.value {
+            case .integer(let value): payload.putInt(value)
+            case .bytes(let value): payload.putBytes(value)
+            }
+            previous = field.type
+        }
+    }
 }

@@ -129,6 +129,28 @@ public actor MoQTConnection {
         }
     }
 
+    /// Queries the status of a track without opening a subscription.
+    ///
+    /// - Parameters:
+    ///   - namespace: The track's namespace fields.
+    ///   - name: The track name within the namespace.
+    ///   - authorizationToken: An optional token understood by the peer.
+    /// - Returns: The track's latest known location and properties, if reported.
+    /// - Throws: A `MoQTRequestError` for a peer rejection, or a transport or protocol error.
+    public func trackStatus(_ namespace: [String], name: String,
+                            authorizationToken: MoQTAuthorizationToken? = nil) async throws -> MoQTRequestOk {
+        let (response, _, _) = try await request(.trackStatus, namespace: namespace, name: name,
+                                                 authorizationToken: authorizationToken)
+        do {
+            guard response.type == MoQTMessageType.requestOK.rawValue else { throw Error.unknownResponse }
+            var body = MoQTPayload(response.body)
+            return try MoQTRequestOk(&body, includesTrackInformation: true)
+        } catch {
+            close()
+            throw error
+        }
+    }
+
     /// Advertises a namespace to the peer.
     ///
     /// - Parameters:
@@ -382,12 +404,17 @@ public actor MoQTConnection {
     }
 
     private func rejectIncomingRequest(_ type: UInt64, reader: inout MoQTStreamReader, socket: MoQTSocket) async throws {
-        guard [0x03, 0x06, 0x0d, 0x16, 0x1d, 0x50, 0x51].contains(type) else {
-            throw Error.unknownResponse
-        }
+        guard let messageType = MoQTMessageType(rawValue: type) else { throw Error.unknownResponse }
         guard let requestId = try await reader.read({ payload in
             var body = MoQTPayload(try payload.getBytes(limit: 65_535))
-            return try body.getInt()
+            switch messageType {
+            case .publish: return try MoQTPublish(&body).requestId
+            case .fetch: return try MoQTFetch(&body).requestId
+            case .trackStatus: return try MoQTTrackStatus(&body).requestId
+            case .subscribeTracks: return try MoQTSubscribeTracks(&body).requestId
+            case .subscribe, .publishNamespace, .subscribeNamespace: return try body.getInt()
+            default: throw Error.unknownResponse
+            }
         }), self.socket === socket, !requestId.isMultiple(of: 2),
               receivedRequestIds.insert(requestId).inserted else { throw MoQTPayload.Error.invalidField }
         var body = MoQTPayload()
@@ -419,10 +446,9 @@ public actor MoQTConnection {
                     }
                     updates?.yield(.unavailable(suffix))
                 case .publishDone where updates == nil:
-                    _ = try body.getInt() // Status code
-                    _ = try body.getInt() // Stream count
-                    _ = try body.getBytes(limit: 1024)
-                    guard body.bytesAvailable == 0 else { throw MoQTPayload.Error.invalidField }
+                    _ = try MoQTPublishDone(&body)
+                case .publishStateNotify where updates == nil:
+                    _ = try MoQTPublishStateNotify(&body)
                 case .goaway:
                     guard !receivedGoAway else { throw Error.unknownResponse }
                     _ = try MoQTGoAway(&body)
