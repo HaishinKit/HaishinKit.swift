@@ -181,6 +181,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     public private(set) var uri: URL?
     /// The instance connected to server(true) or not(false).
     @Published public private(set) var connected = false
+    /// Elapsed time in seconds from queuing C0/C1 to receiving the full S2 packet.
+    /// Includes local queuing and server processing time. The value is nil until the
+    /// handshake completes and is reset when the next connection attempt starts.
+    public private(set) var handshakeDuration: TimeInterval?
     /// The stream of events you receive RTMP status events from a service.
     public var status: AsyncStream<RTMPStatus> {
         AsyncStream { continuation in
@@ -201,6 +205,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     private var sequence: Int64 = 0
     private var bandWidth: UInt32 = 0
     private var handshake: RTMPHandshake = .init()
+    private var handshakeStartedAt: DispatchTime?
     private var arguments: [(any Sendable)?] = []
     private var readyState: ReadyState = .uninitialized {
         didSet {
@@ -320,6 +325,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         self.uri = uri
         self.arguments = arguments
         let secure = uri.scheme == "rtmps" || uri.scheme == "rtmpts"
+        handshakeDuration = nil
+        handshakeStartedAt = nil
         handshake.clear()
         chunks.removeAll()
         sequence = 0
@@ -343,10 +350,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                     }
                     do {
                         readyState = .versionSent
-                        await socket.send(handshake.c0c1packet)
+                        handshakeStartedAt = await socket.send(handshake.c0c1packet)
                         operations[Self.connectTransactionId] = continutation
-                        for await data in await socket.recv() {
-                            try await listen(data)
+                        for await (data, receivedAt) in await socket.recv() {
+                            try await listen(data, receivedAt: receivedAt)
                         }
                         try? await close()
                     } catch {
@@ -446,7 +453,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         streams.append(stream)
     }
 
-    private func listen(_ data: Data) async throws {
+    private func listen(_ data: Data, receivedAt: DispatchTime) async throws {
         switch readyState {
         case .versionSent:
             handshake.put(data)
@@ -455,11 +462,15 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             }
             await socket?.send(handshake.c2packet())
             readyState = .ackSent
-            try await listen(.init())
+            try await listen(.init(), receivedAt: receivedAt)
         case .ackSent:
             handshake.put(data)
             guard handshake.hasS2Packet else {
                 return
+            }
+            if let handshakeStartedAt, receivedAt >= handshakeStartedAt {
+                let elapsedNanoseconds = receivedAt.uptimeNanoseconds - handshakeStartedAt.uptimeNanoseconds
+                handshakeDuration = TimeInterval(elapsedNanoseconds) / 1_000_000_000
             }
             readyState = .handshakeDone
             guard let message = makeConnectionMessage() else {
