@@ -247,13 +247,13 @@ a=fmtp:98 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
             let config = RTCTrackConfiguration(mid: "0", streamId: msid, audioCodecSettings: track.settings)
             let id = try config.addTrack(connection, direction: .sendrecv)
             Task {
-                await stream.addTrack(try RTCMediaTrack(id, id: track.id))
+                await (try RTCMediaTrack(id, id: track.id)).setStream(stream)
             }
         case let track as VideoStreamTrack:
             let config = RTCTrackConfiguration(mid: "1", streamId: msid, videoCodecSettings: track.settings)
             let id = try config.addTrack(connection, direction: .sendrecv)
             Task {
-                await stream.addTrack(try RTCMediaTrack(id, id: track.id))
+                await (try RTCMediaTrack(id, id: track.id)).setStream(stream)
             }
         default:
             break
