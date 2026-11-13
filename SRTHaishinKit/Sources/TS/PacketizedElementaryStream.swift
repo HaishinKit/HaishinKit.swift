@@ -188,10 +188,11 @@ struct PacketizedElementaryStream: PESPacketHeader {
     }
 
     var isEntired: Bool {
-        if 0 < packetLength {
-            return data.count == packetLength - 8
+        guard 0 < packetLength else {
+            return false
         }
-        return false
+        let headerSize = optionalPESHeader.map { PESOptionalHeader.fixedSectionSize + Int($0.pesHeaderLength) } ?? 0
+        return data.count == Int(packetLength) - headerSize
     }
 
     init?(_ payload: Data) {
@@ -336,6 +337,9 @@ struct PacketizedElementaryStream: PESPacketHeader {
             var iterator = reader.makeIterator()
             while let next = iterator.next() {
                 sampleSizes.append(next)
+            }
+            if sampleSizes.isEmpty {
+                return nil
             }
         default:
             break

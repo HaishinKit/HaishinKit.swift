@@ -5,7 +5,7 @@ extension AVAudioCompressedBuffer {
     @discardableResult
     @inline(__always)
     final func copy(_ buffer: AVAudioBuffer) -> Bool {
-        guard let buffer = buffer as? AVAudioCompressedBuffer else {
+        guard let buffer = buffer as? AVAudioCompressedBuffer, buffer.byteLength <= byteCapacity else {
             return false
         }
         if let packetDescriptions = buffer.packetDescriptions {
