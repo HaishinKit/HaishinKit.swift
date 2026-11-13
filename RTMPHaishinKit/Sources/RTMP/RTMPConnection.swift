@@ -178,6 +178,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     public let chunkSize: Int
     /// The dispatchQos for socket.
     public let qualityOfService: DispatchQoS
+    /// The network interface type the socket must use, such as `.wifi` or `.cellular`. The default value is nil, the system chooses the route.
+    public let requiredInterfaceType: NWInterface.InterfaceType?
     /// The URI passed to the Self.connect() method.
     public private(set) var uri: URL?
     /// The instance connected to server(true) or not(false).
@@ -280,17 +282,45 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         requestTimeout: UInt64 = RTMPConnection.defaultRequestTimeout,
         chunkSize: Int = RTMPConnection.defaultChunkSizeS,
         qualityOfService: DispatchQoS = .userInitiated) {
-        self.swfUrl = swfUrl
-        self.pageUrl = pageUrl
-        self.flashVer = flashVer
-        self.timeout = timeout
-        self.fourCcList = fourCcList
-        self.videoFourCcInfoMap = videoFourCcInfoMap
-        self.audioFourCcInfoMap = audioFourCcInfoMap
-        self.capsEx = capsEx
-        self.requestTimeout = requestTimeout
-        self.chunkSize = chunkSize
-        self.qualityOfService = qualityOfService
+        var configuration = RTMPConnectionConfiguration()
+        configuration.swfUrl = swfUrl
+        configuration.pageUrl = pageUrl
+        configuration.flashVer = flashVer
+        configuration.fourCcList = fourCcList
+        configuration.videoFourCcInfoMap = videoFourCcInfoMap
+        configuration.audioFourCcInfoMap = audioFourCcInfoMap
+        configuration.capsEx = capsEx
+        configuration.timeout = timeout
+        configuration.requestTimeout = requestTimeout
+        configuration.chunkSize = chunkSize
+        configuration.qualityOfService = qualityOfService
+        self.init(configuration: configuration)
+    }
+
+    /// Creates a new connection with a configuration.
+    ///
+    /// The configuration holds every option of the other initializer, and the ones it does not take, such as the network
+    /// interface the socket must use.
+    ///
+    /// ## Example code:
+    /// ```swift
+    /// var configuration = RTMPConnectionConfiguration()
+    /// configuration.requiredInterfaceType = .cellular
+    /// let connection = RTMPConnection(configuration: configuration)
+    /// ```
+    public init(configuration: RTMPConnectionConfiguration) {
+        self.swfUrl = configuration.swfUrl
+        self.pageUrl = configuration.pageUrl
+        self.flashVer = configuration.flashVer
+        self.timeout = configuration.timeout
+        self.fourCcList = configuration.fourCcList
+        self.videoFourCcInfoMap = configuration.videoFourCcInfoMap
+        self.audioFourCcInfoMap = configuration.audioFourCcInfoMap
+        self.capsEx = configuration.capsEx
+        self.requestTimeout = configuration.requestTimeout
+        self.chunkSize = configuration.chunkSize
+        self.qualityOfService = configuration.qualityOfService
+        self.requiredInterfaceType = configuration.requiredInterfaceType
     }
 
     deinit {
@@ -343,7 +373,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         chunkSizeC = RTMPChunkMessageHeader.chunkSize
         chunkSizeS = RTMPChunkMessageHeader.chunkSize
         currentTransactionId = Self.connectTransactionId
-        socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
+        socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none, requiredInterfaceType: requiredInterfaceType)
         networkMonitor = await socket?.makeNetworkMonitor()
         guard let socket, let networkMonitor else {
             throw Error.invalidState
