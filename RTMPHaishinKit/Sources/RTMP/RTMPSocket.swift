@@ -13,6 +13,7 @@ final actor RTMPSocket {
         case connectionNotEstablished(_ error: NWError?)
     }
 
+    private(set) var pathReport: NWConnection.DataTransferReport.PathReport?
     private var timeout: UInt64 = 15
     private var connected = false
     private var windowSizeC = RTMPSocket.defaultWindowSizeC
@@ -21,6 +22,7 @@ final actor RTMPSocket {
     private var queueBytesOut = 0
     private var totalBytesOut = 0
     private var parameters: NWParameters = .tcp
+    private var dataTransferReport: NWConnection.PendingDataTransferReport?
     private var connection: NWConnection? {
         didSet {
             oldValue?.viabilityUpdateHandler = nil
@@ -57,6 +59,7 @@ final actor RTMPSocket {
         totalBytesIn = 0
         totalBytesOut = 0
         queueBytesOut = 0
+        pathReport = nil
         do {
             let connection = NWConnection(to: NWEndpoint.hostPort(host: .init(name), port: .init(integerLiteral: NWEndpoint.Port.IntegerLiteralType(port))), using: parameters)
             self.connection = connection
@@ -143,6 +146,8 @@ final actor RTMPSocket {
         outputs = nil
         connection = nil
         continuation = nil
+        dataTransferReport = nil
+        pathReport = nil
     }
 
     private func stateDidChange(to state: NWConnection.State) {
@@ -159,6 +164,7 @@ final actor RTMPSocket {
                 }
             }
             self.outputs = continuation
+            self.dataTransferReport = connection?.startDataTransferReport()
             self.continuation?.resume()
             self.continuation = nil
         case .waiting(let error):
@@ -202,6 +208,22 @@ final actor RTMPSocket {
         }
     }
 
+    private func updateTransportStatistics() async {
+        guard let connection, let dataTransferReport else {
+            return
+        }
+        self.dataTransferReport = connection.startDataTransferReport()
+        let report = await withCheckedContinuation { continuation in
+            dataTransferReport.collect(queue: networkQueue) { report in
+                continuation.resume(returning: report)
+            }
+        }
+        guard connected else {
+            return
+        }
+        pathReport = report.aggregatePathReport
+    }
+
     private func recv() async throws -> ReceivedData {
         return try await withCheckedThrowingContinuation { continuation in
             guard let connection else {
@@ -229,7 +251,8 @@ extension RTMPSocket: NetworkTransportReporter {
         return .init(self)
     }
 
-    func makeNetworkTransportReport() -> NetworkTransportReport {
+    func makeNetworkTransportReport() async -> NetworkTransportReport {
+        await updateTransportStatistics()
         return .init(queueBytesOut: queueBytesOut, totalBytesIn: totalBytesIn, totalBytesOut: totalBytesOut)
     }
 }
