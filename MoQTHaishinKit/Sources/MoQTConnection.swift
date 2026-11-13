@@ -1,39 +1,6 @@
 import Foundation
 import Network
 
-/// The intended application role for a MOQT connection. The role is local metadata.
-public enum MoQTSetupRole: Int, Sendable {
-    /// An endpoint that publishes tracks.
-    case publisher = 1
-    /// An endpoint that subscribes to tracks.
-    case subscriber = 2
-    /// An endpoint that publishes and subscribes to tracks.
-    case pubSub = 3
-}
-
-/// A peer notification that a session or request should migrate.
-public struct MoQTGoAway: Sendable {
-    /// The URI for the replacement session, or nil to reuse the current URI.
-    public let newSessionURI: String?
-    /// The peer’s grace period in milliseconds, or zero if unspecified.
-    public let timeoutMilliseconds: UInt64
-
-    init(_ body: inout MoQTPayload) throws {
-        let uri = try body.getBytes(limit: 8192)
-        newSessionURI = uri.isEmpty ? nil : String(decoding: uri, as: UTF8.self)
-        timeoutMilliseconds = try body.getInt()
-        guard body.bytesAvailable == 0 else { throw MoQTPayload.Error.invalidField }
-    }
-}
-
-/// A discovery event for a namespace relative to the requested prefix.
-public enum MoQTNamespaceUpdate: Sendable {
-    /// The peer advertised the associated namespace suffix as a sequence of byte fields.
-    case available([Data])
-    /// The peer withdrew the associated namespace suffix.
-    case unavailable([Data])
-}
-
 /// A native QUIC client for draft-23 Media over QUIC Transport.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
 public actor MoQTConnection {
