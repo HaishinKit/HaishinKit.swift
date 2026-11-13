@@ -15,7 +15,7 @@ public actor RTCStream {
     static let supportedVideoCodecs: [VideoCodecSettings.Format] = [.h264]
 
     let id: String = UUID().uuidString
-    private(set) var tracks: [RTCSendableStreamTrack] = []
+    private(set) var tracks: [RTCMediaTrack] = []
     /// The readiness state reported by the stream.
     public private(set) var readyState: StreamReadyState = .idle
     /// The selected mixer video track. `UInt8.max` selects mixed output; `nil` disables video delivery.
@@ -59,7 +59,9 @@ public actor RTCStream {
     /// This method does not close the peer connection.
     public func close() async {
         await setDirection(.inactive)
-        tracks.removeAll()
+        for track in tracks {
+            await track.detach(from: self)
+        }
     }
 
     private func startSending() {
@@ -98,9 +100,12 @@ public actor RTCStream {
         outgoing.stopRunning()
     }
 
-    func addTrack(_ track: RTCSendableStreamTrack) async {
-        await track.setDelegate(self)
+    func addTrack(_ track: RTCMediaTrack) {
         tracks.append(track)
+    }
+
+    func removeTrack(_ track: RTCMediaTrack) {
+        tracks.removeAll { $0 === track }
     }
 }
 
@@ -150,7 +155,7 @@ extension RTCStream: _Stream {
             if sampleBuffer.formatDescription?.isCompressed == true {
                 Task {
                     for track in tracks {
-                        await track.send(sampleBuffer)
+                        await track.send(sampleBuffer, from: self)
                     }
                 }
             } else {
@@ -184,7 +189,7 @@ extension RTCStream: _Stream {
         case let audioBuffer as AVAudioCompressedBuffer:
             Task {
                 for track in tracks {
-                    await track.send(audioBuffer, when: when)
+                    await track.send(audioBuffer, when: when, from: self)
                 }
             }
         default:

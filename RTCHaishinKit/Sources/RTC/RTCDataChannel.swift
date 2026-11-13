@@ -78,7 +78,7 @@ public final class RTCDataChannel: RTCChannel {
             })
             try RTCError.check(rtcSetClosedCallback(id) { _, pointer in
                 guard let pointer else { return }
-                Unmanaged<RTCDataChannel>.fromOpaque(pointer).takeUnretainedValue().readyState = .connecting
+                Unmanaged<RTCDataChannel>.fromOpaque(pointer).takeUnretainedValue().readyState = .closed
             })
             try RTCError.check(rtcSetMessageCallback(id) { _, bytes, size, pointer in
                 guard let bytes, let pointer else { return }
@@ -109,11 +109,8 @@ public final class RTCDataChannel: RTCChannel {
     /// - Parameter message: The text to send.
     /// - Throws: `RTCError` if the library rejects the send operation.
     public func send(_ message: String) throws {
-        guard let buffer = message.data(using: .utf8) else {
-            return
-        }
-        try RTCError.check(buffer.withUnsafeBytes { pointer in
-            return rtcSendMessage(id, pointer.bindMemory(to: CChar.self).baseAddress, -Int32(message.count))
+        try RTCError.check(message.withCString { pointer in
+            rtcSendMessage(id, pointer, -1)
         })
     }
 

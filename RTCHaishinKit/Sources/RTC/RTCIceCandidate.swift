@@ -1,9 +1,15 @@
 import Foundation
 
-/// A local ICE candidate delivered by the peer connection delegate.
+/// An ICE candidate exchanged through signaling.
 public struct RTCIceCandidate: Sendable {
-    let candidate: String
-    let mid: String
+    public let candidate: String
+    public let mid: String
+
+    /// Creates a candidate received through signaling.
+    public init(candidate: String, mid: String) {
+        self.candidate = candidate
+        self.mid = mid
+    }
 }
 
 extension RTCIceCandidate {
