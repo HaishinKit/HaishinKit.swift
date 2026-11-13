@@ -1,12 +1,18 @@
 import Foundation
 
+/// The header of a unidirectional MOQT subgroup stream.
 public struct MoQTStreamHeaderSubgroup: Sendable {
+    /// The alias assigned to the track on this session.
     public let trackAlias: UInt64
+    /// The group containing the subgroup.
     public let groupId: UInt64
+    /// The subgroup identifier, or nil if inferred from the first object.
     public let subgroupId: UInt64?
+    /// The publisher priority, or nil if inherited from the track.
     public let publisherPriority: UInt8?
     let hasProperties: Bool
 
+    /// The encoded subgroup header, including its stream type flags.
     public var payload: Data {
         var payload = MoQTPayload()
         let subgroupMode: UInt64 = subgroupId == nil ? 0x02 : 0x04
@@ -19,6 +25,13 @@ public struct MoQTStreamHeaderSubgroup: Sendable {
         return payload.data
     }
 
+    /// Creates a subgroup header with an explicit identifier and priority.
+    ///
+    /// - Parameters:
+    ///   - trackAlias: The session-specific track alias.
+    ///   - groupId: The group containing the subgroup.
+    ///   - subgroupId: The subgroup identifier.
+    ///   - publisherPriority: The publisher priority, where lower values indicate higher priority.
     public init(trackAlias: UInt64, groupId: UInt64, subgroupId: UInt64, publisherPriority: UInt8) {
         self.trackAlias = trackAlias
         self.groupId = groupId

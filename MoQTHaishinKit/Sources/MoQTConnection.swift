@@ -1,14 +1,21 @@
 import Foundation
 import Network
 
+/// The intended application role for a MOQT connection. The role is local metadata.
 public enum MoQTSetupRole: Int, Sendable {
+    /// An endpoint that publishes tracks.
     case publisher = 1
+    /// An endpoint that subscribes to tracks.
     case subscriber = 2
+    /// An endpoint that publishes and subscribes to tracks.
     case pubSub = 3
 }
 
+/// A peer notification that a session or request should migrate.
 public struct MoQTGoAway: Sendable {
+    /// The URI for the replacement session, or nil to reuse the current URI.
     public let newSessionURI: String?
+    /// The peer’s grace period in milliseconds, or zero if unspecified.
     public let timeoutMilliseconds: UInt64
 
     init(_ body: inout MoQTPayload) throws {
@@ -19,29 +26,48 @@ public struct MoQTGoAway: Sendable {
     }
 }
 
+/// A discovery event for a namespace relative to the requested prefix.
 public enum MoQTNamespaceUpdate: Sendable {
+    /// The peer advertised the associated namespace suffix as a sequence of byte fields.
     case available([Data])
+    /// The peer withdrew the associated namespace suffix.
     case unavailable([Data])
 }
 
+/// A native QUIC client for draft-23 Media over QUIC Transport.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
 public actor MoQTConnection {
+    /// The port used when the MOQT URI omits a port.
     public static let defaultPort = 443
+    /// The URI schemes accepted by this client.
     public static let supportedProtocols = ["moqt"]
+    /// The default request timeout in milliseconds.
     public static let defaultRequestTimeout: UInt64 = 3000
 
+    /// Errors reported by the connection and request handling.
     public enum Error: Swift.Error {
+        /// The operation is unavailable in the current connection state.
         case invalidState
+        /// The supplied URI is invalid or uses an unsupported scheme.
         case unsupportedCommand(String)
+        /// The operation exceeded the configured timeout.
         case requestTimedOut
+        /// The peer sent an unexpected message.
         case unknownResponse
+        /// The session or stream closed before the operation completed.
         case connectionClosed
     }
 
+    /// The application role supplied at initialization.
     public let role: MoQTSetupRole
+    /// The timeout for connection setup, requests, and sends, in milliseconds.
     public let requestTimeout: UInt64
+    /// The latest session-level GOAWAY notification, if one was received.
     public private(set) var goAway: MoQTGoAway?
 
+    /// A stream of incoming subgroup and datagram objects.
+    ///
+    /// Reading this property again finishes the previous stream. Obtain it before subscribing.
     public var objectStream: AsyncStream<MoQTObject> {
         let (stream, continuation) = AsyncStream<MoQTObject>.makeStream()
         objectStreamContinuation?.finish()
@@ -62,11 +88,21 @@ public actor MoQTConnection {
     private var datagramTask: Task<Void, Never>?
     private var objectStreamContinuation: AsyncStream<MoQTObject>.Continuation?
 
+    /// Creates a MOQT client.
+    ///
+    /// - Parameters:
+    ///   - role: The intended application role.
+    ///   - requestTimeOut: The timeout in milliseconds.
     public init(_ role: MoQTSetupRole, requestTimeOut: UInt64 = MoQTConnection.defaultRequestTimeout) {
         self.role = role
         requestTimeout = requestTimeOut
     }
 
+    /// Opens a native QUIC session and exchanges SETUP messages.
+    ///
+    /// - Parameter uri: The server's moqt:// URI, including any path and query.
+    /// - Returns: The peer's SETUP options.
+    /// - Throws: A URI, transport, timeout, or protocol error.
     public func connect(_ uri: String) async throws -> MoQTSetup {
         guard socket == nil else { throw Error.invalidState }
         guard let url = URLComponents(string: uri), url.scheme == "moqt",
@@ -101,6 +137,14 @@ public actor MoQTConnection {
         }
     }
 
+    /// Subscribes to a track and waits for the peer's response.
+    ///
+    /// - Parameters:
+    ///   - namespace: The track's namespace fields.
+    ///   - name: The track name within the namespace.
+    ///   - authorizationToken: An optional token understood by the peer.
+    /// - Returns: The accepted subscription, including its track alias.
+    /// - Throws: A MoQTRequestError if the peer rejects the request, or a transport or protocol error.
     public func subscribe(_ namespace: [String], name: String,
                           authorizationToken: MoQTAuthorizationToken? = nil) async throws -> MoQTSubscribeOk {
         let (response, reader, id) = try await request(.subscribe, namespace: namespace, name: name,
@@ -118,6 +162,13 @@ public actor MoQTConnection {
         }
     }
 
+    /// Advertises a namespace to the peer.
+    ///
+    /// - Parameters:
+    ///   - namespace: The namespace prefix to advertise.
+    ///   - authorizationToken: An optional token understood by the peer.
+    /// - Returns: The peer's acknowledgement.
+    /// - Throws: A MoQTRequestError if the peer rejects the request, or a transport or protocol error.
     public func publishNamespace(_ namespace: [String],
                                  authorizationToken: MoQTAuthorizationToken? = nil) async throws -> MoQTRequestOk {
         let (ok, reader, id) = try await namespaceRequest(.publishNamespace, namespace, authorizationToken)
@@ -125,6 +176,13 @@ public actor MoQTConnection {
         return ok
     }
 
+    /// Subscribes to namespace discovery under a prefix.
+    ///
+    /// - Parameters:
+    ///   - namespace: The prefix to match. Pass an empty array to match all namespaces.
+    ///   - authorizationToken: An optional token understood by the peer.
+    /// - Returns: The peer's acknowledgement and a stream of discovery events.
+    /// - Throws: A MoQTRequestError if the peer rejects the request, or a transport or protocol error.
     public func subscribeNamespace(_ namespace: [String], authorizationToken: MoQTAuthorizationToken? = nil)
         async throws -> (response: MoQTRequestOk, updates: AsyncThrowingStream<MoQTNamespaceUpdate, any Swift.Error>) {
         let (ok, reader, id) = try await namespaceRequest(.subscribeNamespace, namespace, authorizationToken)
@@ -136,6 +194,12 @@ public actor MoQTConnection {
         return (ok, updates)
     }
 
+    /// Sends a subgroup on a new unidirectional stream and finishes that stream.
+    ///
+    /// - Parameters:
+    ///   - objects: The subgroup's objects in strictly increasing object ID order.
+    ///   - header: The track alias, group, subgroup, and priority for the stream.
+    /// - Throws: An encoding, transport, or timeout error.
     public func send(_ objects: [MoQTObject], header: MoQTStreamHeaderSubgroup) async throws {
         guard isReady, let socket else { throw Error.invalidState }
         var payload = MoQTPayload(header.payload)
@@ -151,6 +215,7 @@ public actor MoQTConnection {
         }
     }
 
+    /// Closes the session, cancels pending requests, and finishes the object stream.
     public func close() {
         isReady = false
         goAway = nil

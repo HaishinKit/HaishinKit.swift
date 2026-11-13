@@ -1,14 +1,28 @@
 import Foundation
 
+/// A MOQT object and its available delivery metadata.
 public struct MoQTObject: Sendable {
+    /// The object identifier within its group.
     public let id: UInt64
+    /// The explicit wire status, or nil when the wire format implies normal status.
     public let status: UInt64?
+    /// The object payload bytes.
     public let data: Data
+    /// The track alias for a received object.
     public let trackAlias: UInt64?
+    /// The group identifier for a received object.
     public let groupId: UInt64?
+    /// The subgroup identifier for a received subgroup object.
     public let subgroupId: UInt64?
+    /// The properties supplied by the peer for this object.
     public let properties: [MoQTKeyValue]
 
+    /// Creates an object to send with a subgroup header.
+    ///
+    /// - Parameters:
+    ///   - id: The object identifier within its group.
+    ///   - status: An optional explicit wire status for an empty payload.
+    ///   - data: The object payload bytes.
     public init(id: UInt64, status: UInt64?, data: Data) {
         self.init(id: id, status: status, data: data, trackAlias: nil, groupId: nil, subgroupId: nil, properties: [])
     }

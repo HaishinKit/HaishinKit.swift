@@ -36,13 +36,19 @@ struct MoQTControlMessage {
     }
 }
 
+/// A decoded MOQT setup option, error detail, or property.
 public struct MoQTKeyValue: Sendable {
+    /// The wire value associated with a MOQT field type.
     public enum Value: Sendable {
+        /// An unsigned variable-length integer.
         case integer(UInt64)
+        /// A length-prefixed byte sequence.
         case bytes(Data)
     }
 
+    /// The field type identifier after applying the wire delta.
     public let type: UInt64
+    /// The decoded field value.
     public let value: Value
 
     static func decode(_ payload: inout MoQTPayload) throws -> [Self] {
@@ -61,7 +67,9 @@ public struct MoQTKeyValue: Sendable {
     }
 }
 
+/// The SETUP message received from the peer.
 public struct MoQTSetup: Sendable {
+    /// The peer’s setup options.
     public let options: [MoQTKeyValue]
 
     init(_ payload: inout MoQTPayload) throws {
@@ -81,10 +89,18 @@ public struct MoQTSetup: Sendable {
     }
 }
 
+/// An authorization token sent by value in a MOQT request.
 public struct MoQTAuthorizationToken: Sendable {
+    /// The token type expected by the peer.
     public let type: UInt64
+    /// The token payload bytes.
     public let value: Data
 
+    /// Creates a token from its type and payload.
+    ///
+    /// - Parameters:
+    ///   - type: The token type expected by the peer.
+    ///   - value: The token payload bytes.
     public init(type: UInt64, value: Data) {
         self.type = type
         self.value = value
@@ -100,10 +116,15 @@ public struct MoQTAuthorizationToken: Sendable {
     }
 }
 
+/// A REQUEST_ERROR response thrown when the peer rejects a request.
 public struct MoQTRequestError: Swift.Error {
+    /// The peer’s MOQT request error code.
     public let code: UInt64
+    /// The minimum retry delay in milliseconds, or nil when the peer advises against retrying.
     public let retryAfterMilliseconds: UInt64?
+    /// The diagnostic text supplied by the peer.
     public let reasonPhrase: String
+    /// The structured error details supplied by the peer.
     public let details: [MoQTKeyValue]
 
     init(_ payload: inout MoQTPayload) throws {
@@ -115,7 +136,9 @@ public struct MoQTRequestError: Swift.Error {
     }
 }
 
+/// A successful REQUEST_OK response.
 public struct MoQTRequestOk: Sendable {
+    /// The advisory request lifetime in milliseconds. Zero or nil indicates no known expiry.
     public let expires: UInt64?
 
     init(_ payload: inout MoQTPayload) throws {
@@ -125,11 +148,17 @@ public struct MoQTRequestOk: Sendable {
     }
 }
 
+/// A successful SUBSCRIBE_OK response.
 public struct MoQTSubscribeOk: Sendable {
+    /// The publisher-assigned track alias used by incoming objects.
     public let trackAlias: UInt64
+    /// The advisory subscription lifetime in milliseconds. Zero or nil indicates no known expiry.
     public let expires: UInt64?
+    /// The group identifier of the largest known object, if reported.
     public let largestGroupId: UInt64?
+    /// The object identifier of the largest known object, if reported.
     public let largestObjectId: UInt64?
+    /// The track properties supplied by the publisher.
     public let trackProperties: [MoQTKeyValue]
 
     init(_ payload: inout MoQTPayload) throws {
