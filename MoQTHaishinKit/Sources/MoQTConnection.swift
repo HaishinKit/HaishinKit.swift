@@ -24,7 +24,7 @@ public enum MoQTNamespaceUpdate: Sendable {
     case unavailable([Data])
 }
 
-@available(iOS 26.0, macOS 26.0, tvOS 26.0, visionOS 26.0, *)
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
 public actor MoQTConnection {
     public static let defaultPort = 443
     public static let supportedProtocols = ["moqt"]
@@ -86,7 +86,7 @@ public actor MoQTConnection {
             let message = MoQTSetup.clientMessage(authority: authority, path: path)
             guard message.body.count <= 65_535 else { throw MoQTPayload.Error.invalidField }
             let serverSetup = try await withTimeout {
-                socket.start()
+                try await socket.start()
                 try await self.startSession(socket, message: message)
                 var iterator = setup.makeAsyncIterator()
                 guard let setup = try await iterator.next() else { throw Error.connectionClosed }
@@ -156,6 +156,7 @@ public actor MoQTConnection {
         goAway = nil
         nextRequestId = 0
         receivedRequestIds.removeAll()
+        if let socket { Task { await socket.close() } }
         socket = nil
         setupContinuation?.finish(throwing: Error.connectionClosed)
         setupContinuation = nil
@@ -176,17 +177,13 @@ public actor MoQTConnection {
     private func startSession(_ socket: MoQTSocket, message: MoQTControlMessage) async throws {
         guard self.socket === socket else { throw Error.connectionClosed }
         incomingTask = Task { [weak self] in
-            do {
-                try await socket.receiveStreams { [weak self] stream in
-                    await self?.acceptStream(stream, socket: socket)
-                }
-                await self?.sessionEnded(socket, error: Error.connectionClosed)
-            } catch {
-                await self?.sessionEnded(socket, error: error)
+            await socket.receiveStreams { [weak self] stream in
+                await self?.acceptStream(stream, socket: socket)
             }
+            await self?.sessionEnded(socket, error: Error.connectionClosed)
         }
         datagramTask = Task { [weak self] in
-            try? await socket.receiveDatagrams { [weak self] datagram in
+            await socket.receiveDatagrams { [weak self] datagram in
                 await self?.receiveDatagram(datagram, socket: socket)
             }
         }
@@ -300,7 +297,7 @@ public actor MoQTConnection {
         do {
             guard let type = try await reader.read({ try $0.getInt() }) else { return }
             guard self.socket === socket else { return }
-            if stream.directionality == .bidirectional {
+            if stream.isBidirectional {
                 try await rejectIncomingRequest(type, reader: &reader, socket: socket)
                 return
             }

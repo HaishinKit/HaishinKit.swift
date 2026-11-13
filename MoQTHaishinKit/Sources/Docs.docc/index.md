@@ -10,7 +10,7 @@ This module supports the MoQT protocol.
 
 MoQTHaishinKit implements the native QUIC client subset of
 [draft-ietf-moq-transport-23](https://datatracker.ietf.org/doc/html/draft-ietf-moq-transport-23).
-Connection APIs require iOS 26, macOS 26, tvOS 26, or visionOS 26.
+Connection APIs require iOS 16, macOS 13, or tvOS 16.
 
 Connect to a `moqt://` endpoint and consume `objectStream` for incoming
 subgroup objects and datagrams.
