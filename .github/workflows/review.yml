@@ -24,8 +24,10 @@ jobs:
           bundle exec ruby fastlane/tests/publish_documentation_results_test.rb
       - name: fastlane
         id: review
+        timeout-minutes: 20
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SWIFT_BACKTRACE: interactive=no
         run: |
           mkdir -p test-results
           set -o pipefail

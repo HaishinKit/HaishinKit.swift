@@ -1,55 +1,22 @@
-import Foundation
+/// A successful SUBSCRIBE_OK response.
+public struct MoQTSubscribeOk: Sendable {
+    /// The publisher-assigned track alias used by incoming objects.
+    public let trackAlias: UInt64
+    /// The advisory subscription lifetime in milliseconds. Zero or nil indicates no known expiry.
+    public let expires: UInt64?
+    /// The group identifier of the largest known object, if reported.
+    public let largestGroupId: UInt64?
+    /// The object identifier of the largest known object, if reported.
+    public let largestObjectId: UInt64?
+    /// The track properties supplied by the publisher.
+    public let trackProperties: [MoQTKeyValue]
 
-public struct MoQTSubscribeOk: MoQTControlMessage {
-    public let type = MoQTMessageType.subscribeOk
-    public let subscribeId: Int
-    public let expires: Int
-    public let groupOrder: MoQTSubscribe.GroupOrder
-    public let contentExists: Bool
-    public let largestGroupId: Int?
-    public let largestObjectId: Int?
-    public let subscribeParameters: [MoQTVersionSpecificParameter]
-
-    public var payload: Data {
-        get throws {
-            var payload = MoQTPayload()
-            payload.putInt(subscribeId)
-            payload.putInt(expires)
-            payload.putInt(groupOrder.rawValue)
-            _ = payload.putBool(contentExists)
-            if contentExists {
-                if let largestGroupId {
-                    payload.putInt(largestGroupId)
-                }
-                if let largestObjectId {
-                    payload.putInt(largestObjectId)
-                }
-            }
-            for parameter in subscribeParameters {
-                payload.putData(try parameter.payload)
-            }
-            return payload.data
-        }
-    }
-}
-
-extension MoQTSubscribeOk {
     init(_ payload: inout MoQTPayload) throws {
-        subscribeId = try payload.getInt()
-        expires = try payload.getInt()
-        if let groupOrder = MoQTSubscribe.GroupOrder(rawValue: try payload.getInt()) {
-            self.groupOrder = groupOrder
-        } else {
-            throw MoQTControlMessageError.notImplemented
-        }
-        contentExists = try payload.getBool()
-        largestGroupId = contentExists ? try payload.getInt() : nil
-        largestObjectId = contentExists ? try payload.getInt() : nil
-        var subscribeParameters: [MoQTVersionSpecificParameter] = []
-        let numberOfParameters = try payload.getInt()
-        for _ in 0..<numberOfParameters {
-            subscribeParameters.append(try .init(&payload))
-        }
-        self.subscribeParameters = subscribeParameters
+        trackAlias = try payload.getInt()
+        let parameters = try MoQTResponseParameters(&payload, allowsLargestObject: true)
+        expires = parameters.expires
+        largestGroupId = parameters.largestGroupId
+        largestObjectId = parameters.largestObjectId
+        trackProperties = try MoQTKeyValue.decode(&payload)
     }
 }
