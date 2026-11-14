@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Use only the trusted workflow; never check out or execute PR code.
-      - name: Assign latest open milestone
+      - name: Assign earliest open release milestone
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -38,8 +38,13 @@ jobs:
             end
 
             pages = api('--paginate', '--slurp', "repos/#{repository}/milestones?state=open&per_page=100")
-            milestone = pages.flatten.select { |item| item['state'] == 'open' }.max_by do |item|
-              [Time.iso8601(item.fetch('created_at')), item.fetch('number')]
+            milestone = pages.flatten.select { |item| item['state'] == 'open' }.min_by do |item|
+              title = item.fetch('title')
+              if title.match?(/\Av?\d+\.\d+\.\d+\z/)
+                [0, title.delete_prefix('v').split('.').map(&:to_i), item.fetch('number')]
+              else
+                [1, Time.iso8601(item.fetch('created_at')), item.fetch('number')]
+              end
             end
             unless milestone
               puts '::notice::No open milestone exists; the merged PR was left unchanged.'
