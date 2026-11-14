@@ -26,7 +26,7 @@ lane :document do |options|
 
   version = options[:version]
   # Document public modules, not dependency wrappers such as RTC.
-  document_targets = %w[HaishinKit RTMPHaishinKit SRTHaishinKit MoQTHaishinKit RTCHaishinKit]
+  document_targets = %w[HaishinKit RTMPHaishinKit SRTHaishinKit MoQTHaishinKit RTCHaishinKit VPXHaishinKit]
                      .map { |target| "--target #{target}" }.join(' ')
 
   Dir.chdir('..') do
