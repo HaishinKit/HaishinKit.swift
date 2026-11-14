@@ -109,12 +109,20 @@ public struct VideoCodecSettings: Codable, Sendable {
     /// Specifies the bitRateMode.
     public var bitRateMode: BitRateMode
     /// Specifies the keyframeInterval.
+    ///
+    /// - Note: On iOS 27, H.264 keyframes are never more than 32 frames apart unless ``isLowLatencyRateControlEnabled`` is true.
     public var maxKeyFrameIntervalDuration: Int32
     /// Specifies the allowFrameRecording.
     public var allowFrameReordering: Bool? // swiftlint:disable:this discouraged_optional_boolean
     /// Specifies the dataRateLimits
     public var dataRateLimits: [Double]?
-    /// Specifies the low-latency opretaion for an encoder.
+    /// Specifies the low-latency rate control for an encoder.
+    ///
+    /// On iOS 27, the default H.264 rate control starts a new keyframe whenever `frame_num` wraps. It signals only
+    /// 32 frame numbers, so keyframes are never more than 32 frames apart, whatever ``maxKeyFrameIntervalDuration`` is.
+    /// Low-latency rate control signals 4096 frame numbers, so the interval holds.
+    ///
+    /// Where no low-latency encoder is available, such as on the iOS Simulator, the default rate control is used.
     public var isLowLatencyRateControlEnabled: Bool
     /// Specifies the hardware accelerated encoder is enabled(TRUE), or not(FALSE) for macOS.
     public var isHardwareAcceleratedEnabled: Bool
