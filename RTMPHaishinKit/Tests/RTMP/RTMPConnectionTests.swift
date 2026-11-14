@@ -5,6 +5,40 @@ import Testing
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPConnectionTests {
+    @Test func configurationDefaultsMatchTheInitializer() async {
+        let configuration = RTMPConnectionConfiguration()
+        let connection = RTMPConnection()
+        #expect(configuration.requiredInterfaceType == nil)
+        #expect(await connection.requiredInterfaceType == nil)
+        #expect(await connection.swfUrl == configuration.swfUrl)
+        #expect(await connection.pageUrl == configuration.pageUrl)
+        #expect(await connection.flashVer == configuration.flashVer)
+        #expect(await connection.fourCcList == configuration.fourCcList)
+        #expect(await connection.capsEx == configuration.capsEx)
+        #expect(await connection.timeout == configuration.timeout)
+        #expect(await connection.requestTimeout == configuration.requestTimeout)
+        #expect(await connection.chunkSize == configuration.chunkSize)
+        #expect(await connection.qualityOfService == configuration.qualityOfService)
+    }
+
+    @Test func requiredInterfaceTypeThroughTheConfiguration() async {
+        var configuration = RTMPConnectionConfiguration()
+        configuration.requiredInterfaceType = .cellular
+        configuration.timeout = 30
+        let connection = RTMPConnection(configuration: configuration)
+        #expect(await connection.requiredInterfaceType == .cellular)
+        #expect(await connection.timeout == 30)
+    }
+
+    @Test func theExistingInitializerKeepsItsFunctionType() async {
+        let make: (String?, String?, String, [String]?, AMFObject?, AMFObject?, Int, Int, UInt64, Int, DispatchQoS) -> RTMPConnection =
+            RTMPConnection.init(swfUrl:pageUrl:flashVer:fourCcList:videoFourCcInfoMap:audioFourCcInfoMap:capsEx:timeout:requestTimeout:chunkSize:qualityOfService:)
+        let connection = make(nil, nil, RTMPConnection.defaultFlashVer, nil, nil, nil, 0, 20, RTMPConnection.defaultRequestTimeout, RTMPConnection.defaultChunkSizeS, .userInitiated)
+        #expect(await connection.timeout == 20)
+        #expect(await connection.fourCcList == nil)
+        #expect(await connection.requiredInterfaceType == nil)
+    }
+
     @Test(arguments: ["rtmp:/", "rtmps:/", "rtmp:/localhost/live", "rtmps:/localhost/live", "rtmp:///live", "rtmps://"])
     func rejectsMalformedURL(_ command: String) async {
         let connection = RTMPConnection()
