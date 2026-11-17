@@ -16,6 +16,7 @@ final class PublishViewModel: ObservableObject {
     private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
     @ScreenActor private var currentVideoEffect: VideoEffect?
+    @ScreenActor private var didAddSampleOverlays = false
 
     func startPublishing(_ preference: PreferenceViewModel) {
         Task {
@@ -100,14 +101,17 @@ final class PublishViewModel: ObservableObject {
         Task { @ScreenActor in
             await mixer.screen.size = .init(width: 1280, height: 720)
             await mixer.screen.backgroundColor = NSColor.black.cgColor
+            guard !didAddSampleOverlays else { return }
+            didAddSampleOverlays = true
 
-            let assetScreenObject = AssetScreenObject()
+            let assetScreenObject = AssetScreenObject(id: "example-overlay-video")
+            assetScreenObject.isLooping = true
             assetScreenObject.size = .init(width: 180, height: 180)
             assetScreenObject.layoutMargin = .init(top: 16, left: 16, bottom: 0, right: 0)
             try? assetScreenObject.startReading(AVAsset(url: URL(fileURLWithPath: Bundle.main.path(forResource: "SampleVideo_360x240_5mb", ofType: "mp4") ?? "")))
             try? await mixer.screen.addChild(assetScreenObject)
 
-            let image = ImageScreenObject()
+            let image = ImageScreenObject(id: "example-overlay-image")
             image.size = .init(width: 120, height: 120)
             image.horizontalAlignment = .right
             image.verticalAlignment = .bottom

@@ -86,42 +86,25 @@ public final class ImageScreenObject: ScreenObject {
     private var source: String?
 
     override public func makeImage(_ renderer: some ScreenRenderer) -> CIImage? {
-        let intersection = bounds.intersection(renderer.bounds)
-
-        guard bounds != intersection else {
-            if let ciImage {
-                return ciImage.transformed(by: .init(scaleX: size.width / ciImage.extent.width, y: size.height / ciImage.extent.height))
-            } else {
-                return nil
-            }
-        }
-
-        // Handling when the drawing area is exceeded.
-        let x: CGFloat
-        switch horizontalAlignment {
-        case .left:
-            x = bounds.origin.x
-        case .center:
-            x = bounds.origin.x / 2
-        case .right:
-            x = 0.0
-        }
-
-        let y: CGFloat
-        switch verticalAlignment {
-        case .top:
-            y = 0.0
-        case .middle:
-            y = abs(bounds.origin.y) / 2
-        case .bottom:
-            y = abs(bounds.origin.y)
-        }
-
-        if let ciImage = ciImage?.cropped(to: .init(origin: .init(x: x, y: y), size: intersection.size)) {
-            return ciImage
-        } else {
+        guard let ciImage, !bounds.isEmpty else {
             return nil
         }
+        let extent = ciImage.extent
+        let visible = bounds.intersection(renderer.bounds)
+        guard !extent.isEmpty, !extent.isInfinite, !visible.isEmpty else {
+            return nil
+        }
+
+        let image = ciImage
+            .transformed(by: .init(translationX: -extent.minX, y: -extent.minY))
+            .transformed(by: .init(scaleX: bounds.width / extent.width, y: bounds.height / extent.height))
+        // Screen bounds use a top-left origin. Core Image crops from the bottom left.
+        return image.cropped(to: CGRect(
+            x: visible.minX - bounds.minX,
+            y: bounds.maxY - visible.maxY,
+            width: visible.width,
+            height: visible.height
+        ))
     }
 
     override public func makeBounds(_ size: CGSize) -> CGRect {

@@ -76,6 +76,7 @@ final class PublishViewModel: ObservableObject {
     private var audioSourceService = AudioSourceService()
     @ScreenActor private var videoScreenObject: VideoScreenObject?
     @ScreenActor private var currentVideoEffect: VideoEffect?
+    @ScreenActor private var didAddSampleOverlay = false
     private var volumeObserver: NSKeyValueObservation?
     private var mtView: MediaMixerOutput?
     private var isMixerReady = false
@@ -398,7 +399,15 @@ final class PublishViewModel: ObservableObject {
     @ScreenActor
     private func configureScreen(isGPURendererEnabled: Bool) async {
         await mixer.screen.size = .init(width: 720, height: 1280)
-        await mixer.screen.backgroundColor = UIColor.black.cgColor
+        let screen = await mixer.screen
+        screen.backgroundColor = UIColor.black.cgColor
+        guard !didAddSampleOverlay else { return }
+        didAddSampleOverlay = true
+        let text = TextScreenObject(id: "example-overlay-text")
+        text.string = "Hello World!"
+        text.horizontalAlignment = .center
+        text.layoutMargin.top = 160
+        try? screen.addChild(text)
     }
 
     private func startVolumeMonitoring() {

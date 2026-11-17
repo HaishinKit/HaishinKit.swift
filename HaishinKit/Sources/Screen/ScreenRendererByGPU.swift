@@ -47,6 +47,10 @@ final class ScreenRendererByGPU: ScreenRenderer {
 
     func layout(_ screenObject: ScreenObject) {
         guard let image: CIImage = screenObject.makeImage(self) else {
+            // Video sources can return nil between frames and should keep their previous image.
+            if screenObject is ImageScreenObject {
+                images.removeValue(forKey: screenObject)
+            }
             return
         }
         if 0 < screenObject.cornerRadius {
@@ -67,14 +71,9 @@ final class ScreenRendererByGPU: ScreenRenderer {
             return
         }
         let origin = screenObject.bounds.origin
-        if origin.x == 0 && origin.y == 0 {
-            canvas = image
-                .composited(over: canvas)
-        } else {
-            canvas = image
-                .transformed(by: .init(translationX: origin.x, y: bounds.height - origin.y - screenObject.bounds.height))
-                .composited(over: canvas)
-        }
+        canvas = image
+            .transformed(by: .init(translationX: origin.x, y: bounds.maxY - origin.y - screenObject.bounds.height))
+            .composited(over: canvas)
     }
 
     func render() {

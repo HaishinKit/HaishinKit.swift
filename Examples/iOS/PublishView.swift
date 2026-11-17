@@ -272,7 +272,7 @@ struct PublishView: View {
 
     var body: some View {
         ZStack {
-            VStack {
+            ScreenObjectEditingPreview(mixer: model.mixer, gravity: .resizeAspectFill, onSwipe: changeFilter) {
                 switch preference.viewType {
                 case .metal:
                     MTHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
@@ -320,6 +320,7 @@ struct PublishView: View {
                         }
                     }
                 }
+                .allowsHitTesting(false)
                 .transition(.opacity)
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
@@ -347,6 +348,7 @@ struct PublishView: View {
                         }
                     }
                 }
+                .allowsHitTesting(false)
                 .opacity(showFilterChange ? 1 : 0)
                 .animation(.easeOut(duration: 0.3), value: showFilterChange)
             }
@@ -584,33 +586,24 @@ struct PublishView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    if abs(value.translation.width) > abs(value.translation.height) {
-                        let effects = VideoEffectItem.allCases
-                        guard let currentIndex = effects.firstIndex(of: model.visualEffectItem) else { return }
-                        let newIndex: Int
-                        if value.translation.width < 0 {
-                            newIndex = (currentIndex + 1) % effects.count
-                        } else {
-                            newIndex = (currentIndex - 1 + effects.count) % effects.count
-                        }
-                        let newEffect = effects[newIndex]
-                        model.visualEffectItem = newEffect
-                        model.setVisualEffet(newEffect)
-                        filterChangeId += 1
-                        showFilterChange = true
-                        let currentId = filterChangeId
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(800))
-                            if filterChangeId == currentId {
-                                showFilterChange = false
-                            }
-                        }
-                    }
-                }
-        )
+    }
+
+    private func changeFilter(_ distance: CGFloat) {
+        let effects = VideoEffectItem.allCases
+        guard let currentIndex = effects.firstIndex(of: model.visualEffectItem) else { return }
+        let step = distance < 0 ? 1 : -1
+        let effect = effects[(currentIndex + effects.count + step) % effects.count]
+        model.visualEffectItem = effect
+        model.setVisualEffet(effect)
+        filterChangeId += 1
+        showFilterChange = true
+        let currentId = filterChangeId
+        Task {
+            try? await Task.sleep(for: .milliseconds(800))
+            if filterChangeId == currentId {
+                showFilterChange = false
+            }
+        }
     }
 }
 
