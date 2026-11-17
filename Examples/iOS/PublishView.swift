@@ -280,6 +280,7 @@ struct PublishView: View {
                     PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
                 }
             }
+            .id(ObjectIdentifier(model.mixer))
 
             if model.isLoading {
                 Color.black.opacity(0.6)

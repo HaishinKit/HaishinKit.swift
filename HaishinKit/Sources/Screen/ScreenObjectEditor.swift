@@ -74,8 +74,15 @@ public final class ScreenObjectEditor {
         if factor != 1 {
             if let text = target as? TextScreenObject {
                 text.scaleFont(by: factor)
-                // Allow Core Text to measure the scaled font without clipping at the old size.
-                text.size = .zero
+                text.size = CGSize(width: text.size.width * factor, height: text.size.height * factor)
+                move(text, to: origin, size: size)
+                let measured = text.makeBounds(text.size)
+                let measuredOrigin = CGPoint(
+                    x: destination.x - (anchor.x - bounds.minX) * measured.width / bounds.width,
+                    y: destination.y - (anchor.y - bounds.minY) * measured.height / bounds.height
+                )
+                move(text, to: measuredOrigin, size: measured.size)
+                return text.makeBounds(text.size)
             } else {
                 target.size = size
             }

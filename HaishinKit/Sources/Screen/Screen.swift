@@ -113,7 +113,9 @@ public final class Screen: ScreenObjectContainerConvertible {
 
     /// Removes the specified screen object as a child of the current screen object container.
     public func removeChild(_ child: ScreenObject?) {
+        guard let child, child.parent === root else { return }
         root.removeChild(child)
+        (renderer as? ScreenRendererByGPU)?.removeImages(for: child)
     }
 
     /// Registers a video effect.

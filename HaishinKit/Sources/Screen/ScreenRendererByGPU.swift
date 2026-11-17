@@ -76,6 +76,15 @@ final class ScreenRendererByGPU: ScreenRenderer {
             .composited(over: canvas)
     }
 
+    func removeImages(for screenObject: ScreenObject) {
+        images.removeValue(forKey: screenObject)
+        if let container = screenObject as? ScreenObjectContainer {
+            for child in container.children {
+                removeImages(for: child)
+            }
+        }
+    }
+
     func render() {
         guard let pixelBuffer else {
             return

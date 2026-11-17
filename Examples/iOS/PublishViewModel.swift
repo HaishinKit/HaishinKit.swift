@@ -68,7 +68,7 @@ final class PublishViewModel: ObservableObject {
             }
         }
     }
-    private(set) var mixer = MediaMixer()
+    @Published private(set) var mixer = MediaMixer()
     private var tasks: [Task<Void, Swift.Error>] = []
     private var session: (any StreamSession)?
     private var recorder: StreamRecorder?
@@ -76,7 +76,6 @@ final class PublishViewModel: ObservableObject {
     private var audioSourceService = AudioSourceService()
     @ScreenActor private var videoScreenObject: VideoScreenObject?
     @ScreenActor private var currentVideoEffect: VideoEffect?
-    @ScreenActor private var didAddSampleOverlay = false
     private var volumeObserver: NSKeyValueObservation?
     private var mtView: MediaMixerOutput?
     private var isMixerReady = false
@@ -335,7 +334,7 @@ final class PublishViewModel: ObservableObject {
             videoMixerSettings.mode = .offscreen
             await mixer.setVideoMixerSettings(videoMixerSettings)
 
-            await configureScreen(isGPURendererEnabled: true)
+            await configureScreen()
 
             let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
             let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
@@ -397,13 +396,13 @@ final class PublishViewModel: ObservableObject {
     }
 
     @ScreenActor
-    private func configureScreen(isGPURendererEnabled: Bool) async {
-        await mixer.screen.size = .init(width: 720, height: 1280)
+    private func configureScreen() async {
         let screen = await mixer.screen
+        screen.size = .init(width: 720, height: 1280)
         screen.backgroundColor = UIColor.black.cgColor
-        guard !didAddSampleOverlay else { return }
-        didAddSampleOverlay = true
-        let text = TextScreenObject(id: "example-overlay-text")
+        let id = "example-overlay-text"
+        guard screen.findById(id) == nil else { return }
+        let text = TextScreenObject(id: id)
         text.string = "Hello World!"
         text.horizontalAlignment = .center
         text.layoutMargin.top = 160
@@ -642,9 +641,9 @@ extension PublishViewModel: PiPHKViewRepresentable.PreviewSource {
             if isMixerReady {
                 await mixer.addOutput(view)
             }
-            if pictureInPictureController == nil {
-                pictureInPictureController = AVPictureInPictureController(contentSource: .init(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate()))
-            }
+            pictureInPictureController = AVPictureInPictureController(
+                contentSource: .init(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate())
+            )
         }
     }
 }

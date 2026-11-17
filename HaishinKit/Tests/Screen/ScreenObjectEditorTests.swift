@@ -6,6 +6,30 @@ import Testing
 
 @ScreenActor
 struct ScreenObjectEditorTests {
+    @Test func resizingTextPreservesWrappingConstraintsAndReturnsMeasuredBounds() throws {
+        let screen = Screen()
+        screen.root.size = screen.size
+        let text = TextScreenObject()
+        text.string = "Long text that must remain on multiple lines after resizing"
+        text.size = CGSize(width: 140, height: 300)
+        try screen.addChild(text)
+        screen.root.layout(screen.renderer)
+        let initial = text.bounds
+        let anchor = CGPoint(x: initial.midX, y: initial.midY)
+        let destination = CGPoint(x: 500, y: 300)
+
+        let editor = ScreenObjectEditor(screen: screen)
+        let resized = try #require(editor.transform(
+            text, bounds: initial, anchor: anchor, destination: destination, scale: 1.5
+        ))
+        screen.root.layout(screen.renderer)
+        #expect(text.size == CGSize(width: 210, height: 450))
+        #expect(resized == text.bounds)
+        #expect(resized.height > 100)
+        #expect(abs(resized.midX - destination.x) < 0.001)
+        #expect(abs(resized.midY - destination.y) < 0.001)
+    }
+
     @Test func previewCoordinatesRespectCroppingLetterboxAndStretch() throws {
         let screen = CGSize(width: 1280, height: 720)
         let preview = CGSize(width: 640, height: 480)
