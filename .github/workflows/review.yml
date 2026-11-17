@@ -31,17 +31,6 @@ jobs:
         run: |
           mkdir -p test-results
           set -o pipefail
-          (
-            sleep 150
-            ps -axo pid,ppid,command | grep '[H]aishinKitPackageTests'
-            for pid in $(pgrep -f '[H]aishinKitPackageTests'); do
-              /usr/bin/sample "$pid" 2 10 -file "test-results/sample-$pid.log" &&
-                head -220 "test-results/sample-$pid.log"
-              kill -TERM "$pid"
-            done
-          ) &
-          sampler=$!
-          trap 'kill "$sampler" 2>/dev/null || true' EXIT
           bundle exec fastlane review 2>&1 | tee test-results/review.log
       - name: Annotate test failures and summarize results
         if: always() && (steps.review.outcome == 'success' || steps.review.outcome == 'failure')
@@ -53,6 +42,6 @@ jobs:
           name: test-logs
           path: |
             test-results/*.xml
-            test-results/*.log
+            test-results/review.log
           retention-days: 14
           if-no-files-found: error

@@ -95,13 +95,8 @@ import Testing
                 // Pace input so encoder backpressure does not drop frames under test.
                 try await Task.sleep(nanoseconds: 30_000_000)
             }
-            print("Recorder video finishing writer")
-            print("Recorder audio finishing writer")
-        #expect(try await recorder.stopRecording() == url)
-        print("Recorder audio waiting for errors")
-            print("Recorder video waiting for errors")
+            #expect(try await recorder.stopRecording() == url)
             #expect(await errorCount.value == 0)
-            print("Recorder error stream finished")
 
             let asset = AVURLAsset(url: url)
             let track = try #require(try await asset.loadTracks(withMediaType: .video).first)
@@ -153,7 +148,6 @@ import Testing
         }
         #expect(try await recorder.stopRecording() == url)
         #expect(await errorCount.value == 0)
-            print("Recorder error stream finished")
 
         let asset = AVURLAsset(url: url)
         let track = try #require(try await asset.loadTracks(withMediaType: .audio).first)

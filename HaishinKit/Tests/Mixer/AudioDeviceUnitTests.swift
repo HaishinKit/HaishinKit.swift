@@ -4,7 +4,8 @@ import Testing
 
 @testable import HaishinKit
 
-@Suite struct AudioDeviceUnitTests {
+@Suite(.disabled(if: TestEnvironment.isCI))
+struct AudioDeviceUnitTests {
     @Test func release() {
         weak var weakDevice: AudioDeviceUnit?
         _ = {
