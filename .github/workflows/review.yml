@@ -33,7 +33,8 @@ jobs:
           set -o pipefail
           (
             sleep 150
-            for pid in $(pgrep -f 'HaishinKitPackageTests[.]xctest/Contents/MacOS/HaishinKitPackageTests'); do
+            ps -axo pid,ppid,command | grep '[H]aishinKitPackageTests'
+            for pid in $(pgrep -f '[H]aishinKitPackageTests'); do
               /usr/bin/sample "$pid" 2 10 -file "test-results/sample-$pid.log" &&
                 head -220 "test-results/sample-$pid.log"
               kill -TERM "$pid"
