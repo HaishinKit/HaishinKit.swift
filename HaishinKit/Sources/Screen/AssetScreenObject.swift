@@ -6,6 +6,9 @@ import CoreImage
 public final class AssetScreenObject: ScreenObject, ChromaKeyProcessable {
     public var chromaKeyColor: CGColor?
 
+    /// Restarts the asset when its video track reaches the end.
+    public var isLooping = false
+
     /// The reading incidies whether assets reading or not.
     public var isReading: Bool {
         return reader?.status == .reading
@@ -104,7 +107,17 @@ public final class AssetScreenObject: ScreenObject, ChromaKeyProcessable {
         super.draw(renderer)
         let duration = CMClock.hostTimeClock.time - startedAt
         if let sampleBuffer, sampleBuffer.presentationTimeStamp <= duration {
-            self.sampleBuffer = videoTrackOutput?.copyNextSampleBuffer()
+            if let next = videoTrackOutput?.copyNextSampleBuffer() {
+                self.sampleBuffer = next
+            } else if isLooping, let reader, reader.status == .completed {
+                do {
+                    try startReading(reader.asset)
+                } catch {
+                    cancelReading()
+                }
+            } else {
+                self.sampleBuffer = nil
+            }
         }
     }
 }

@@ -44,7 +44,7 @@ struct PublishView: View {
 
     var body: some View {
         ZStack {
-            VStack {
+            ScreenObjectEditingPreview(mixer: model.mixer, gravity: .resizeAspect) {
                 MTHKViewRepresentable(previewSource: model)
             }
             VStack(alignment: .trailing) {

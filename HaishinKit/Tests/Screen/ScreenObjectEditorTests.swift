@@ -1,0 +1,101 @@
+import AVFoundation
+import CoreGraphics
+import Testing
+
+@testable import HaishinKit
+
+@ScreenActor
+struct ScreenObjectEditorTests {
+    @Test func movingAnAutoSizedChildReturnsItsNewLayoutBounds() throws {
+        let screen = Screen()
+        screen.root.size = screen.size
+        let object = ScreenObject()
+        object.size = CGSize(width: 0, height: 40)
+        object.layoutMargin.left = 640
+        try screen.addChild(object)
+        screen.root.layout(screen.renderer)
+        let initial = object.bounds
+        #expect(initial.width == 640)
+
+        let moved = ScreenObjectEditor(screen: screen).transform(
+            object, bounds: initial, anchor: initial.origin, destination: .zero
+        )
+        screen.root.layout(screen.renderer)
+        #expect(moved == CGRect(x: 0, y: 0, width: 1280, height: 40))
+        #expect(moved == object.bounds)
+    }
+
+    @Test func resizingTextPreservesWrappingConstraintsAndReturnsMeasuredBounds() throws {
+        let screen = Screen()
+        screen.root.size = screen.size
+        let text = TextScreenObject()
+        text.string = "Long text that must remain on multiple lines after resizing"
+        text.size = CGSize(width: 140, height: 300)
+        try screen.addChild(text)
+        screen.root.layout(screen.renderer)
+        let initial = text.bounds
+        let anchor = CGPoint(x: initial.midX, y: initial.midY)
+        let destination = CGPoint(x: 500, y: 300)
+
+        let editor = ScreenObjectEditor(screen: screen)
+        let resized = try #require(editor.transform(
+            text, bounds: initial, anchor: anchor, destination: destination, scale: 1.5
+        ))
+        screen.root.layout(screen.renderer)
+        #expect(text.size == CGSize(width: 210, height: 450))
+        #expect(resized == text.bounds)
+        #expect(resized.height > 100)
+        #expect(abs(resized.midX - destination.x) < 0.001)
+        #expect(abs(resized.midY - destination.y) < 0.001)
+    }
+
+    @Test func previewCoordinatesRespectCroppingLetterboxAndStretch() throws {
+        let screen = CGSize(width: 1280, height: 720)
+        let preview = CGSize(width: 640, height: 480)
+        let fit = try #require(ScreenCoordinateTransform(screenSize: screen, previewSize: preview))
+        #expect(fit.toScreen(.zero as CGPoint) == CGPoint(x: 0, y: -120))
+        let fill = try #require(ScreenCoordinateTransform(screenSize: screen, previewSize: preview, videoGravity: .resizeAspectFill))
+        #expect(abs(fill.toScreen(.zero as CGPoint).x - 160) < 0.001)
+        let stretch = try #require(ScreenCoordinateTransform(screenSize: screen, previewSize: preview, videoGravity: .resize))
+        #expect(stretch.toPreview(CGRect(origin: .zero, size: screen)) == CGRect(origin: .zero, size: preview))
+        #expect(ScreenCoordinateTransform(screenSize: .zero, previewSize: preview) == nil)
+    }
+
+    @Test func hitTestingFollowsDrawingOrderAndSceneMembership() throws {
+        let screen = Screen()
+        let editor = ScreenObjectEditor(screen: screen)
+        let back = ScreenObject()
+        let front = ScreenObject()
+        try screen.addChild(back)
+        try screen.addChild(front)
+        screen.videoTrackScreenObject.bounds = CGRect(origin: .zero, size: screen.size)
+        back.bounds = CGRect(x: 10, y: 10, width: 100, height: 100)
+        front.bounds = back.bounds
+        let point = CGPoint(x: 20, y: 20)
+        #expect(editor.hitTest(point) === front)
+        front.isVisible = false
+        #expect(editor.hitTest(point) === back)
+        screen.removeChild(back)
+        #expect(editor.hitTest(point) == nil)
+    }
+
+    @Test func transformKeepsTheAnchorAndAppliesSizeLimitsBeforeLayout() throws {
+        let screen = Screen()
+        let editor = ScreenObjectEditor(screen: screen)
+        let object = ScreenObject()
+        try screen.addChild(object)
+        object.size = CGSize(width: 100, height: 50)
+        let initial = CGRect(x: 200, y: 100, width: 100, height: 50)
+        let anchor = CGPoint(x: 250, y: 125)
+        let next = try #require(editor.transform(
+            object, bounds: initial, anchor: anchor, destination: CGPoint(x: 300, y: 200), scale: 2
+        ))
+        #expect(next == CGRect(x: 200, y: 150, width: 200, height: 100))
+        let clamped = try #require(editor.transform(object, bounds: next, anchor: anchor, destination: CGPoint(x: -20, y: -20), scale: 0.01))
+        #expect(clamped.size == CGSize(width: 48, height: 24))
+        #expect(clamped.origin == .zero)
+        #expect(object.size == clamped.size)
+        screen.removeChild(object)
+        #expect(editor.transform(object, bounds: clamped, anchor: anchor, destination: anchor) == nil)
+    }
+}
