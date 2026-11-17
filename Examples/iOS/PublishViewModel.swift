@@ -5,6 +5,7 @@ import MediaPlayer
 import Photos
 import RTCHaishinKit
 import SwiftUI
+import VideoToolbox
 
 @MainActor
 final class PublishViewModel: ObservableObject {
@@ -334,7 +335,7 @@ final class PublishViewModel: ObservableObject {
             videoMixerSettings.mode = .offscreen
             await mixer.setVideoMixerSettings(videoMixerSettings)
 
-            await configureScreen(isGPURendererEnabled: true)
+            await configureScreen(preference: preference, isGPURendererEnabled: true)
 
             let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
             let frontCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
@@ -370,7 +371,7 @@ final class PublishViewModel: ObservableObject {
             }
             await makeSession(preference)
             let isLandscape = UIDevice.current.orientation.isLandscape
-            await updateVideoEncoderSize(isLandscape: isLandscape)
+            await updateVideoEncoderSize(isLandscape: isLandscape, resolution: preference.videoResolution)
             let screenSize = await mixer.screen.size
             if let session = self.session {
                 let videoSettings = await session.stream.videoSettings
@@ -378,7 +379,7 @@ final class PublishViewModel: ObservableObject {
             }
             isLoading = false
         }
-        orientationDidChange()
+        orientationDidChange(preference)
         tasks.append(Task {
             for await buffer in await audioSourceService.buffer {
                 await mixer.append(buffer.0, when: buffer.1)
@@ -396,8 +397,9 @@ final class PublishViewModel: ObservableObject {
     }
 
     @ScreenActor
-    private func configureScreen(isGPURendererEnabled: Bool) async {
-        await mixer.screen.size = .init(width: 720, height: 1280)
+    private func configureScreen(preference: PreferenceViewModel, isGPURendererEnabled: Bool) async {
+        let size = await makeTargetSize(isLandscape: false, resolution: preference.videoResolution)
+        await mixer.screen.size = size
         await mixer.screen.backgroundColor = UIColor.black.cgColor
     }
 
@@ -535,13 +537,14 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
-    func orientationDidChange() {
+    func orientationDidChange(_ preference: PreferenceViewModel) {
         Task { @ScreenActor in
             await mixer.setVideoOrientation(.portrait)
-            await mixer.screen.size = .init(width: 720, height: 1280)
+            let size = await makeTargetSize(isLandscape: false, resolution: preference.videoResolution)
+            await mixer.screen.size = size
             let screenSize = await mixer.screen.size
             Task { @MainActor in
-                await self.updateVideoEncoderSize(isLandscape: false)
+                await self.updateVideoEncoderSize(isLandscape: false, resolution: preference.videoResolution)
                 if let session = self.session {
                     let videoSettings = await session.stream.videoSettings
                     self.videoDimensions = "Screen: \(Int(screenSize.width))x\(Int(screenSize.height)) | Video: \(videoSettings.videoSize.width)x\(videoSettings.videoSize.height)"
@@ -552,16 +555,30 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
-    private func updateVideoEncoderSize(isLandscape: Bool) async {
+    private func updateVideoEncoderSize(isLandscape: Bool, resolution: VideoResolution) async {
         guard let session else { return }
         var videoSettings = await session.stream.videoSettings
-        let targetSize: CGSize = isLandscape
-            ? CGSize(width: 1280, height: 720)
-            : CGSize(width: 720, height: 1280)
+        var shouldApplySettings = false
+        let targetSize = makeTargetSize(isLandscape: isLandscape, resolution: resolution)
         if videoSettings.videoSize != targetSize {
             videoSettings.videoSize = targetSize
+            shouldApplySettings = true
+        }
+        if resolution == .p1080,
+           videoSettings.profileLevel == kVTProfileLevel_H264_Baseline_3_1 as String {
+            videoSettings.profileLevel = kVTProfileLevel_H264_High_AutoLevel as String
+            shouldApplySettings = true
+        }
+        if shouldApplySettings {
             try? await session.stream.setVideoSettings(videoSettings)
         }
+    }
+
+    private func makeTargetSize(isLandscape: Bool, resolution: VideoResolution) -> CGSize {
+        let landscape = resolution.landscapeSize
+        return isLandscape
+            ? landscape
+            : .init(width: landscape.height, height: landscape.width)
     }
 
     private func startBatteryTracking() {
