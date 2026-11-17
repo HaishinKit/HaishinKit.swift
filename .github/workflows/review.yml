@@ -35,7 +35,8 @@ jobs:
             sleep 150
             for pid in $(pgrep -f 'HaishinKitPackageTests[.]xctest/Contents/MacOS/HaishinKitPackageTests'); do
               /usr/bin/sample "$pid" 2 10 -file "test-results/sample-$pid.log" &&
-                rg -n 'RTMP|startDataTransferReport|dispatch_sync|__DISPATCH_WAIT' "test-results/sample-$pid.log" | head -80
+                head -220 "test-results/sample-$pid.log"
+              kill -TERM "$pid"
             done
           ) &
           sampler=$!
