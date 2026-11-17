@@ -4,3 +4,7 @@
 - Use shell for simple command execution. Prefer existing Fastlane lanes for shared build and release logic.
 - Failure-reporting helpers must work even when dependency installation or `ruby/setup-ruby` fails: use runner-provided Ruby without Bundler or additional gems.
 - If Ruby cannot reasonably satisfy a requirement, explain the constraint before introducing another scripting language.
+
+# Example applications
+
+- Do not add or reintroduce VoiceOver-specific actions for adding, selecting, or editing ScreenObjects in the example apps. Keep accessibility labels on standard controls.

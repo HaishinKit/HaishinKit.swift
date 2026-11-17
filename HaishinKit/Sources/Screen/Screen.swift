@@ -28,11 +28,6 @@ public final class Screen: ScreenObjectContainerConvertible {
         return root.childCounts
     }
 
-    /// The direct children of the composition, in drawing order.
-    public var children: [ScreenObject] {
-        root.children
-    }
-
     /// Specifies the delegate object.
     public weak var delegate: (any ScreenDelegate)?
 
