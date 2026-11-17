@@ -23,6 +23,7 @@ private enum OverlayKind: String, CaseIterable, Identifiable, Sendable {
 private struct PreviewSelection: Equatable, Sendable {
     let id: String
     let bounds: CGRect
+    let label: String
 }
 
 private struct SelectionTask: Equatable {
@@ -153,7 +154,41 @@ private final class PreviewSceneEditor {
         }
         let rect = coordinates.toPreview(target === object ? editingBounds ?? object.bounds : object.bounds)
         let visible = rect.intersection(CGRect(origin: .zero, size: size))
-        return visible.isEmpty ? nil : PreviewSelection(id: id, bounds: visible)
+        let label: String
+        switch object {
+        case let text as TextScreenObject:
+            label = text.string
+        case is AssetScreenObject:
+            label = "Sample video"
+        default:
+            label = "Sample image"
+        }
+        return visible.isEmpty ? nil : PreviewSelection(id: id, bounds: visible, label: label)
+    }
+
+    func compositionCenter() async -> CGPoint {
+        let size = await mixer.screen.size
+        return CGPoint(x: size.width / 2, y: size.height / 2)
+    }
+
+    func nextSelection(after id: String?, size: CGSize, gravity: AVLayerVideoGravity) async -> String? {
+        let screen = await mixer.screen
+        guard let coordinates = ScreenCoordinateTransform(screenSize: screen.size, previewSize: size, videoGravity: gravity) else {
+            return nil
+        }
+        let viewport = CGRect(origin: .zero, size: size)
+        let overlays = screen.children.filter {
+            $0.isVisible && $0.id.hasPrefix(Self.idPrefix) && !coordinates.toPreview($0.bounds).intersection(viewport).isEmpty
+        }
+        guard !overlays.isEmpty else { return nil }
+        let current = overlays.firstIndex { $0.id == id }
+        return overlays[(current.map { $0 + 1 } ?? 0) % overlays.count].id
+    }
+
+    func textValue(id: String?) async -> String? {
+        guard let id else { return nil }
+        let screen = await mixer.screen
+        return (screen.findById(id) as? TextScreenObject)?.string
     }
 
     func add(_ kind: OverlayKind, at position: CGPoint) async throws -> String {
@@ -261,6 +296,28 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
                         case .swipe(let distance):
                             onSwipe(distance)
                         }
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Overlay editor")
+                .accessibilityValue(selection?.label ?? "No object selected")
+                .accessibilityAction(named: Text("Add object")) {
+                    enqueue {
+                        insertionPoint = await editor.compositionCenter()
+                        showAddMenu = true
+                    }
+                }
+                .accessibilityAction(named: Text("Select next object")) {
+                    enqueue {
+                        focus = await editor.nextSelection(after: focus, size: geometry.size, gravity: gravity)
+                    }
+                }
+                .accessibilityAction(named: Text("Edit selected text")) {
+                    enqueue {
+                        guard let focus, let value = await editor.textValue(id: focus) else { return }
+                        editingID = focus
+                        text = value
+                        showEditor = true
                     }
                 }
                 if let selection, selection.id == focus {

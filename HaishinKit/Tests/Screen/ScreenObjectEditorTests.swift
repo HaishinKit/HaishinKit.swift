@@ -6,6 +6,25 @@ import Testing
 
 @ScreenActor
 struct ScreenObjectEditorTests {
+    @Test func movingAnAutoSizedChildReturnsItsNewLayoutBounds() throws {
+        let screen = Screen()
+        screen.root.size = screen.size
+        let object = ScreenObject()
+        object.size = CGSize(width: 0, height: 40)
+        object.layoutMargin.left = 640
+        try screen.addChild(object)
+        screen.root.layout(screen.renderer)
+        let initial = object.bounds
+        #expect(initial.width == 640)
+
+        let moved = ScreenObjectEditor(screen: screen).transform(
+            object, bounds: initial, anchor: initial.origin, destination: .zero
+        )
+        screen.root.layout(screen.renderer)
+        #expect(moved == CGRect(x: 0, y: 0, width: 1280, height: 40))
+        #expect(moved == object.bounds)
+    }
+
     @Test func resizingTextPreservesWrappingConstraintsAndReturnsMeasuredBounds() throws {
         let screen = Screen()
         screen.root.size = screen.size

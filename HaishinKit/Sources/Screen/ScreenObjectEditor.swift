@@ -88,6 +88,9 @@ public final class ScreenObjectEditor {
             }
         }
         move(target, to: origin, size: size)
+        if target.size.width == 0 || target.size.height == 0 {
+            return target.makeBounds(target.size)
+        }
         return CGRect(x: target.layoutMargin.left, y: target.layoutMargin.top, width: size.width, height: size.height)
     }
 }
