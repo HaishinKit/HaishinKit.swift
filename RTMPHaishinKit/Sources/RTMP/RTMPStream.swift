@@ -176,6 +176,8 @@ public actor RTMPStream {
 
     /// The RTMPStream metadata.
     public private(set) var metadata: AMFArray = .init(count: 0)
+    /// The fields that the stream adds to the onMetaData it sends when publishing starts.
+    public private(set) var customMetadata: AMFObject = [:]
     /// The RTMPStreamInfo object whose properties contain data.
     public private(set) var info = RTMPStreamInfo()
     /// The object encoding (AMF). Framework supports AMF0 only.
@@ -450,6 +452,14 @@ public actor RTMPStream {
         }
     }
 
+    /// Sets the fields that the stream adds to the onMetaData it sends when publishing starts.
+    ///
+    /// Set the fields before calling ``publish(_:type:)``. A field with the same name as a field the stream sets
+    /// itself is ignored.
+    public func setCustomMetadata(_ customMetadata: AMFObject) {
+        self.customMetadata = customMetadata
+    }
+
     /// Sends a message on a published stream to all subscribing clients.
     ///
     /// ```
@@ -708,6 +718,7 @@ public actor RTMPStream {
                 output: outgoing.audioSettings.sampleRate
             )
         }
+        metadata.merge(customMetadata) { streamValue, _ in streamValue }
         return AMFArray(metadata)
     }
 }
