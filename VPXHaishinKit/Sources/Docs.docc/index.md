@@ -1,71 +1,97 @@
 # ``VPXHaishinKit``
 
-Optional software VP8 and VP9 encoding and decoding for HaishinKit.
+Standalone software VP8 and VP9 encoding and decoding for Apple platforms.
 
-## Enable the provider
+This optional product exposes ``VPXVideoEncoder``, ``VPXVideoDecoder``, and
+``VPXVideoCodecSettings`` without depending on the `HaishinKit` target. Applications
+such as VQMetrix can call it directly. The existing `VideoCodec`, codec registration,
+MediaMixer, and RTC/RTMP/SRT pipelines are unchanged; importing this product does not
+add VP8/VP9 transport support.
 
-Add the `VPXHaishinKit` Swift Package product to your target, then register its
-factory before starting streams or creating codec sessions:
+## Installation
+
+This product is currently on the development PR branch, not in released 2.3.0:
 
 ```swift
-import HaishinKit
-import VPXHaishinKit
-
-await VideoCodecFactory.shared.register(VPXVideoCodecFactory())
-let settings = VideoCodecSettings(format: .vp9)
+.package(url: "https://github.com/HaishinKit/HaishinKit.swift.git",
+         branch: "codex/optional-vpx-codecs")
 ```
 
-Importing the module does not register it. Until registration, the codec factory
-supports only the built-in VideoToolbox H.264 and HEVC implementations. Repeated
-registration of the same factory type has no effect. Registration affects newly
-created sessions; an existing converter keeps its original implementation.
+Add `.product(name: "VPXHaishinKit", package: "HaishinKit.swift")` to your target.
+After publication, replace the development branch with a release containing this product.
 
-`VideoCodecFactory.supportedFormats(for:)` reports the implementations registered
-for compression or decompression. The registry is independent of the transport
-factories registered with `StreamSessionBuilderFactory`.
+## Standalone conversion
 
-## Codec sessions
+The following function needs no `import HaishinKit` or shared codec registration:
 
-The existing media pipeline uses the codec factory when creating converters.
-For standalone conversion, call `VideoCodecFactory.makeSession(mode:settings:inputFormat:)`
-and pass a continuation to `VideoCodecSession.convert(_:continuation:)`. Calls to
-an individual session must be serialized. Invalidate the session when finished.
-Decompression selects its codec from the input `CMFormatDescription`, independently
-of the default H.264 encoding settings.
+```swift
+import CoreMedia
+import VPXHaishinKit
 
-Encoding requires iOS 16, tvOS 16, or Mac Catalyst 16 (macOS and visionOS follow
-the core package minimums). Decoding also works on iOS/tvOS/Mac Catalyst 15.
-The provider reports only the directions available on the running OS.
+@available(iOS 16, tvOS 16, macCatalyst 16, *)
+func roundTrip(_ references: [CMSampleBuffer]) throws -> [CMSampleBuffer] {
+    let settings = VPXVideoCodecSettings(bitRate: 1_000_000, format: .vp9)
+    let encoder = try VPXVideoEncoder(settings: settings)
+    let decoder = try VPXVideoDecoder(format: .vp9)
+    defer { encoder.invalidate(); decoder.invalidate() }
+    var restored: [CMSampleBuffer] = []
+    for reference in references {
+        for packet in try encoder.encode(reference) {
+            restored += try decoder.decode(packet)
+        }
+    }
+    for packet in try encoder.finish() {
+        restored += try decoder.decode(packet)
+    }
+    return restored
+}
+```
 
-The provider encodes 8-bit SDR video from NV12 (video/full range), planar I420
-(video/full range), BGRA, or ARGB input. VideoToolbox pixel transfer normalizes and
-scales the image; libvpx performs the compression. Encoded sizes must be positive
-even dimensions. Decoding produces 8-bit 4:2:0 NV12 pixel buffers and preserves the
-input timestamps and durations. VP9 high-bit-depth and 4:4:4 video are unsupported.
+`encode` and `decode` synchronously return owned Core Media samples. Copying encoded
+bytes and decoded pixels before libvpx reuses its buffers makes retained outputs safe.
+The classes are deliberately non-Sendable: create and use each instance on one actor
+or serial executor. Software compression runs on that caller; use a worker executor
+for UI applications. The APIs throw errors directly rather than dropping outputs
+through an asynchronous continuation.
 
-Encoding uses realtime, zero-lookahead operation with no frame reordering.
-`videoSize`, `bitRate`, `expectedFrameRate`, `maxKeyFrameIntervalDuration`,
-`scalingMode`, and the average/constant bitrate modes are supported. Constant mode
-requires the same OS versions as `VideoCodecSettings.BitRateMode.constant`.
-Variable bitrate mode is rejected. H.264/HEVC profile settings, hardware encoder
-selection, and VideoToolbox-specific data-rate limits do not configure libvpx. Keyframes are
-scheduled from media timestamps so dropped frames do not extend their interval.
+## Settings and lifecycle
 
-## Transport support
+VP8 and VP9 use 8-bit SDR 4:2:0. Encoding accepts NV12/I420 in video or full range,
+BGRA, and ARGB; VideoToolbox normalizes/scales to limited-range NV12 before libvpx
+compression. Unsupported formats, including 10-bit input, are rejected. Encoded
+width/height must be positive even integers, within the codec limit, and their
+product must not exceed 16,777,216 pixels. VP9 high-bit-depth and 4:4:4 are not supported.
 
-Codec registration does not add RTP packetizers or Enhanced RTMP/TS framing.
-RTC, RTMP, and SRT retain their existing video format restrictions and reject
-VP8/VP9 encoding settings in this version. Transport support must be implemented
-separately before publishing or playing these formats over those protocols.
+PTS values must be numeric, epoch zero, and strictly increasing after conversion
+to a microsecond timebase. Numeric positive input durations are preserved to that
+precision; otherwise the frame-rate hint provides a duration. The hint must be finite
+and between 0.001 and 1,000,000 fps. Keyframe intervals are timestamp-based, between
+one microsecond and one hour, so skipped inputs do not extend the keyframe interval.
 
-## Dependency and distribution
+Compression uses realtime, zero-lookahead operation with no intentional frame drops
+or frame reordering. Average and constant bitrate modes are available. Call `update`
+to change bitrate and frame-rate hints. Changing codec, dimensions, scaling mode,
+bitrate mode, or keyframe interval requires a new encoder and is rejected by `update`.
+`finish` drains the encoder and rejects further input; repeated calls return no
+packets. `invalidate` releases resources and is safe to call repeatedly. Construct
+new encoder/decoder instances to restart.
 
-Only the `VPXHaishinKit` product links libvpx; the core `HaishinKit` target does not
-depend on it. The Swift package dependency is libvpx-xcframework 1.17.0 or later in
-the compatible major version. Its current artifact contains arm64 slices for iOS,
-macOS, Mac Catalyst, tvOS, and visionOS, including Apple silicon simulators.
-Intel builds are not supported by that artifact.
+The decoder consumes raw compressed VP8/VP9 samples with a matching format description,
+and returns NV12 frames with the packet PTS/duration and decoded full/video range.
+The caller must demultiplex a container and supply packet timing; this module does not
+read/write MP4, IVF, or WebM files, nor add RTP/Enhanced RTMP/TS framing.
+Only decoded pixel range is signaled here; interpreting and attaching container colorimetry remains the caller’s responsibility.
 
-Preserve libvpx's BSD license and patent notice in your app's third-party notices.
-SwiftPM does not automatically include the XCFramework's top-level `Licenses/`
-directory in the final app. See the libvpx-xcframework distribution documentation.
+Encoding requires iOS/tvOS/Mac Catalyst 16; decoding follows the package's existing
+platform minimums. The libvpx 1.17.0 artifact supports arm64, including Apple silicon
+simulators; it does not include Intel slices. Preserve the libvpx LICENSE and PATENTS
+notices from libvpx-xcframework when distributing an app.
+
+## Verification
+
+Run `swift test --filter VPXVideoCodecTests` for both codec round trips, owned outputs,
+keyframe timing, settings updates, resizing, malformed packets, and lifecycle checks.
+`swift run --package-path VPXHaishinKit/Tests/Consumer Consumer` exercises a separate
+SwiftPM consumer importing only the public VPX API, without linking the HaishinKit core.
+
+The published libvpx 1.17.0 artifact includes embedded DWARF debug information in its static libraries. Retain the final app archive and matching app dSYM for symbolication.

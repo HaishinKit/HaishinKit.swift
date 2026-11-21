@@ -45,14 +45,15 @@ let package = Package(
         ),
         .target(
             name: "VPXHaishinKit",
-            dependencies: ["HaishinKit", "VPXBridge"],
+            dependencies: ["VPXBridge"],
             path: "VPXHaishinKit/Sources",
             swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "VPXHaishinKitTests",
-            dependencies: ["VPXHaishinKit", "RTMPHaishinKit", "RTCHaishinKit", "SRTHaishinKit"],
+            dependencies: ["VPXHaishinKit"],
             path: "VPXHaishinKit/Tests",
+            exclude: ["Consumer"],
             swiftSettings: swiftSettings
         ),
         .target(

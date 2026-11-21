@@ -88,6 +88,12 @@ int hk_vpx_encoder_encode(HKVPXSession *session, const uint8_t *y, int y_stride,
     return vpx_codec_encode(&session->codec, &session->image, pts, duration, flags, VPX_DL_REALTIME);
 }
 
+int hk_vpx_encoder_flush(HKVPXSession *session) {
+    if (!session) return VPX_CODEC_INVALID_PARAM;
+    session->iterator = NULL;
+    return vpx_codec_encode(&session->codec, NULL, 0, 0, 0, VPX_DL_REALTIME);
+}
+
 const uint8_t *hk_vpx_encoder_next_packet(HKVPXSession *session, size_t *size,
     int64_t *pts, unsigned long *duration, int *keyframe) {
     const vpx_codec_cx_pkt_t *packet;

@@ -18,6 +18,7 @@ HKVPXSession *hk_vpx_encoder_create(int codec, unsigned int width, unsigned int 
 int hk_vpx_encoder_update(HKVPXSession *session, unsigned int bitrate_kbps, double fps);
 int hk_vpx_encoder_encode(HKVPXSession *session, const uint8_t *y, int y_stride,
     const uint8_t *u, int u_stride, const uint8_t *v, int v_stride, int64_t pts, unsigned long duration);
+int hk_vpx_encoder_flush(HKVPXSession *session);
 const uint8_t *hk_vpx_encoder_next_packet(HKVPXSession *session, size_t *size,
     int64_t *pts, unsigned long *duration, int *keyframe);
 HKVPXSession *hk_vpx_decoder_create(int codec, int *status);

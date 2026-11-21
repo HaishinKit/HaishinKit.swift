@@ -5,6 +5,7 @@ lane :review do
   Dir.chdir('..') do
     FileUtils.mkdir_p('test-results')
     sh 'swift test --xunit-output test-results/tests.xml'
+    sh 'swift run --package-path VPXHaishinKit/Tests/Consumer Consumer'
   end
 
   begin
