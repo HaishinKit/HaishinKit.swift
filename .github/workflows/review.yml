@@ -34,7 +34,8 @@ jobs:
           set -o pipefail
           (
             sleep 180
-            for pid in $(pgrep -x 'swiftpm-testing|xctest' || true); do
+            ps -axo pid,command > test-results/processes.txt
+            for pid in $(pgrep -f '/swiftpm-testing|/HaishinKitPackageTests.xctest' || true); do
               sample "$pid" 5 -file "test-results/runner-$pid.sample.txt" || true
             done
           ) &
@@ -53,5 +54,6 @@ jobs:
             test-results/*.xml
             test-results/review.log
             test-results/*.sample.txt
+            test-results/processes.txt
           retention-days: 14
           if-no-files-found: error
