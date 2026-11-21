@@ -1,5 +1,5 @@
 {
-  "originHash" : "f7dfac81054c441702c6fd9efafd739ba788212dfe8c79946d8781fcea5cd957",
+  "originHash" : "99f823374457b38068edbcf1df23335d3fd2983ba7ac067cf72e830df0973239",
   "pins" : [
     {
       "identity" : "libaom-xcframework",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "48d7559dcda148fb02e75600a973acaa789a5472",
         "version" : "1.5.7"
+      }
+    },
+    {
+      "identity" : "libvpx-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/HaishinKit/libvpx-xcframework.git",
+      "state" : {
+        "revision" : "1ad46d3b7e59b93c708f61237f4603f3d62aed58",
+        "version" : "1.17.0"
       }
     },
     {
