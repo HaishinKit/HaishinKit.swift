@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BCFE627D2E770A9900941209"
-               BuildableName = "Example macOS.app"
+               BuildableName = "HaishinKit.app"
                BlueprintName = "Example macOS"
                ReferencedContainer = "container:Examples.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BCFE627D2E770A9900941209"
-            BuildableName = "Example macOS.app"
+            BuildableName = "HaishinKit.app"
             BlueprintName = "Example macOS"
             ReferencedContainer = "container:Examples.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BCFE627D2E770A9900941209"
-            BuildableName = "Example macOS.app"
+            BuildableName = "HaishinKit.app"
             BlueprintName = "Example macOS"
             ReferencedContainer = "container:Examples.xcodeproj">
          </BuildableReference>

@@ -93,7 +93,7 @@
 		BC912A802D12F0900077EFF3 /* libc++.1.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.1.tbd"; path = "Platforms/XROS.platform/Developer/SDKs/XROS2.1.sdk/usr/lib/libc++.1.tbd"; sourceTree = DEVELOPER_DIR; };
 		BCD5C7F92E3F189700A69F16 /* ReplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReplayKit.framework; path = System/Library/Frameworks/ReplayKit.framework; sourceTree = SDKROOT; };
 		BCD916432D3A934400D30743 /* HaishinKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HaishinKit; path = ../; sourceTree = SOURCE_ROOT; };
-		BCFE627E2E770A9900941209 /* Example macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Example macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BCFE627E2E770A9900941209 /* HaishinKit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HaishinKit.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -246,7 +246,7 @@
 			children = (
 				BC7A0E3D2B088FA7005FB2F7 /* Example visionOS.app */,
 				BC6841622E3CFBE0008FBFEE /* Example iOS.app */,
-				BCFE627E2E770A9900941209 /* Example macOS.app */,
+				BCFE627E2E770A9900941209 /* HaishinKit.app */,
 				BC4B7DCC2E86D06700973BD7 /* Screencast.appex */,
 				BC82124C2EB8F8BE00419D06 /* Example tvOS.app */,
 			);
@@ -403,8 +403,8 @@
 				BCFE62A92E77179F00941209 /* RTMPHaishinKit */,
 				BCFE62AB2E77179F00941209 /* SRTHaishinKit */,
 			);
-			productName = "Example macOS";
-			productReference = BCFE627E2E770A9900941209 /* Example macOS.app */;
+			productName = HaishinKit;
+			productReference = BCFE627E2E770A9900941209 /* HaishinKit.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -1096,7 +1096,9 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.haishinkit.Example-macOS";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = HaishinKit;
+				PRODUCT_MODULE_NAME = HaishinKitExample;
+				PRODUCT_NAME = HaishinKit;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
@@ -1141,7 +1143,9 @@
 				MARKETING_VERSION = 1.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.haishinkit.Example-macOS";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = HaishinKit;
+				PRODUCT_MODULE_NAME = HaishinKitExample;
+				PRODUCT_NAME = HaishinKit;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;

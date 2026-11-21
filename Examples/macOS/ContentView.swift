@@ -18,6 +18,8 @@ struct ContentView: View {
         }
     }
 
+    @Binding var appearance: String
+
     @State private var selection: Tab? = .playback
 
     var body: some View {
@@ -53,7 +55,7 @@ struct ContentView: View {
             case .playback: PlaybackView()
             case .publish: PublishView()
             case .settings: MacSettingsView()
-            case .debug: DebugView()
+            case .debug: DebugView(appearance: $appearance)
             }
         }
         .frame(minWidth: 900, minHeight: 620)

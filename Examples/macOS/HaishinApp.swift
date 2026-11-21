@@ -9,12 +9,12 @@ let logger = LBLogger.with("com.haishinkit.HaishinKit.HaishinApp")
 
 @main
 struct HaishinApp: App {
-    @AppStorage("macos.debug.appearance") private var appearance = "system"
+    @State private var appearance = "system"
     @StateObject private var preference = PreferenceViewModel()
 
     var body: some Scene {
-        WindowGroup {
-            ContentView().environmentObject(preference)
+        WindowGroup("HaishinKit") {
+            ContentView(appearance: $appearance).environmentObject(preference)
                 .preferredColorScheme(appearance == "light" ? .light : (appearance == "dark" ? .dark : nil))
         }
         .defaultSize(width: 1180, height: 760)

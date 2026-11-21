@@ -8,7 +8,7 @@ lane :macos_example do |options|
   root = File.expand_path('..', __dir__)
   output = File.join(root, 'build', 'macos-example', version)
   derived_data = File.join(output, 'DerivedData')
-  app = File.join(derived_data, 'Build', 'Products', 'Release', 'Example macOS.app')
+  app = File.join(derived_data, 'Build', 'Products', 'Release', 'HaishinKit.app')
   zip = File.join(output, "HaishinKit-macOS-#{version}-arm64-unsigned.zip")
   FileUtils.rm_rf(output)
   FileUtils.mkdir_p(output)
@@ -21,7 +21,7 @@ lane :macos_example do |options|
     "MARKETING_VERSION=#{version.split(/[-+]/).first}", 'build'
   ])
   UI.user_error!("Missing app: #{app}") unless File.directory?(app)
-  sh Shellwords.join(['lipo', File.join(app, 'Contents', 'MacOS', 'Example macOS'), '-verify_arch', 'arm64'])
+  sh Shellwords.join(['lipo', File.join(app, 'Contents', 'MacOS', 'HaishinKit'), '-verify_arch', 'arm64'])
   sh Shellwords.join(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
   UI.success("Created #{zip}")
 end

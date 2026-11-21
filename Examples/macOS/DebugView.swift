@@ -8,7 +8,7 @@ import SwiftUI
 struct DebugView: View {
     @EnvironmentObject private var preference: PreferenceViewModel
     @AppStorage("macos.debug.verboseLogging") private var verboseLogging = true
-    @AppStorage("macos.debug.appearance") private var appearance = "system"
+    @Binding var appearance: String
     @State private var serverHost = "127.0.0.1"
     @State private var serverPort = "8889"
     @State private var streamPath = "live"
@@ -33,6 +33,8 @@ struct DebugView: View {
                     Text("Light").tag("light")
                     Text("Dark").tag("dark")
                 }
+                Text("Appearance overrides apply until the app closes. Each launch follows the system setting.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Verbose logging", isOn: $verboseLogging)
                     .onChange(of: verboseLogging) { _, value in
                         let level: LBLogger.Level = value ? .debug : .warn
