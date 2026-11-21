@@ -1,0 +1,13 @@
+name: Release milestones
+on:
+  pull_request_target:
+    types: [closed]
+  release:
+    types: [published]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  milestones:
+    uses: HaishinKit/.github/.github/workflows/milestones.yml@main
