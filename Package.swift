@@ -23,6 +23,7 @@ let package = Package(
         .visionOS("1.3")
     ],
     products: [
+        .library(name: "AOMHaishinKit", targets: ["AOMHaishinKit"]),
         .library(name: "HaishinKit", targets: ["HaishinKit"]),
         .library(name: "RTMPHaishinKit", targets: ["RTMPHaishinKit"]),
         .library(name: "SRTHaishinKit", targets: ["SRTHaishinKit"]),
@@ -30,12 +31,31 @@ let package = Package(
         .library(name: "RTCHaishinKit", targets: ["RTCHaishinKit"])
     ],
     dependencies: [
+        .package(url: "https://github.com/HaishinKit/libaom-xcframework.git", from: "3.15.3"),
         .package(url: "https://github.com/HaishinKit/libdatachannel-xcframework.git", from: "0.24.7"),
         .package(url: "https://github.com/HaishinKit/libsrt-xcframework.git", from: "1.5.7"),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.5"),
         .package(url: "https://github.com/shogo4405/Logboard.git", "2.6.0"..<"2.7.0")
     ],
     targets: [
+        .target(
+            name: "AOMBridge",
+            dependencies: [.product(name: "libaom", package: "libaom-xcframework")],
+            path: "AOMHaishinKit/Bridge"
+        ),
+        .target(
+            name: "AOMHaishinKit",
+            dependencies: ["AOMBridge"],
+            path: "AOMHaishinKit/Sources",
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "AOMHaishinKitTests",
+            dependencies: ["AOMHaishinKit"],
+            path: "AOMHaishinKit/Tests",
+            exclude: ["Consumer"],
+            swiftSettings: swiftSettings
+        ),
         .target(
             name: "HaishinKit",
             dependencies: ["Logboard"],
