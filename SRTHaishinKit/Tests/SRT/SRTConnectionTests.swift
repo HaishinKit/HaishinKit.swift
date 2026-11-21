@@ -22,30 +22,46 @@ import libsrt
     }
 
     @Test func streamid_success() async throws {
-        Task {
-            let listener = SRTConnection()
-            try await listener.connect(URL(string: "srt://:10000?streamid=test"))
-        }
-        Task {
-            let connection = SRTConnection()
-            try await Task.sleep(nanoseconds: UInt64(1 * 1_000_000_000))
-            try await connection.connect(URL(string: "srt://127.0.0.1:10000?streamid=test"))
-            await connection.close()
+        try await withListener("srt://:10000?streamid=test") { connection, accepting in
+            try await connection.connect(URL(string: "srt://127.0.0.1:10000?streamid=test&conntimeo=1000"))
+            try await accepting.value
+            #expect(await connection.connected)
+            let streamid = try await connection.getSocketOption(.streamid)
+            #expect(streamid?.stringValue == "test")
         }
     }
 
-    @Test func streamid_failed() async throws {
-        Task {
-            let listener = SRTConnection()
-            try await listener.connect(URL(string: "srt://:10001?streamid=test&passphrase=a546994dbf25a0823f0cbadff9cc5088k9e7c2027e8e40933a04ef574bc61cd4a"))
-        }
-        Task {
-            let connection = SRTConnection()
-            try await Task.sleep(nanoseconds: UInt64(1 * 1_000_000_000))
+    @Test func rejectsMismatchedPassphrase() async throws {
+        try await withListener("srt://:10001?passphrase=listener-password") { connection, _ in
             await #expect(throws: SRTConnection.Error.self) {
-                try await connection.connect(URL(string: "srt://127.0.0.1:10001?streamid=test2&passphrase=a546994dbf25a0823f0cbadff9cc5088k9e7c2027e8e40933a04ef574bc61cd4"))
+                try await connection.connect(URL(string: "srt://127.0.0.1:10001?passphrase=different-password&conntimeo=1000"))
             }
-            await connection.close()
+            #expect(await connection.connected == false)
         }
+    }
+
+    private func withListener(
+        _ uri: String,
+        operation: (SRTConnection, Task<Void, any Error>) async throws -> Void
+    ) async throws {
+        let listener = SRTConnection()
+        let connection = SRTConnection()
+        let accepting = Task { try await listener.connect(URL(string: uri)) }
+        do {
+            // Wait for bind/listen before starting the caller, without blocking an executor thread.
+            for _ in 0..<100 where await listener.uri == nil {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            try #require(await listener.uri != nil)
+            try await operation(connection, accepting)
+        } catch {
+            await connection.close()
+            await listener.close()
+            _ = await accepting.result
+            throw error
+        }
+        await connection.close()
+        await listener.close()
+        _ = await accepting.result
     }
 }
