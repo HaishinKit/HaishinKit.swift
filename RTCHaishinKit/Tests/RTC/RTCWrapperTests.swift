@@ -1,6 +1,7 @@
 import Foundation
 import HaishinKit
 import Testing
+import XCTest
 @testable import RTCHaishinKit
 
 @Suite struct RTCWrapperTests {
@@ -22,10 +23,12 @@ import Testing
         let stream = RTCStream()
         try sender.addTrack(AudioStreamTrack(.init(format: .opus)), stream: stream)
         try sender.setLocalDesciption(.offer)
+        #expect(await XCTWaiter.fulfillment(of: [events.descriptionGenerated], timeout: 10) == .completed)
         #expect(!sender.localDescription.isEmpty)
         #expect(events.description == sender.localDescription)
         #expect(events.type == .offer)
         try receiver.setRemoteDesciption(sender.localDescription, type: .offer)
+        #expect(await XCTWaiter.fulfillment(of: [events.trackDelivered], timeout: 10) == .completed)
         events.track = nil
         let remoteTrack = try #require(events.weakTrack)
         let playback = RTCStream()
@@ -51,6 +54,8 @@ import Testing
 }
 
 private final class PeerEvents: RTCPeerConnectionDelegate {
+    let descriptionGenerated = XCTestExpectation(description: "local description generated")
+    let trackDelivered = XCTestExpectation(description: "remote track delivered")
     var description = ""
     var type: SDPSessionDescriptionType?
     var track: RTCMediaTrack?
@@ -59,10 +64,12 @@ private final class PeerEvents: RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didGenerateLocalDescription sdp: String, type: SDPSessionDescriptionType) {
         description = sdp
         self.type = type
+        descriptionGenerated.fulfill()
     }
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen track: RTCMediaTrack) {
         self.track = track
         weakTrack = track
+        trackDelivered.fulfill()
     }
     func peerConnection(_ peerConnection: RTCPeerConnection, connectionStateChanged connectionState: RTCPeerConnection.ConnectionState) {}
     func peerConnection(_ peerConnection: RTCPeerConnection, iceGatheringStateChanged iceGatheringState: RTCPeerConnection.IceGatheringState) {}

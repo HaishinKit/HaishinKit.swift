@@ -12,7 +12,9 @@ final class RTCDataChannelTests: XCTestCase {
         let received = expectation(description: "UTF-8 and empty text received")
         received.expectedFulfillmentCount = 2
         let closed = expectation(description: "channel closed")
-        let events = LoopbackEvents(opened: opened, received: received, closed: closed)
+        let offerCreated = expectation(description: "offer generated")
+        let answerCreated = expectation(description: "answer generated")
+        let events = LoopbackEvents(opened: opened, received: received, closed: closed, offerCreated: offerCreated, answerCreated: answerCreated)
         sender.delegate = events
         receiver.delegate = events
         channel.delegate = events
@@ -23,8 +25,10 @@ final class RTCDataChannelTests: XCTestCase {
             receiver.close()
         }
         try sender.setLocalDesciption(.offer)
+        wait(for: [offerCreated], timeout: 10)
         try receiver.setRemoteDesciption(sender.localDescription, type: .offer)
         try receiver.setLocalDesciption(.answer)
+        wait(for: [answerCreated], timeout: 10)
         try sender.setRemoteDesciption(receiver.localDescription, type: .answer)
         events.flushCandidates()
         wait(for: [opened], timeout: 10)
@@ -42,6 +46,8 @@ private final class LoopbackEvents: RTCPeerConnectionDelegate, RTCDataChannelDel
     let opened: XCTestExpectation
     let received: XCTestExpectation
     let closed: XCTestExpectation
+    let offerCreated: XCTestExpectation
+    let answerCreated: XCTestExpectation
     weak var sender: RTCPeerConnection?
     weak var receiver: RTCPeerConnection?
     var remoteChannel: RTCDataChannel?
@@ -69,10 +75,17 @@ private final class LoopbackEvents: RTCPeerConnectionDelegate, RTCDataChannelDel
         }
     }
 
-    init(opened: XCTestExpectation, received: XCTestExpectation, closed: XCTestExpectation) {
+    init(opened: XCTestExpectation, received: XCTestExpectation, closed: XCTestExpectation, offerCreated: XCTestExpectation, answerCreated: XCTestExpectation) {
         self.opened = opened
         self.received = received
         self.closed = closed
+        self.offerCreated = offerCreated
+        self.answerCreated = answerCreated
+    }
+
+    func peerConnection(_ peerConnection: RTCPeerConnection, didGenerateLocalDescription sdp: String, type: SDPSessionDescriptionType) {
+        if type == .offer { offerCreated.fulfill() }
+        if type == .answer { answerCreated.fulfill() }
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {
