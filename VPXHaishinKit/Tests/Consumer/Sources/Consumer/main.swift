@@ -5,11 +5,11 @@ import VPXHaishinKit
 
 func reference() throws -> CMSampleBuffer {
     var image: CVPixelBuffer?
-    guard CVPixelBufferCreate(nil, 64, 48, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+    guard CVPixelBufferCreate(nil, 64, 48, kCVPixelFormatType_420YpCbCr8Planar,
         [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &image) == kCVReturnSuccess,
           let image else { throw VPXVideoCodecError.unsupportedFormat }
     CVPixelBufferLockBaseAddress(image, [])
-    for plane in 0..<2 {
+    for plane in 0..<3 {
         memset(CVPixelBufferGetBaseAddressOfPlane(image, plane), plane == 0 ? 80 : 128,
             CVPixelBufferGetBytesPerRowOfPlane(image, plane) * CVPixelBufferGetHeightOfPlane(image, plane))
     }

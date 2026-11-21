@@ -12,6 +12,6 @@ public enum VPXVideoCodecError: Swift.Error {
     case invalidSession
     /// A native libvpx operation failed with its returned status code.
     case codec(Int32)
-    /// A Core Media, Core Video, or VideoToolbox operation failed with its status code.
+    /// A Core Media or Core Video operation failed with its status code.
     case coreMedia(OSStatus)
 }

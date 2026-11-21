@@ -6,7 +6,6 @@ import VPXHaishinKit
 
 @Suite struct VPXVideoCodecTests {
     @Test(arguments: VPXVideoCodecSettings.Format.allCases)
-    @available(iOS 16.0, tvOS 16.0, macCatalyst 16.0, *)
     func roundTripAndOwnedOutputs(format: VPXVideoCodecSettings.Format) throws {
         for _ in 0..<2 {
             var settings = VPXVideoCodecSettings(videoSize: CGSize(width: 64, height: 48), bitRate: 300_000, format: format)
@@ -38,6 +37,9 @@ import VPXHaishinKit
                 #expect(CVPixelBufferLockBaseAddress(pixel, .readOnly) == kCVReturnSuccess)
                 let y = try #require(CVPixelBufferGetBaseAddressOfPlane(pixel, 0)?.assumingMemoryBound(to: UInt8.self))
                 #expect(abs(Int(y.pointee) - (80 + index)) < 12)
+                let uv = try #require(CVPixelBufferGetBaseAddressOfPlane(pixel, 1)?.assumingMemoryBound(to: UInt8.self))
+                #expect(abs(Int(uv[0]) - 96) < 12)
+                #expect(abs(Int(uv[1]) - 160) < 12)
                 CVPixelBufferUnlockBaseAddress(pixel, .readOnly)
             }
             encoder.invalidate(); encoder.invalidate(); decoder.invalidate(); decoder.invalidate()
@@ -46,14 +48,19 @@ import VPXHaishinKit
     }
 
     @Test(arguments: VPXVideoCodecSettings.Format.allCases)
-    @available(iOS 16.0, tvOS 16.0, macCatalyst 16.0, *)
-    func conversionKeyframesAndRejectedChanges(format: VPXVideoCodecSettings.Format) throws {
+    func preparedInputKeyframesAndRejectedChanges(format: VPXVideoCodecSettings.Format) throws {
         let settings = VPXVideoCodecSettings(videoSize: CGSize(width: 64, height: 48), maxKeyFrameIntervalDuration: 2, format: format, bitRateMode: .constant)
         let encoder = try VPXVideoEncoder(settings: settings)
         var invalid = settings; invalid.videoSize.width = 128
         #expect(throws: VPXVideoCodecError.self) { try encoder.update(invalid) }
         var packets: [CMSampleBuffer] = []
-        for index in [0, 1, 75] { packets += try encoder.encode(frame(index: index, width: 96, height: 72, bgra: true)) }
+        for input in [try frame(index: 0, width: 96, height: 72),
+                      try frame(index: 0, bgra: true),
+                      try frame(index: 0, pixelFormat: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange),
+                      try frame(index: 0, pixelFormat: kCVPixelFormatType_420YpCbCr8PlanarFullRange)] {
+            #expect(throws: VPXVideoCodecError.self) { try encoder.encode(input) }
+        }
+        for index in [0, 1, 75] { packets += try encoder.encode(frame(index: index)) }
         packets += try encoder.finish()
         #expect(packets.count == 3)
         #expect(try #require(packets.last).sampleAttachments[0][.notSync] == nil)
@@ -66,7 +73,7 @@ import VPXHaishinKit
         #expect(throws: VPXVideoCodecError.self) { try wrong.decode(try #require(packets.first)) }
     }
 
-    @Test @available(iOS 16.0, tvOS 16.0, macCatalyst 16.0, *)
+    @Test
     func invalidSettingsAndTimestampsFailDirectly() throws {
         var invalid: [VPXVideoCodecSettings] = []
         var value = VPXVideoCodecSettings(); value.videoSize.width = 63; invalid.append(value)
@@ -97,9 +104,9 @@ import VPXHaishinKit
         return data
     }
 
-    private func frame(index: Int, width: Int = 64, height: Int = 48, bgra: Bool = false) throws -> CMSampleBuffer {
+    private func frame(index: Int, width: Int = 64, height: Int = 48, bgra: Bool = false, pixelFormat: OSType = kCVPixelFormatType_420YpCbCr8Planar) throws -> CMSampleBuffer {
         var pixel: CVPixelBuffer?
-        #expect(CVPixelBufferCreate(nil, width, height, bgra ? kCVPixelFormatType_32BGRA : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+        #expect(CVPixelBufferCreate(nil, width, height, bgra ? kCVPixelFormatType_32BGRA : pixelFormat,
             [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &pixel) == kCVReturnSuccess)
         let image = try #require(pixel)
         #expect(CVPixelBufferLockBaseAddress(image, []) == kCVReturnSuccess)
@@ -110,8 +117,8 @@ import VPXHaishinKit
                 p[0] = UInt8(80 + index); p[1] = UInt8(80 + index); p[2] = UInt8(80 + index); p[3] = 255
             } }
         } else {
-            for plane in 0..<2 {
-                memset(CVPixelBufferGetBaseAddressOfPlane(image, plane), plane == 0 ? Int32(80 + index) : 128,
+            for plane in 0..<CVPixelBufferGetPlaneCount(image) {
+                memset(CVPixelBufferGetBaseAddressOfPlane(image, plane), plane == 0 ? Int32(80 + index) : (plane == 1 ? 96 : 160),
                     CVPixelBufferGetBytesPerRowOfPlane(image, plane) * CVPixelBufferGetHeightOfPlane(image, plane))
             }
         }

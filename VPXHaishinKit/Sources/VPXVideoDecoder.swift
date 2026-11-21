@@ -1,7 +1,6 @@
 import CoreMedia
 import CoreVideo
 import Foundation
-import VideoToolbox
 import VPXBridge
 
 /// A synchronous decoder. Returned frames own their pixel storage; calls must be serialized.

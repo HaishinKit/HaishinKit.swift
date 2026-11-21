@@ -1,25 +1,20 @@
 import CoreMedia
 import CoreVideo
 import Foundation
-import VideoToolbox
 import VPXBridge
 
 /// A synchronous encoder. Confine the instance and its calls to one actor or serial executor.
-@available(iOS 16.0, tvOS 16.0, macCatalyst 16.0, *)
 public final class VPXVideoEncoder {
     private var context: OpaquePointer?
-    private var transfer: VTPixelTransferSession?
-    private var pixelBuffer: CVPixelBuffer?
     private var formatDescription: CMFormatDescription
     private var settings: VPXVideoCodecSettings
     private var finished = false
     private var lastPTS: Int64?
-    private var chroma: [UInt8]
     private let width: Int
     private let height: Int
 
-    /// Creates an encoder and allocates its conversion buffers.
-    /// - Parameter settings: Output dimensions, codec, rate control, and scaling configuration.
+    /// Creates a software encoder for caller-prepared I420 frames.
+    /// - Parameter settings: Output dimensions, codec, and rate-control configuration.
     /// - Throws: ``VPXVideoCodecError`` if settings are invalid or codec allocation fails.
     public init(settings: VPXVideoCodecSettings = .init()) throws {
         let codec = settings.format.identifier
@@ -36,7 +31,6 @@ public final class VPXVideoEncoder {
         width = Int(size.width)
         height = Int(size.height)
         self.settings = settings
-        chroma = []
         let fps = try Self.frameRate(settings)
         var description: CMFormatDescription?
         try checkStatus(CMVideoFormatDescriptionCreate(
@@ -51,19 +45,7 @@ public final class VPXVideoEncoder {
         context = hk_vpx_encoder_create(codec, UInt32(width), UInt32(height), try Self.bitrate(settings), fps,
                                         Int64((settings.maxKeyFrameIntervalDuration * 1_000_000).rounded()), Self.isConstantBitRate(settings) ? 1 : 0, &status)
         guard context != nil else { throw VPXVideoCodecError.codec(status) }
-        chroma = [UInt8](repeating: 0, count: width * height / 2)
-        do {
-            try checkStatus(VTPixelTransferSessionCreate(allocator: kCFAllocatorDefault, pixelTransferSessionOut: &transfer))
-            guard let transfer else { throw VPXVideoCodecError.unsupportedFormat }
-            try checkStatus(VTSessionSetProperty(transfer, key: kVTPixelTransferPropertyKey_ScalingMode, value: settings.scalingMode.rawValue as CFString))
-            try checkStatus(CVPixelBufferCreate(
-                kCFAllocatorDefault, width, height, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
-                [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &pixelBuffer
-            ))
-        } catch {
-            invalidate()
-            throw error
-        }
+
     }
 
     deinit {
@@ -77,7 +59,7 @@ public final class VPXVideoEncoder {
     public func update(_ settings: VPXVideoCodecSettings) throws {
         guard let context, !finished else { throw VPXVideoCodecError.invalidSession }
         guard settings.videoSize == self.settings.videoSize, settings.format == self.settings.format,
-              settings.scalingMode == self.settings.scalingMode, settings.bitRateMode == self.settings.bitRateMode,
+              settings.bitRateMode == self.settings.bitRateMode,
               settings.maxKeyFrameIntervalDuration == self.settings.maxKeyFrameIntervalDuration else {
             throw VPXVideoCodecError.invalidSettings
         }
@@ -88,52 +70,48 @@ public final class VPXVideoEncoder {
 
     /// Compresses an 8-bit image sample synchronously.
     ///
-    /// Accepts NV12, planar YUV 4:2:0, BGRA, or ARGB. Input is scaled and converted to
-    /// video-range YUV 4:2:0. Presentation timestamps must be numeric, epoch zero,
-    /// and strictly increasing at microsecond precision. An invalid duration uses
-    /// the expected frame rate. Calls must be serialized with all other operations.
-    /// - Parameter sampleBuffer: An uncompressed image sample with a presentation timestamp.
+    /// Accepts only video-range, 8-bit planar YUV 4:2:0 (I420), exactly matching
+    /// the configured dimensions. The caller performs all color conversion, range
+    /// normalization, and resizing before calling this method. No pixel conversion
+    /// or scaling is performed here. Presentation timestamps must be numeric, epoch
+    /// zero, and strictly increasing at microsecond precision. An invalid duration
+    /// uses the expected frame rate. Serialize calls with all other operations.
+    /// - Parameter sampleBuffer: A caller-prepared I420 image sample with a presentation timestamp.
     /// - Returns: Owned raw VP8/VP9 packets, with timing and keyframe attachments.
     ///   Packet storage remains valid after later calls or invalidation.
     /// - Throws: ``VPXVideoCodecError`` for an unsupported image, invalid timestamp,
-    ///   inactive session, or a conversion/codec failure.
+    ///   inactive session, or a codec failure.
     public func encode(_ sampleBuffer: CMSampleBuffer) throws -> [CMSampleBuffer] {
-        guard let context, !finished, let transfer, let pixelBuffer else { throw VPXVideoCodecError.invalidSession }
-        guard let source = sampleBuffer.imageBuffer else { throw VPXVideoCodecError.unsupportedFormat }
-        switch CVPixelBufferGetPixelFormatType(source) {
-        case kCVPixelFormatType_32BGRA, kCVPixelFormatType_32ARGB,
-             kCVPixelFormatType_420YpCbCr8Planar, kCVPixelFormatType_420YpCbCr8PlanarFullRange,
-             kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
-            break
-        default:
+        guard let context, !finished else { throw VPXVideoCodecError.invalidSession }
+        guard let source = sampleBuffer.imageBuffer,
+              CVPixelBufferGetPixelFormatType(source) == kCVPixelFormatType_420YpCbCr8Planar,
+              CVPixelBufferGetWidth(source) == width, CVPixelBufferGetHeight(source) == height,
+              CVPixelBufferGetPlaneCount(source) == 3 else {
             throw VPXVideoCodecError.unsupportedFormat
         }
         let pts = CMTimeConvertScale(sampleBuffer.presentationTimeStamp, timescale: 1_000_000, method: .default)
         guard pts.isNumeric, pts.epoch == 0, lastPTS.map({ pts.value > $0 }) ?? true else { throw VPXVideoCodecError.invalidTimestamp }
         let duration = CMTimeConvertScale(sampleBuffer.duration, timescale: 1_000_000, method: .default)
         let ticks = duration.isNumeric && duration.value > 0 ? duration.value : max(1, Int64((1_000_000 / (try Self.frameRate(settings))).rounded()))
-        try checkStatus(VTPixelTransferSessionTransferImage(transfer, from: source, to: pixelBuffer))
-        try checkStatus(CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly))
-        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
-        guard let y = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)?.assumingMemoryBound(to: UInt8.self),
-              let uv = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)?.assumingMemoryBound(to: UInt8.self) else {
-            throw VPXVideoCodecError.unsupportedFormat
-        }
-        let yStride = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
-        let uvStride = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
-        let chromaSize = width * height / 4
-        try chroma.withUnsafeMutableBufferPointer { buffer in
-            guard let base = buffer.baseAddress else { throw VPXVideoCodecError.unsupportedFormat }
-            let u = base
-            let v = base.advanced(by: chromaSize)
-            for row in 0..<height / 2 {
-                for col in 0..<width / 2 {
-                    u[row * width / 2 + col] = uv[row * uvStride + col * 2]
-                    v[row * width / 2 + col] = uv[row * uvStride + col * 2 + 1]
-                }
+        try checkStatus(CVPixelBufferLockBaseAddress(source, .readOnly))
+        defer { CVPixelBufferUnlockBaseAddress(source, .readOnly) }
+        var planes: [UnsafePointer<UInt8>] = []
+        var strides: [Int32] = []
+        for plane in 0..<3 {
+            let planeWidth = plane == 0 ? width : width / 2
+            let planeHeight = plane == 0 ? height : height / 2
+            let stride = CVPixelBufferGetBytesPerRowOfPlane(source, plane)
+            guard CVPixelBufferGetWidthOfPlane(source, plane) == planeWidth,
+                  CVPixelBufferGetHeightOfPlane(source, plane) == planeHeight,
+                  stride >= planeWidth, stride <= Int(Int32.max),
+                  let base = CVPixelBufferGetBaseAddressOfPlane(source, plane) else {
+                throw VPXVideoCodecError.unsupportedFormat
             }
-            try checkCodec(hk_vpx_encoder_encode(context, y, Int32(yStride), u, Int32(width / 2), v, Int32(width / 2), pts.value, UInt(ticks)))
+            planes.append(UnsafePointer(base.assumingMemoryBound(to: UInt8.self)))
+            strides.append(Int32(stride))
         }
+        try checkCodec(hk_vpx_encoder_encode(context, planes[0], strides[0], planes[1], strides[1],
+                                            planes[2], strides[2], pts.value, UInt(ticks)))
         lastPTS = pts.value
         return try packets()
     }
@@ -185,9 +163,6 @@ public final class VPXVideoEncoder {
     public func invalidate() {
         hk_vpx_destroy(context)
         context = nil
-        if let transfer { VTPixelTransferSessionInvalidate(transfer) }
-        transfer = nil
-        pixelBuffer = nil
     }
 
     private static func bitrate(_ settings: VPXVideoCodecSettings) throws -> UInt32 {

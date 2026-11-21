@@ -1,7 +1,6 @@
 import CoreMedia
 import CoreVideo
 import Foundation
-import VideoToolbox
 import VPXBridge
 
 func checkStatus(_ status: OSStatus) throws {

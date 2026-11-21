@@ -28,7 +28,6 @@ The following function needs no `import HaishinKit` or shared codec registration
 import CoreMedia
 import VPXHaishinKit
 
-@available(iOS 16, tvOS 16, macCatalyst 16, *)
 func roundTrip(_ references: [CMSampleBuffer]) throws -> [CMSampleBuffer] {
     let settings = VPXVideoCodecSettings(bitRate: 1_000_000, format: .vp9)
     let encoder = try VPXVideoEncoder(settings: settings)
@@ -56,11 +55,14 @@ through an asynchronous continuation.
 
 ## Settings and lifecycle
 
-VP8 and VP9 use 8-bit SDR 4:2:0. Encoding accepts NV12/I420 in video or full range,
-BGRA, and ARGB; VideoToolbox normalizes/scales to limited-range NV12 before libvpx
-compression. Unsupported formats, including 10-bit input, are rejected. Encoded
-width/height must be positive even integers, within the codec limit, and their
-product must not exceed 16,777,216 pixels. VP9 high-bit-depth and 4:4:4 are not supported.
+VP8 and VP9 use 8-bit SDR 4:2:0. The encoder accepts only video-range planar
+I420 (`kCVPixelFormatType_420YpCbCr8Planar`), with dimensions exactly matching
+`videoSize`. It passes the three planes and their row strides directly to libvpx
+while the input pixel buffer is locked. The caller is responsible for color-space
+conversion, range normalization, and resizing before encoding. NV12, RGB, full-range,
+10-bit, and mismatched dimensions are rejected rather than converted implicitly.
+Encoded width/height must be positive even integers, within the codec limit, and
+their product must not exceed 16,777,216 pixels. VP9 high-bit-depth and 4:4:4 are not supported.
 
 PTS values must be numeric, epoch zero, and strictly increasing after conversion
 to a microsecond timebase. Numeric positive input durations are preserved to that
@@ -70,7 +72,7 @@ one microsecond and one hour, so skipped inputs do not extend the keyframe inter
 
 Compression uses realtime, zero-lookahead operation with no intentional frame drops
 or frame reordering. Average and constant bitrate modes are available. Call `update`
-to change bitrate and frame-rate hints. Changing codec, dimensions, scaling mode,
+to change bitrate and frame-rate hints. Changing codec, dimensions,
 bitrate mode, or keyframe interval requires a new encoder and is rejected by `update`.
 `finish` drains the encoder and rejects further input; repeated calls return no
 packets. `invalidate` releases resources and is safe to call repeatedly. Construct
@@ -82,15 +84,15 @@ The caller must demultiplex a container and supply packet timing; this module do
 read/write MP4, IVF, or WebM files, nor add RTP/Enhanced RTMP/TS framing.
 Only decoded pixel range is signaled here; interpreting and attaching container colorimetry remains the caller’s responsibility.
 
-Encoding requires iOS/tvOS/Mac Catalyst 16; decoding follows the package's existing
-platform minimums. The libvpx 1.17.0 artifact supports arm64, including Apple silicon
+Encoding and decoding follow the package's existing platform minimums; this module
+does not depend on VideoToolbox pixel transfer. The libvpx 1.17.0 artifact supports arm64, including Apple silicon
 simulators; it does not include Intel slices. Preserve the libvpx LICENSE and PATENTS
 notices from libvpx-xcframework when distributing an app.
 
 ## Verification
 
 Run `swift test --filter VPXVideoCodecTests` for both codec round trips, owned outputs,
-keyframe timing, settings updates, resizing, malformed packets, and lifecycle checks.
+keyframe timing, settings updates, unsupported input/dimension rejection, malformed packets, and lifecycle checks.
 `swift run --package-path VPXHaishinKit/Tests/Consumer Consumer` exercises a separate
 SwiftPM consumer importing only the public VPX API, without linking the HaishinKit core.
 
@@ -108,5 +110,4 @@ The published libvpx 1.17.0 artifact includes embedded DWARF debug information i
 - ``VPXVideoCodecSettings``
 - ``VPXVideoCodecSettings/Format``
 - ``VPXVideoCodecSettings/BitRateMode``
-- ``VPXVideoCodecSettings/ScalingMode``
 - ``VPXVideoCodecError``

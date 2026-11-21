@@ -25,17 +25,7 @@ public struct VPXVideoCodecSettings: Codable, Sendable, Equatable {
         case constant
     }
 
-    /// How VideoToolbox fits an input image to the output dimensions.
-    public enum ScalingMode: String, Codable, Sendable {
-        /// Scales to fill the dimensions, allowing aspect-ratio changes.
-        case normal = "Normal"
-        /// Preserves aspect ratio and adds borders to fit the complete image.
-        case letterbox = "Letterbox"
-        /// Preserves aspect ratio and crops the image to fill the dimensions.
-        case trim = "Trim"
-    }
-
-    /// Output size in pixels. Both dimensions must be positive, even integers.
+    /// Required input and output size in pixels; the caller must resize input beforehand. Both dimensions must be positive, even integers.
     ///
     /// The total may not exceed 16,777,216 pixels. Each dimension must also fit
     /// the codec limit: 16,383 for VP8 or 65,535 for VP9.
@@ -52,8 +42,6 @@ public struct VPXVideoCodecSettings: Codable, Sendable, Equatable {
     public var format: Format
     /// Rate-control strategy. Changing this requires a new encoder.
     public var bitRateMode: BitRateMode
-    /// Input scaling strategy. Changing this requires a new encoder.
-    public var scalingMode: ScalingMode
 
     /// Creates a configuration. Values are validated by the encoder, not this initializer.
     /// - Parameters:
@@ -63,16 +51,14 @@ public struct VPXVideoCodecSettings: Codable, Sendable, Equatable {
     ///   - maxKeyFrameIntervalDuration: Maximum keyframe interval; defaults to 2 seconds.
     ///   - format: Output codec; defaults to VP9.
     ///   - bitRateMode: Rate control; defaults to average bitrate.
-    ///   - scalingMode: Image fitting; defaults to normal scaling.
     public init(videoSize: CGSize = CGSize(width: 640, height: 480), bitRate: Int = 1_000_000,
                 expectedFrameRate: Double = 30, maxKeyFrameIntervalDuration: Double = 2,
-                format: Format = .vp9, bitRateMode: BitRateMode = .average, scalingMode: ScalingMode = .normal) {
+                format: Format = .vp9, bitRateMode: BitRateMode = .average) {
         self.videoSize = videoSize
         self.bitRate = bitRate
         self.expectedFrameRate = expectedFrameRate
         self.maxKeyFrameIntervalDuration = maxKeyFrameIntervalDuration
         self.format = format
         self.bitRateMode = bitRateMode
-        self.scalingMode = scalingMode
     }
 }
