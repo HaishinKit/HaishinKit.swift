@@ -6,6 +6,7 @@ lane :review do
     FileUtils.mkdir_p('test-results')
     sh 'swift test --xunit-output test-results/tests.xml'
     sh 'swift run --package-path VPXHaishinKit/Tests/Consumer Consumer'
+    sh 'swift run --package-path AOMHaishinKit/Tests/Consumer Consumer'
   end
 
   begin
@@ -27,7 +28,7 @@ lane :document do |options|
 
   version = options[:version]
   # Document public modules, not dependency wrappers such as RTC.
-  document_targets = %w[HaishinKit RTMPHaishinKit SRTHaishinKit MoQTHaishinKit RTCHaishinKit VPXHaishinKit]
+  document_targets = %w[HaishinKit RTMPHaishinKit SRTHaishinKit MoQTHaishinKit RTCHaishinKit VPXHaishinKit AOMHaishinKit]
                      .map { |target| "--target #{target}" }.join(' ')
 
   Dir.chdir('..') do

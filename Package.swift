@@ -23,6 +23,7 @@ let package = Package(
         .visionOS("1.3")
     ],
     products: [
+        .library(name: "AOMHaishinKit", targets: ["AOMHaishinKit"]),
         .library(name: "HaishinKit", targets: ["HaishinKit"]),
         .library(name: "VPXHaishinKit", targets: ["VPXHaishinKit"]),
         .library(name: "RTMPHaishinKit", targets: ["RTMPHaishinKit"]),
@@ -31,6 +32,7 @@ let package = Package(
         .library(name: "RTCHaishinKit", targets: ["RTCHaishinKit"])
     ],
     dependencies: [
+        .package(url: "https://github.com/HaishinKit/libaom-xcframework.git", from: "3.15.3"),
         .package(url: "https://github.com/HaishinKit/libvpx-xcframework.git", from: "1.17.0"),
         .package(url: "https://github.com/HaishinKit/libdatachannel-xcframework.git", from: "0.24.7"),
         .package(url: "https://github.com/HaishinKit/libsrt-xcframework.git", from: "1.5.7"),
@@ -38,6 +40,24 @@ let package = Package(
         .package(url: "https://github.com/shogo4405/Logboard.git", "2.6.0"..<"2.7.0")
     ],
     targets: [
+        .target(
+            name: "AOMBridge",
+            dependencies: [.product(name: "libaom", package: "libaom-xcframework")],
+            path: "AOMHaishinKit/Bridge"
+        ),
+        .target(
+            name: "AOMHaishinKit",
+            dependencies: ["AOMBridge"],
+            path: "AOMHaishinKit/Sources",
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "AOMHaishinKitTests",
+            dependencies: ["AOMHaishinKit"],
+            path: "AOMHaishinKit/Tests",
+            exclude: ["Consumer"],
+            swiftSettings: swiftSettings
+        ),
         .target(
             name: "VPXBridge",
             dependencies: [.product(name: "libvpx", package: "libvpx-xcframework")],
