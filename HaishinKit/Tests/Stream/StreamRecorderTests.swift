@@ -36,15 +36,19 @@ import Testing
         #expect(((await recorder.outputURL?.path.contains("dir")) != nil))
     }
 
-    @Test func startRunning_fileAlreadyExists() async {
+    @Test func startRunning_fileAlreadyExists() async throws {
         let recorder = StreamRecorder()
-        let filePath = await recorder.moviesDirectory.appendingPathComponent("duplicate-file.mp4")
-        FileManager.default.createFile(atPath: filePath.path, contents: nil)
-        do {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let filePath = directory.appendingPathComponent("duplicate-file.mp4")
+        try Data().write(to: filePath)
+
+        await #expect {
             try await recorder.startRecording(filePath)
-            fatalError()
-        } catch {
-            try? FileManager.default.removeItem(atPath: filePath.path)
+        } throws: { error in
+            guard case StreamRecorder.Error.fileAlreadyExists(let outputURL) = error else { return false }
+            return outputURL == filePath
         }
     }
 

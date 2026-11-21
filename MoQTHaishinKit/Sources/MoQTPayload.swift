@@ -1,133 +1,95 @@
 import Foundation
 
 struct MoQTPayload {
-    private(set) var data = Data()
-
     enum Error: Swift.Error {
         case eof
-        case outOfRange
+        case invalidField
     }
 
-    /// Specifies the length of buffer.
-    var length: Int {
-        get {
-            data.count
-        }
-        set {
-            switch true {
-            case (data.count < newValue):
-                data.append(Data(count: newValue - data.count))
-            case (newValue < data.count):
-                data = data.subdata(in: 0..<newValue)
-            default:
-                break
-            }
-        }
+    private(set) var data: Data
+    private(set) var position = 0
+    var bytesAvailable: Int { data.count - position }
+
+    init(_ data: Data = Data()) {
+        self.data = Data(data)
     }
 
-    /// Specifies the position of buffer.
-    var position: Int = 0
-
-    /// The bytesAvalibale or not.
-    var bytesAvailable: Int {
-        data.count - position
-    }
-
-    init() {
-    }
-
-    init(_ data: Data) {
-        self.data = data
-    }
-
-    @discardableResult
-    mutating func putInt(_ value: Int) -> Self {
-        if value <= 63 {
-            return putData(UInt8(value).bigEndian.data)
-        }
-        if value <= 16383 {
-            return putData((UInt16(value) | 0x4000).bigEndian.data)
-        }
-        if value <= 1073741823 {
-            return putData((UInt32(value) | 0x80000000).bigEndian.data)
-        }
-        return putData((UInt64(value) | 0xc000000000000000).bigEndian.data)
-    }
-
-    mutating func getInt() throws -> Int {
-        guard 1 <= bytesAvailable else {
-            throw Error.eof
-        }
-        switch Int(data[position] >> 6) {
-        case 0:
-            defer {
-                position += 1
-            }
-            return Int(data: data[position..<position + 1]).bigEndian
-        case 1:
-            defer {
-                position += 2
-            }
-            return Int(data: data[position..<position + 2]).bigEndian & 0x3FFF
-        case 2:
-            defer {
-                position += 4
-            }
-            return Int(data: data[position..<position + 4]).bigEndian
-        case 3:
-            defer {
-                position += 8
-            }
-            return Int(data: data[position..<position + 8]).bigEndian & 0x1FFFFFFFFFFFFFFF
-        default:
-            throw Error.outOfRange
+    mutating func putInt(_ value: UInt64) {
+        let bits = UInt64.bitWidth - value.leadingZeroBitCount
+        let extra = min(8, max(0, (bits - 1) / 7))
+        let prefix = UInt8(truncatingIfNeeded: 0xff << (8 - extra))
+        let first = extra == 8 ? 0 : UInt8(truncatingIfNeeded: value >> (8 * extra))
+        data.append(prefix | first)
+        for index in (0..<extra).reversed() {
+            data.append(UInt8(truncatingIfNeeded: value >> (8 * index)))
         }
     }
 
-    @discardableResult
-    mutating func putString(_ value: String) -> Self {
-        putInt(value.utf8.count)
-        putData(Data(value.utf8))
-        return self
-    }
-
-    mutating func getString() throws -> String {
-        let length = try getInt()
-        let data = try getData(length)
-        return String(data: data, encoding: .utf8) ?? ""
-    }
-
-    mutating func putBool(_ value: Bool) -> Self {
-        putData(Data([value ? 1 : 0]))
-        return self
-    }
-
-    mutating func getBool() throws -> Bool {
-        guard 1 <= bytesAvailable else {
-            throw Error.eof
+    mutating func getInt() throws -> UInt64 {
+        let first = try getByte()
+        let extra = (~first).leadingZeroBitCount
+        var value = UInt64(first & (0xff >> extra))
+        for _ in 0..<extra {
+            value = (value << 8) | UInt64(try getByte())
         }
-        let value = try getData(1)
-        return value[0] == 1
+        return value
     }
 
-    @discardableResult
-    mutating func putData(_ value: Data) -> Self {
-        if position == data.count {
-            data.append(value)
-            position = data.count
-            return self
-        }
-        let length = min(data.count - position, value.count)
-        data.replaceSubrange(position..<position + length, with: value)
-        position += value.count
-        return self
+    mutating func getByte() throws -> UInt8 {
+        guard bytesAvailable > 0 else { throw Error.eof }
+        defer { position += 1 }
+        return data[position]
     }
 
-    mutating func getData(_ length: Int) throws -> Data {
-        guard length <= bytesAvailable else {
-            throw Error.eof
+    mutating func putByte(_ value: UInt8) {
+        data.append(value)
+    }
+
+    mutating func putBytes(_ value: Data) {
+        putInt(UInt64(value.count))
+        putData(value)
+    }
+
+    mutating func getBytes(limit: UInt64 = .max) throws -> Data {
+        let count = try getInt()
+        guard count <= limit else { throw Error.invalidField }
+        return try getData(count)
+    }
+
+    mutating func putData(_ value: Data) {
+        data.append(value)
+    }
+
+    mutating func getData(_ count: UInt64) throws -> Data {
+        guard count <= UInt64(bytesAvailable) else { throw Error.eof }
+        defer { position += Int(count) }
+        return data.subdata(in: position..<position + Int(count))
+    }
+
+    mutating func remainder() -> Data {
+        let result = data.subdata(in: position..<data.count)
+        position = data.count
+        return result
+    }
+
+    mutating func getNamespace() throws -> [Data] {
+        let count = try getInt()
+        guard count <= 32 else { throw Error.invalidField }
+        var remaining: UInt64 = 4096
+        return try (0..<count).map { _ in
+            let component = try getBytes(limit: remaining)
+            guard !component.isEmpty else { throw Error.invalidField }
+            remaining -= UInt64(component.count)
+            return component
         }
-        position += length
-        return data.subdata(in: position - length..<position)
+    }
+
+    mutating func putNamespace(_ namespace: [String]) throws {
+        guard namespace.count <= 32, namespace.allSatisfy({ !$0.isEmpty }),
+              namespace.reduce(0, { $0 + $1.utf8.count }) <= 4096 else { throw Error.invalidField }
+        putInt(UInt64(namespace.count))
+        for component in namespace {
+            putBytes(Data(component.utf8))
+        }
     }
 }

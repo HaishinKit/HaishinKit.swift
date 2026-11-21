@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA05F96E2E3D248A002BCC92 /* ScreenObjectEditingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */; };
+		CAFE628F2E7710A100941209 /* ScreenObjectEditingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */; };
+		CA05F96E2E3D248A002BCC93 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = CA9129382D12EA820077EFF4 /* AppIcon.png */; };
+		CA05F96E2E3D248A002BCC94 /* SampleVideo_360x240_5mb.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = CA9129382D12EA820077EFF5 /* SampleVideo_360x240_5mb.mp4 */; };
 		BC05F96E2E3D248A002BCC92 /* Preference.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9129382D12EA820077EFF3 /* Preference.swift */; };
 		BC4B7DCD2E86D06700973BD7 /* ReplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCD5C7F92E3F189700A69F16 /* ReplayKit.framework */; };
 		BC4B7DD42E86D06700973BD7 /* Screencast.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BC4B7DCC2E86D06700973BD7 /* Screencast.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -75,6 +79,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenObjectEditingPreview.swift; sourceTree = "<group>"; };
+		CA9129382D12EA820077EFF4 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = macOS/AppIcon.png; sourceTree = SOURCE_ROOT; };
+		CA9129382D12EA820077EFF5 /* SampleVideo_360x240_5mb.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = macOS/SampleVideo_360x240_5mb.mp4; sourceTree = SOURCE_ROOT; };
 		BC4B7DCC2E86D06700973BD7 /* Screencast.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Screencast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BC6841622E3CFBE0008FBFEE /* Example iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Example iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BC7A0E3D2B088FA7005FB2F7 /* Example visionOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Example visionOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -218,6 +225,7 @@
 			isa = PBXGroup;
 			children = (
 				BC9129382D12EA820077EFF3 /* Preference.swift */,
+				CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */,
 				BC912A762D12F0600077EFF3 /* Frameworks */,
 				2945CBBE1B4BE66000104112 /* Products */,
 				BC6841632E3CFBE0008FBFEE /* iOS */,
@@ -469,6 +477,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA05F96E2E3D248A002BCC93 /* AppIcon.png in Resources */,
+				CA05F96E2E3D248A002BCC94 /* SampleVideo_360x240_5mb.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -509,6 +519,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BC05F96E2E3D248A002BCC92 /* Preference.swift in Sources */,
+				CA05F96E2E3D248A002BCC92 /* ScreenObjectEditingPreview.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -533,6 +544,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BCFE628F2E7710A100941209 /* Preference.swift in Sources */,
+				CAFE628F2E7710A100941209 /* ScreenObjectEditingPreview.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1059,7 +1071,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_ASSET_PATHS = "macOS/SampleVideo_360x240_5mb.mp4 macOS/AppIcon.png";
+
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1104,7 +1116,7 @@
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "macOS/SampleVideo_360x240_5mb.mp4 macOS/AppIcon.png";
+
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
