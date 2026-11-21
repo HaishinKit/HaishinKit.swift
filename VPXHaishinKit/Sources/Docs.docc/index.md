@@ -89,6 +89,25 @@ does not depend on VideoToolbox pixel transfer. The libvpx 1.17.0 artifact suppo
 simulators; it does not include Intel slices. Preserve the libvpx LICENSE and PATENTS
 notices from libvpx-xcframework when distributing an app.
 
+## Encoder statistics
+
+Read ``VPXVideoEncoder/statistics`` on the encoder's actor or serial executor,
+then send the value snapshot to VQMetrix's UI, history store, or report:
+
+```swift
+let snapshot = encoder.statistics
+print(snapshot.submittedFrameCount, snapshot.outputPacketCount, snapshot.encodedByteCount)
+print(snapshot.lastEncodingDuration, snapshot.averageEncodingDuration,
+      snapshot.maximumEncodingDuration, snapshot.totalEncodingDuration)
+```
+
+Durations are monotonic wall-clock seconds inside successful native frame-encode calls,
+including scheduling delays. They exclude caller conversion, input validation, output
+copying, failed encode calls, and `finish()` flushing. They are not CPU utilization,
+thermal state, energy use, or end-to-end latency. Packet/byte counters include drained
+output. Counters live for the encoder's lifetime, survive invalidation, and are not
+reset by settings updates. Snapshots are Codable and Sendable.
+
 ## Verification
 
 Run `swift test --filter VPXVideoCodecTests` for both codec round trips, owned outputs,
@@ -111,3 +130,7 @@ The published libvpx 1.17.0 artifact includes embedded DWARF debug information i
 - ``VPXVideoCodecSettings/Format``
 - ``VPXVideoCodecSettings/BitRateMode``
 - ``VPXVideoCodecError``
+
+### Measurement
+
+- ``VPXVideoEncoderStatistics``

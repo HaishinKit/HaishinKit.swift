@@ -1,10 +1,15 @@
 import CoreMedia
 import CoreVideo
 import Foundation
+import Dispatch
 import VPXBridge
 
 /// A synchronous encoder. Confine the instance and its calls to one actor or serial executor.
 public final class VPXVideoEncoder {
+    /// Current lifetime statistics. Read on the same actor or serial executor as encode calls.
+    /// Copy this Sendable value to forward a snapshot to a UI, history store, or report.
+    public private(set) var statistics = VPXVideoEncoderStatistics()
+
     private var context: OpaquePointer?
     private var formatDescription: CMFormatDescription
     private var settings: VPXVideoCodecSettings
@@ -110,8 +115,12 @@ public final class VPXVideoEncoder {
             planes.append(UnsafePointer(base.assumingMemoryBound(to: UInt8.self)))
             strides.append(Int32(stride))
         }
-        try checkCodec(hk_vpx_encoder_encode(context, planes[0], strides[0], planes[1], strides[1],
-                                            planes[2], strides[2], pts.value, UInt(ticks)))
+        let start = DispatchTime.now().uptimeNanoseconds
+        let status = hk_vpx_encoder_encode(context, planes[0], strides[0], planes[1], strides[1],
+                                            planes[2], strides[2], pts.value, UInt(ticks))
+        let elapsed = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
+        try checkCodec(status)
+        statistics.recordFrame(duration: elapsed)
         lastPTS = pts.value
         return try packets()
     }
@@ -156,6 +165,7 @@ public final class VPXVideoEncoder {
             }
             outputPackets.append(output)
         }
+        statistics.recordOutput(packetCount: outputPackets.count, byteCount: outputPackets.reduce(UInt64(0)) { $0 + UInt64($1.totalSampleSize) })
         return outputPackets
     }
 

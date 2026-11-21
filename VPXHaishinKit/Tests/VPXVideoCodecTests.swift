@@ -96,6 +96,30 @@ import VPXHaishinKit
         #expect(throws: VPXVideoCodecError.self) { try decoder.decode(corrupt) }
     }
 
+    @Test
+    func statisticsTrackSuccessfulFramesAndOwnedOutput() throws {
+        let encoder = try VPXVideoEncoder(settings: .init(videoSize: CGSize(width: 64, height: 48)))
+        let initial = encoder.statistics
+        #expect(initial.submittedFrameCount == 0 && initial.averageEncodingDuration == 0)
+        #expect(throws: VPXVideoCodecError.self) { try encoder.encode(frame(index: 0, bgra: true)) }
+        #expect(encoder.statistics == initial)
+        var packets = try encoder.encode(frame(index: 0))
+        let snapshot = encoder.statistics
+        packets += try encoder.encode(frame(index: 1))
+        packets += try encoder.finish()
+        let result = encoder.statistics
+        #expect(snapshot.submittedFrameCount == 1)
+        #expect(result.submittedFrameCount == 2)
+        #expect(result.outputPacketCount == UInt64(packets.count))
+        #expect(result.encodedByteCount == packets.reduce(UInt64(0)) { $0 + UInt64($1.totalSampleSize) })
+        #expect(result.lastEncodingDuration >= 0 && result.totalEncodingDuration >= result.lastEncodingDuration)
+        #expect(result.maximumEncodingDuration >= result.lastEncodingDuration)
+        #expect(result.averageEncodingDuration == result.totalEncodingDuration / 2)
+        #expect(try JSONDecoder().decode(VPXVideoEncoderStatistics.self, from: JSONEncoder().encode(result)) == result)
+        encoder.invalidate()
+        #expect(encoder.statistics == result)
+    }
+
     private func bytes(_ sample: CMSampleBuffer) throws -> Data {
         let block = try #require(sample.dataBuffer)
         var data = Data(count: CMBlockBufferGetDataLength(block))
