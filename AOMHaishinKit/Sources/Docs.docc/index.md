@@ -10,15 +10,15 @@ add AV1 transport support.
 
 ## Installation
 
-This product is currently on the development PR branch, not in released 2.3.0:
+This product is available on main, but is not included in the released 2.3.0 package:
 
 ```swift
 .package(url: "https://github.com/HaishinKit/HaishinKit.swift.git",
-         branch: "codex/standalone-aom")
+         branch: "main")
 ```
 
 Add `.product(name: "AOMHaishinKit", package: "HaishinKit.swift")` to your target.
-After publication, replace the development branch with a release containing this product.
+After publication, replace the main branch with a release containing this product.
 
 ## Standalone conversion
 
