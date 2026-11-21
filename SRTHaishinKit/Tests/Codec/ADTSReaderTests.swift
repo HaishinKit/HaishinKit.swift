@@ -16,4 +16,36 @@ import Testing
         }
         #expect(ranges == [371, 369, 348, 291, 315, 307, 360, 374])
     }
+
+    @Test func stopsAtTruncatedFrame() {
+        let data = Self.frame(length: 100) + Self.frame(length: 100).prefix(50)
+        #expect(Self.ranges(data) == [100])
+    }
+
+    @Test func stopsAtBrokenSyncWord() {
+        var data = Self.frame(length: 100) + Self.frame(length: 100)
+        data[100] = 0
+        #expect(Self.ranges(data) == [100])
+    }
+
+    @Test func stopsAtZeroLength() {
+        var data = Self.frame(length: 100)
+        data[3] = 0x40
+        data[4] = 0
+        data[5] = 0x1F
+        #expect(Self.ranges(data).isEmpty)
+    }
+
+    /// An ADTS frame of AAC LC, 44.1 kHz, mono, without CRC.
+    static func frame(length: Int) -> Data {
+        var data = Data([0xFF, 0xF1, 0x50, 0x40 | UInt8(length >> 11), UInt8((length >> 3) & 0xFF), UInt8((length & 0x07) << 5) | 0x1F, 0xFC])
+        data.append(Data(repeating: 0, count: length - data.count))
+        return data
+    }
+
+    private static func ranges(_ data: Data) -> [Int] {
+        let reader = ADTSReader()
+        reader.read(data)
+        return Array(reader)
+    }
 }
