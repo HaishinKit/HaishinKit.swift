@@ -186,21 +186,29 @@ final actor SRTSocket {
     }
 
     func accept(_ options: [SRTSocketOption]) async throws -> SRTSocket {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<SRTSocket, Swift.Error>) in
-            Task.detached { [self] in
-                do {
-                    let accept = srt_accept(await socket, nil, nil)
-                    guard -1 < accept else {
-                        throw await makeSocketError()
+        let listeningSocket = socket
+        let acceptedSocket: SRTSOCKET
+        do {
+            acceptedSocket = try await withCheckedThrowingContinuation { continuation in
+                // A blocking accept must not occupy Swift's cooperative executor.
+                DispatchQueue.global().async {
+                    let accepted = srt_accept(listeningSocket, nil, nil)
+                    guard accepted != SRT_INVALID_SOCK else {
+                        // SRT's last error belongs to the thread that called accept.
+                        let message = String(cString: srt_getlasterror_str())
+                        continuation.resume(throwing: Error.illegalState(message))
+                        return
                     }
-                    let socket = try await SRTSocket(socket: accept, options: options)
-                    await socket.startRunning()
-                    continuation.resume(returning: socket)
-                } catch {
-                    continuation.resume(throwing: error)
+                    continuation.resume(returning: accepted)
                 }
             }
+        } catch {
+            await stopRunning()
+            throw error
         }
+        let socket = try await SRTSocket(socket: acceptedSocket, options: options)
+        await socket.startRunning()
+        return socket
     }
 
     func send(_ data: Data) throws {
