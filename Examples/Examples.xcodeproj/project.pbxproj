@@ -97,6 +97,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BCF000012E77100000941209 /* macOS Info.plist */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (Info.plist,);
+			target = BCFE627D2E770A9900941209 /* Example macOS */;
+		};
 		BC36B4F82E77201200AADEC1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -154,7 +159,7 @@
 		BC6841632E3CFBE0008FBFEE /* iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (BC4B7DDD2E86D06E00973BD7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, BC36B4F82E77201200AADEC1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, BCABAC0D2E65BBBC00B0E878 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, BC4B7DDE2E86D06E00973BD7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, BC8212582EB8FA8A00419D06 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = iOS; sourceTree = "<group>"; };
 		BC82124D2EB8F8BE00419D06 /* tvOS */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = tvOS; sourceTree = "<group>"; };
 		BC9129712D12EA930077EFF3 /* visionOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (BC912A722D12F0100077EFF3 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = visionOS; sourceTree = "<group>"; };
-		BCFE627F2E770A9900941209 /* macOS */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = macOS; sourceTree = "<group>"; };
+		BCFE627F2E770A9900941209 /* macOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (BCF000012E77100000941209 /* macOS Info.plist */,); explicitFileTypes = {}; explicitFolders = (); path = macOS; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1067,6 +1072,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = macOS/HaishinApp.entitlements;
+				INFOPLIST_FILE = macOS/Info.plist;
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1077,9 +1083,9 @@
 				ENABLE_PREVIEWS = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is requested for live streaming.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is requested for live streaming.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1113,6 +1119,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = macOS/HaishinApp.entitlements;
+				INFOPLIST_FILE = macOS/Info.plist;
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1122,9 +1129,9 @@
 				ENABLE_PREVIEWS = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is requested for live streaming.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is requested for live streaming.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

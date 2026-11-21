@@ -1,3 +1,31 @@
+require 'shellwords'
+
+desc 'Builds the Apple Silicon macOS example ZIP.'
+lane :macos_example do |options|
+  version = options[:version].to_s
+  UI.user_error!('A release version is required (for example, 2.2.0).') unless version.match?(/\A\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?\z/)
+
+  root = File.expand_path('..', __dir__)
+  output = File.join(root, 'build', 'macos-example', version)
+  derived_data = File.join(output, 'DerivedData')
+  app = File.join(derived_data, 'Build', 'Products', 'Release', 'Example macOS.app')
+  zip = File.join(output, "HaishinKit-macOS-#{version}-arm64-unsigned.zip")
+  FileUtils.rm_rf(output)
+  FileUtils.mkdir_p(output)
+
+  sh Shellwords.join([
+    'xcodebuild', '-workspace', File.join(root, 'Examples', 'Examples.xcworkspace'),
+    '-scheme', 'Example macOS', '-configuration', 'Release',
+    '-destination', 'generic/platform=macOS', '-derivedDataPath', derived_data,
+    'ARCHS=arm64', 'ONLY_ACTIVE_ARCH=NO', 'CODE_SIGNING_ALLOWED=NO',
+    "MARKETING_VERSION=#{version.split(/[-+]/).first}", 'build'
+  ])
+  UI.user_error!("Missing app: #{app}") unless File.directory?(app)
+  sh Shellwords.join(['lipo', File.join(app, 'Contents', 'MacOS', 'Example macOS'), '-verify_arch', 'arm64'])
+  sh Shellwords.join(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
+  UI.success("Created #{zip}")
+end
+
 desc 'Review PullRequest.'
 lane :review do
 

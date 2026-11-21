@@ -6,12 +6,57 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Documentation version to generate and publish'
+        description: 'Release tag to build the macOS example and publish documentation for'
         required: true
         type: string
 permissions:
   contents: read
 jobs:
+  macos-example:
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    concurrency:
+      group: macos-example-${{ inputs.version || github.ref_name }}
+      cancel-in-progress: false
+    env:
+      RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
+          persist-credentials: false
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][a-zA-Z0-9.-]+)?$ ]]; then
+            echo 'Invalid release version' >&2
+            exit 1
+          fi
+          git show-ref --verify "refs/tags/$RELEASE_VERSION"
+      - name: Select Xcode version
+        run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: Build unsigned Apple Silicon macOS example
+        run: bundle exec fastlane macos_example "version:$RELEASE_VERSION"
+      - name: Upload macOS example to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          if ! gh release view "$RELEASE_VERSION" > /dev/null 2>&1; then
+            gh release create "$RELEASE_VERSION" --verify-tag --draft \
+              --title "$RELEASE_VERSION" \
+              --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is unsigned and not notarized; macOS may block it from opening. See .github/macos-release.md for details.'
+          fi
+          gh release upload "$RELEASE_VERSION" \
+            "build/macos-example/$RELEASE_VERSION/HaishinKit-macOS-$RELEASE_VERSION-arm64-unsigned.zip" --clobber
   build:
     runs-on: macos-26
     env:
