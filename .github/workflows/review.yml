@@ -28,9 +28,18 @@ jobs:
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SWIFT_BACKTRACE: interactive=no
+          NSUnbufferedIO: 'YES'
         run: |
           mkdir -p test-results
           set -o pipefail
+          (
+            sleep 180
+            for pid in $(pgrep -x 'swiftpm-testing|xctest' || true); do
+              sample "$pid" 5 -file "test-results/runner-$pid.sample.txt" || true
+            done
+          ) &
+          diagnostic_pid=$!
+          trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
           bundle exec fastlane review 2>&1 | tee test-results/review.log
       - name: Annotate test failures and summarize results
         if: always() && (steps.review.outcome == 'success' || steps.review.outcome == 'failure')
@@ -43,5 +52,6 @@ jobs:
           path: |
             test-results/*.xml
             test-results/review.log
+            test-results/*.sample.txt
           retention-days: 14
           if-no-files-found: error
