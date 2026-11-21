@@ -95,3 +95,18 @@ keyframe timing, settings updates, resizing, malformed packets, and lifecycle ch
 SwiftPM consumer importing only the public VPX API, without linking the HaishinKit core.
 
 The published libvpx 1.17.0 artifact includes embedded DWARF debug information in its static libraries. Retain the final app archive and matching app dSYM for symbolication.
+
+## Topics
+
+### Encoding and decoding
+
+- ``VPXVideoEncoder``
+- ``VPXVideoDecoder``
+
+### Configuration and failures
+
+- ``VPXVideoCodecSettings``
+- ``VPXVideoCodecSettings/Format``
+- ``VPXVideoCodecSettings/BitRateMode``
+- ``VPXVideoCodecSettings/ScalingMode``
+- ``VPXVideoCodecError``

@@ -18,6 +18,9 @@ public final class VPXVideoEncoder {
     private let width: Int
     private let height: Int
 
+    /// Creates an encoder and allocates its conversion buffers.
+    /// - Parameter settings: Output dimensions, codec, rate control, and scaling configuration.
+    /// - Throws: ``VPXVideoCodecError`` if settings are invalid or codec allocation fails.
     public init(settings: VPXVideoCodecSettings = .init()) throws {
         let codec = settings.format.identifier
         let size = settings.videoSize
@@ -67,7 +70,10 @@ public final class VPXVideoEncoder {
         invalidate()
     }
 
-    /// Updates bitrate/frame-rate hints. Recreate the encoder to change other settings.
+    /// Updates bitrate and expected frame-rate hints without recreating the codec.
+    /// - Parameter settings: The complete configuration. Only `bitRate` and `expectedFrameRate` may change.
+    /// - Throws: ``VPXVideoCodecError/invalidSettings`` for other changes, or
+    ///   ``VPXVideoCodecError/invalidSession`` after finishing or invalidation.
     public func update(_ settings: VPXVideoCodecSettings) throws {
         guard let context, !finished else { throw VPXVideoCodecError.invalidSession }
         guard settings.videoSize == self.settings.videoSize, settings.format == self.settings.format,
@@ -80,7 +86,17 @@ public final class VPXVideoEncoder {
         self.settings = settings
     }
 
-    /// Compresses a frame, copying every returned packet before libvpx reuses its memory.
+    /// Compresses an 8-bit image sample synchronously.
+    ///
+    /// Accepts NV12, planar YUV 4:2:0, BGRA, or ARGB. Input is scaled and converted to
+    /// video-range YUV 4:2:0. Presentation timestamps must be numeric, epoch zero,
+    /// and strictly increasing at microsecond precision. An invalid duration uses
+    /// the expected frame rate. Calls must be serialized with all other operations.
+    /// - Parameter sampleBuffer: An uncompressed image sample with a presentation timestamp.
+    /// - Returns: Owned raw VP8/VP9 packets, with timing and keyframe attachments.
+    ///   Packet storage remains valid after later calls or invalidation.
+    /// - Throws: ``VPXVideoCodecError`` for an unsupported image, invalid timestamp,
+    ///   inactive session, or a conversion/codec failure.
     public func encode(_ sampleBuffer: CMSampleBuffer) throws -> [CMSampleBuffer] {
         guard let context, !finished, let transfer, let pixelBuffer else { throw VPXVideoCodecError.invalidSession }
         guard let source = sampleBuffer.imageBuffer else { throw VPXVideoCodecError.unsupportedFormat }
@@ -122,7 +138,11 @@ public final class VPXVideoEncoder {
         return try packets()
     }
 
-    /// Drains the encoder. Further input requires a new encoder; repeated finish calls return no packets.
+    /// Drains pending packets and ends input for this encoder.
+    /// - Returns: Remaining owned packets. Repeated calls return an empty array.
+    /// - Throws: ``VPXVideoCodecError`` if invalidated or flushing fails.
+    ///
+    /// Create a new encoder to resume input. Call this before ``invalidate()`` to retain pending output.
     public func finish() throws -> [CMSampleBuffer] {
         guard let context else { throw VPXVideoCodecError.invalidSession }
         if finished { return [] }
@@ -161,6 +181,7 @@ public final class VPXVideoEncoder {
         return outputPackets
     }
 
+    /// Releases native resources. Repeated calls are safe; further encoding fails.
     public func invalidate() {
         hk_vpx_destroy(context)
         context = nil
@@ -187,127 +208,3 @@ public final class VPXVideoEncoder {
     }
 }
 
-/// A synchronous decoder. Returned frames own their pixel storage; calls must be serialized.
-public final class VPXVideoDecoder {
-    private var context: OpaquePointer?
-    private let format: VPXVideoCodecSettings.Format
-    private var pool: CVPixelBufferPool?
-    private var dimensions: (width: Int, height: Int, fullRange: Bool)?
-
-    public init(format: VPXVideoCodecSettings.Format) throws {
-        self.format = format
-        let codec = format.identifier
-        var status: Int32 = 0
-        context = hk_vpx_decoder_create(codec, &status)
-        guard context != nil else { throw VPXVideoCodecError.codec(status) }
-    }
-
-    deinit {
-        invalidate()
-    }
-
-    /// Decodes a raw VP8/VP9 packet carried in a matching Core Media sample buffer.
-    public func decode(_ sampleBuffer: CMSampleBuffer) throws -> [CMSampleBuffer] {
-        guard let context else { throw VPXVideoCodecError.invalidSession }
-        guard let description = sampleBuffer.formatDescription,
-              CMFormatDescriptionGetMediaType(description) == kCMMediaType_Video,
-              CMFormatDescriptionGetMediaSubType(description) == format.codecType,
-              sampleBuffer.presentationTimeStamp.isNumeric else { throw VPXVideoCodecError.unsupportedFormat }
-        guard let data = sampleBuffer.dataBuffer else { throw VPXVideoCodecError.unsupportedFormat }
-        let count = CMBlockBufferGetDataLength(data)
-        guard count > 0, count <= Int(UInt32.max) else { throw VPXVideoCodecError.unsupportedFormat }
-        var bytes = [UInt8](repeating: 0, count: count)
-        try bytes.withUnsafeMutableBytes { buffer in
-            guard let base = buffer.baseAddress else { throw VPXVideoCodecError.unsupportedFormat }
-            try checkStatus(CMBlockBufferCopyDataBytes(data, atOffset: 0, dataLength: count, destination: base))
-        }
-        try bytes.withUnsafeBufferPointer { buffer in
-            try checkCodec(hk_vpx_decoder_decode(context, buffer.baseAddress, UInt32(count)))
-        }
-        var frames: [CMSampleBuffer] = []
-        var image = HKVPXImage()
-        while true {
-            let result = hk_vpx_decoder_next_image(context, &image)
-            guard result != 0 else { return frames }
-            guard result > 0 else { throw VPXVideoCodecError.unsupportedFormat }
-            let pixelBuffer = try makePixelBuffer(image)
-            var format: CMFormatDescription?
-            try checkStatus(CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &format))
-            guard let format else { throw VPXVideoCodecError.unsupportedFormat }
-            var timing = CMSampleTimingInfo(duration: sampleBuffer.duration, presentationTimeStamp: sampleBuffer.presentationTimeStamp, decodeTimeStamp: .invalid)
-            var output: CMSampleBuffer?
-            try checkStatus(CMSampleBufferCreateReadyWithImageBuffer(
-                allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer,
-                formatDescription: format, sampleTiming: &timing, sampleBufferOut: &output
-            ))
-            guard let output else { throw VPXVideoCodecError.unsupportedFormat }
-            frames.append(output)
-        }
-    }
-
-    public func invalidate() {
-        hk_vpx_destroy(context)
-        context = nil
-        pool = nil
-        dimensions = nil
-    }
-
-    private func makePixelBuffer(_ image: HKVPXImage) throws -> CVPixelBuffer {
-        let width = Int(image.width)
-        let height = Int(image.height)
-        let fullRange = image.full_range != 0
-        guard width > 0, height > 0, let sourceY = image.y, let sourceU = image.u, let sourceV = image.v else {
-            throw VPXVideoCodecError.unsupportedFormat
-        }
-        if dimensions?.width != width || dimensions?.height != height || dimensions?.fullRange != fullRange {
-            let attributes: [CFString: Any] = [
-                kCVPixelBufferWidthKey: width, kCVPixelBufferHeightKey: height,
-                kCVPixelBufferPixelFormatTypeKey: fullRange ? kCVPixelFormatType_420YpCbCr8BiPlanarFullRange : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
-                kCVPixelBufferIOSurfacePropertiesKey: [:], kCVPixelBufferMetalCompatibilityKey: true
-            ]
-            try checkStatus(CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attributes as CFDictionary, &pool))
-            dimensions = (width, height, fullRange)
-        }
-        guard let pool else { throw VPXVideoCodecError.unsupportedFormat }
-        var output: CVPixelBuffer?
-        try checkStatus(CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &output))
-        guard let output else { throw VPXVideoCodecError.unsupportedFormat }
-        try checkStatus(CVPixelBufferLockBaseAddress(output, []))
-        defer { CVPixelBufferUnlockBaseAddress(output, []) }
-        guard let y = CVPixelBufferGetBaseAddressOfPlane(output, 0)?.assumingMemoryBound(to: UInt8.self),
-              let uv = CVPixelBufferGetBaseAddressOfPlane(output, 1)?.assumingMemoryBound(to: UInt8.self) else {
-            throw VPXVideoCodecError.unsupportedFormat
-        }
-        for row in 0..<height {
-            memcpy(y.advanced(by: row * CVPixelBufferGetBytesPerRowOfPlane(output, 0)), sourceY.advanced(by: row * Int(image.y_stride)), width)
-        }
-        for row in 0..<(height + 1) / 2 {
-            let destination = uv.advanced(by: row * CVPixelBufferGetBytesPerRowOfPlane(output, 1))
-            for col in 0..<(width + 1) / 2 {
-                destination[col * 2] = sourceU[row * Int(image.u_stride) + col]
-                destination[col * 2 + 1] = sourceV[row * Int(image.v_stride) + col]
-            }
-        }
-        return output
-    }
-}
-
-private func checkStatus(_ status: OSStatus) throws {
-    guard status == noErr else { throw VPXVideoCodecError.coreMedia(status) }
-}
-
-private func checkCodec(_ status: Int32) throws {
-    guard status == 0 else { throw VPXVideoCodecError.codec(status) }
-}
-
-private func makeBlockBuffer(_ data: Data) -> CMBlockBuffer? {
-    var block: CMBlockBuffer?
-    guard CMBlockBufferCreateWithMemoryBlock(allocator: kCFAllocatorDefault, memoryBlock: nil,
-        blockLength: data.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0,
-        dataLength: data.count, flags: 0, blockBufferOut: &block) == noErr, let block else { return nil }
-    let status = data.withUnsafeBytes { bytes -> OSStatus in
-        guard let base = bytes.baseAddress else { return kCMBlockBufferBadLengthParameterErr }
-        return CMBlockBufferReplaceDataBytes(with: base, blockBuffer: block, offsetIntoDestination: 0, dataLength: data.count)
-    }
-    return status == noErr ? block : nil
-}
