@@ -28,6 +28,9 @@ jobs:
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SWIFT_BACKTRACE: interactive=no
+          NSUnbufferedIO: 'YES'
+          # Catch blocking calls that would exhaust Swift's cooperative executor.
+          LIBDISPATCH_COOPERATIVE_POOL_STRICT: '1'
         run: |
           mkdir -p test-results
           set -o pipefail

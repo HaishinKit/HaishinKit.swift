@@ -32,7 +32,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/HaishinKit/libvpx-xcframework.git", from: "1.17.0"),
-        .package(url: "https://github.com/HaishinKit/libdatachannel-xcframework.git", from: "0.24.6"),
+        .package(url: "https://github.com/HaishinKit/libdatachannel-xcframework.git", from: "0.24.7"),
         .package(url: "https://github.com/HaishinKit/libsrt-xcframework.git", from: "1.5.7"),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.5"),
         .package(url: "https://github.com/shogo4405/Logboard.git", "2.6.0"..<"2.7.0")

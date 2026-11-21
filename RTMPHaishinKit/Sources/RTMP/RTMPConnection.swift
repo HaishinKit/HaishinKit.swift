@@ -238,6 +238,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         }
     }
     private var operations: [Int: CheckedContinuation<RTMPResponse, any Swift.Error>] = [:]
+    private var isClosing = false
     private var inputBuffer = RTMPChunkBuffer()
     private var windowSizeC = RTMPConnection.defaultWindowSizeS {
         didSet {
@@ -325,6 +326,9 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Creates a two-way connection to an application on RTMP Server.
     public func connect(_ command: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        guard !isClosing else {
+            throw Error.invalidState
+        }
         guard !connected else {
             throw Error.invalidState
         }
@@ -362,10 +366,14 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                         handshakeStartedAt = await socket.send(handshake.c0c1packet)
                         operations[Self.connectTransactionId] = continutation
                         for await (data, receivedAt) in await socket.recv() {
+                            guard self.socket === socket else { return }
                             try await listen(data, receivedAt: receivedAt)
                         }
+                        // An old receive loop can finish after a reconnect has replaced its socket.
+                        guard self.socket === socket else { return }
                         try? await close()
                     } catch {
+                        guard self.socket === socket else { return }
                         try? await close()
                     }
                 }
@@ -417,9 +425,11 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Closes the connection from the server.
     public func close() async throws {
-        guard readyState != .uninitialized else {
+        guard readyState != .uninitialized, !isClosing else {
             throw Error.invalidState
         }
+        isClosing = true
+        defer { isClosing = false }
 
         uri = nil
         for stream in streams {

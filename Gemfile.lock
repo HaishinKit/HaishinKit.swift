@@ -295,9 +295,9 @@ GEM
     logger (1.7.0)
     mini_magick (4.13.2)
     mini_mime (1.1.5)
-    minitest (6.0.6)
+    minitest (6.1.0)
       drb (~> 2.0)
-      prism (~> 1.5)
+      prism (>= 1.5, < 3)
     molinillo (0.8.0)
     multi_json (1.21.2)
     multipart-post (2.4.1)
@@ -327,7 +327,15 @@ GEM
     pp (0.6.4)
       prettyprint
     prettyprint (0.2.0)
-    prism (1.9.0)
+    prism (2.1.0)
+    prism (2.1.0-aarch64-linux-gnu)
+    prism (2.1.0-aarch64-linux-musl)
+    prism (2.1.0-arm-linux-gnu)
+    prism (2.1.0-arm-linux-musl)
+    prism (2.1.0-arm64-darwin)
+    prism (2.1.0-x86_64-darwin)
+    prism (2.1.0-x86_64-linux-gnu)
+    prism (2.1.0-x86_64-linux-musl)
     process_executer (4.1.1)
       track_open_instances (~> 0.1)
     pstore (0.3.0)
@@ -366,9 +374,11 @@ GEM
       rubocop-ast (>= 1.49.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
-    rubocop-ast (1.50.0)
+    rubocop-ast (1.52.0)
+      ast (~> 2.4)
       parser (>= 3.3.7.2)
-      prism (~> 1.7)
+      prism (>= 1.7)
+      racc
     ruby-macho (4.1.0)
     ruby-progressbar (1.13.0)
     rubyzip (3.7.0)
@@ -438,7 +448,7 @@ DEPENDENCIES
   danger
   danger-privacymanifest!
   fastlane (~> 2.241, >= 2.241.2)
-  minitest (~> 6.0)
+  minitest (~> 6.1)
   rexml (~> 3.4)
   rubocop
 

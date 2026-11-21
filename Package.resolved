@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/HaishinKit/libdatachannel-xcframework.git",
       "state" : {
-        "revision" : "d411057e4f2c78f359c443d3912d16e6a1b126b8",
-        "version" : "0.24.6"
+        "revision" : "689dd3fc4a1fe7b4ce900e61f2b319e3e750dfe8",
+        "version" : "0.24.7"
       }
     },
     {
