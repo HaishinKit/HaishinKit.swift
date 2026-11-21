@@ -2,6 +2,15 @@
   "originHash" : "99f823374457b38068edbcf1df23335d3fd2983ba7ac067cf72e830df0973239",
   "pins" : [
     {
+      "identity" : "libaom-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/HaishinKit/libaom-xcframework.git",
+      "state" : {
+        "revision" : "2646d382326772cd9e1ffb11c7bc7fb079395bf0",
+        "version" : "3.15.3"
+      }
+    },
+    {
       "identity" : "libdatachannel-xcframework",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/HaishinKit/libdatachannel-xcframework.git",
