@@ -8,9 +8,12 @@ for that version.
 
 To add the app to an existing release, run the Release workflow manually with
 its exact tag as `version`. The selected workflow revision must contain this
-workflow, and the tag must contain the `macos_example` Fastlane lane and the
-example workspace. Documentation publication runs independently in the same
-workflow.
+workflow, and the tag must contain the updated `macos_example` lane that signs
+and verifies `arm64-adhoc.zip`, plus the example workspace. Tags with only the
+older unsigned lane cannot produce an ad-hoc archive through this workflow;
+use that tag's workflow revision if you need its legacy unsigned package.
+The workflow checks for the ad-hoc archive before creating or updating a
+GitHub Release. Documentation publication runs independently in the same workflow.
 
 The app supports Apple Silicon Macs with macOS 15.5 or later.
 It is ad-hoc signed, without Developer ID signing or notarization. macOS Gatekeeper may block the downloaded

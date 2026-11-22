@@ -50,13 +50,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
+          archive="build/macos-example/$RELEASE_VERSION/HaishinKit-macOS-$RELEASE_VERSION-arm64-adhoc.zip"
+          if [[ ! -f "$archive" ]]; then
+            echo 'Missing verified ad-hoc archive. The release tag must include the updated macos_example signing lane.' >&2
+            exit 1
+          fi
           if ! gh release view "$RELEASE_VERSION" > /dev/null 2>&1; then
             gh release create "$RELEASE_VERSION" --verify-tag --draft \
               --title "$RELEASE_VERSION" \
               --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is ad-hoc signed, without Developer ID signing or notarization; macOS may block it from opening. See .github/macos-release.md for details.'
           fi
-          gh release upload "$RELEASE_VERSION" \
-            "build/macos-example/$RELEASE_VERSION/HaishinKit-macOS-$RELEASE_VERSION-arm64-adhoc.zip" --clobber
+          gh release upload "$RELEASE_VERSION" "$archive" --clobber
   build:
     runs-on: macos-26
     env:
