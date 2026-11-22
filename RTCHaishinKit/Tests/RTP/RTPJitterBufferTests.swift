@@ -106,6 +106,10 @@ import Testing
         buffer.append(Self.packet(10002), now: 90)
         buffer.append(Self.packet(10003), now: 90)
         #expect(result.sequences == [1000, 41002, 41003, 41004, 41005])
+        for sequence: UInt16 in [10004, 10005, 10006, 10007] {
+            buffer.append(Self.packet(sequence), now: 91)
+        }
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005, 10004, 10005, 10006, 10007])
     }
 
     @Test func lostPacket()
