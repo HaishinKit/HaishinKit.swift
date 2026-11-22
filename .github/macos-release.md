@@ -1,22 +1,30 @@
 # macOS example releases
 
 Pushing a release tag such as `2.2.0` runs the Release workflow and attaches
-`HaishinKit-macOS-<version>-arm64-unsigned.zip` to the matching GitHub Release.
+`HaishinKit-macOS-<version>-arm64-adhoc.zip` to the matching GitHub Release.
 If the release does not exist, the workflow creates a draft for review and manual
 publication. Existing release notes are preserved. Rerunning replaces the ZIP
 for that version.
 
 To add the app to an existing release, run the Release workflow manually with
 its exact tag as `version`. The selected workflow revision must contain this
-workflow, and the tag must contain the `macos_example` Fastlane lane and the
-example workspace. Documentation publication runs independently in the same
-workflow.
+workflow, and the tag must contain the updated `macos_example` lane that signs
+and verifies `arm64-adhoc.zip`, plus the example workspace. Tags with only the
+older unsigned lane cannot produce an ad-hoc archive through this workflow;
+use that tag's workflow revision if you need its legacy unsigned package.
+The workflow checks for the ad-hoc archive before creating or updating a
+GitHub Release. Documentation publication runs independently in the same workflow.
 
 The app supports Apple Silicon Macs with macOS 15.5 or later.
-It is unsigned and not notarized. macOS Gatekeeper may block the downloaded
+It is ad-hoc signed, without Developer ID signing or notarization. macOS Gatekeeper may block the downloaded
 app. Only open a download you trust; if macOS permits an exception, use
 System Settings → Privacy & Security → Open Anyway after attempting to open it.
 Managed Macs may prohibit exceptions.
+
+Before creating the ZIP, Fastlane signs the app and its nested code ad hoc and
+verifies the complete bundle. It then extracts the ZIP into a temporary directory
+and verifies the distributed app again. A signing or verification failure stops
+the workflow before upload. No Apple certificate is needed for ad-hoc signing.
 
 To build locally with Xcode and the repository's Ruby/Bundler dependencies:
 
