@@ -31,6 +31,26 @@ microphone access must be granted before their capture devices are opened.
 **Stop sharing · Use camera** restores authorized camera capture. Sharing stops
 when the publishing view closes.
 
+## Edit scenes and screen objects
+
+The **Scenes** list stores independent 1280 × 720 compositions. Its action menu
+creates, duplicates, or deletes a scene; enter a name and press Return to rename
+it. Selecting another scene changes the preview and the outgoing composition.
+Scenes and their layouts are restored the next time the app opens.
+
+Use **Objects → Add** for capture input, text, an image, or a video file. Capture
+input uses the current camera or ScreenCaptureKit source on mixer track 0.
+Imported files are copied into the app's Application Support `HaishinKit/SceneMedia`
+directory so moving the original file does not break the scene. Video objects
+loop without supplying audio; microphone settings still control capture audio.
+
+Select an object in the list or preview. Drag it to move, scroll or use the
+preview's plus/minus controls to resize, and use **Object inspector** for its
+name, position, dimensions, text, font size, and color. Press Return or Apply
+to commit inspector edits. The top object in the list is drawn in front; use
+the arrows to change its order, the eye to hide it, and the duplicate or trash
+buttons to copy or remove it. The last scene cannot be deleted.
+
 ## Receive SRT on the local network
 
 In **Playback**, enter a receive port and choose **Listen for SRT sender**.

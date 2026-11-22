@@ -54,9 +54,8 @@ struct PublishView: View {
                     Spacer()
                     SessionStatus(state: model.readyState, busy: model.isBusy, publishing: true)
                 }
-                ScreenObjectEditingPreview(mixer: model.mixer, gravity: .resizeAspect) {
-                    MTHKViewRepresentable(previewSource: model)
-                }
+                StudioEditingPreview(source: model, editor: model.sceneEditor)
+                .frame(minHeight: 160)
                 .background(.black)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
@@ -67,8 +66,7 @@ struct PublishView: View {
                         .monospacedDigit()
                 }.font(.callout).foregroundStyle(.secondary)
                 PublishMetricsPanel(model: model)
-                Text("Select an overlay in the preview to move or resize it.")
-                    .font(.callout).foregroundStyle(.secondary)
+                SceneEditorView(model: model.sceneEditor)
             }
             .padding(24)
             .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -79,6 +77,7 @@ struct PublishView: View {
                         StudioSection(title: "Destination", subtitle: "Where your broadcast goes") {
                             ConnectionFields().disabled(locked)
                         }
+                        SceneObjectInspector(model: model.sceneEditor)
                         ScreenSourceControls(source: model.screenCapture).disabled(model.captureIsStarting)
                         if AVCaptureDevice.authorizationStatus(for: .video) != .authorized {
                             Button("Request camera access") { model.requestCameraAccess(preference) }

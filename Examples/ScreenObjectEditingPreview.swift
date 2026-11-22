@@ -217,7 +217,13 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
     private let onSwipe: (CGFloat) -> Void
     private let preview: Preview
 
-    @State private var focus: String?
+    private let externalSelection: Binding<String?>?
+    private let usesInspector: Bool
+    @State private var localFocus: String?
+    private var focus: String? {
+        get { if let externalSelection { return externalSelection.wrappedValue }; return localFocus }
+        nonmutating set { if let externalSelection { externalSelection.wrappedValue = newValue } else { localFocus = newValue } }
+    }
     @State private var selection: PreviewSelection?
     @State private var inputTask: Task<Void, Never>?
     @State private var insertionPoint: CGPoint?
@@ -232,11 +238,15 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
         mixer: MediaMixer,
         gravity: AVLayerVideoGravity,
         onSwipe: @escaping (CGFloat) -> Void = { _ in },
+        selection: Binding<String?>? = nil,
+        usesInspector: Bool = false,
         @ViewBuilder preview: () -> Preview
     ) {
         _editor = State(initialValue: PreviewSceneEditor(mixer: mixer))
         self.gravity = gravity
         self.onSwipe = onSwipe
+        self.externalSelection = selection
+        self.usesInspector = usesInspector
         self.preview = preview()
     }
 
@@ -253,11 +263,11 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
                             break
                         case .add(let position):
                             insertionPoint = position
-                            showAddMenu = true
+                            showAddMenu = !usesInspector
                         case .edit(let id, let value):
                             editingID = id
                             text = value
-                            showEditor = true
+                            showEditor = !usesInspector
                         case .swipe(let distance):
                             onSwipe(distance)
                         }
