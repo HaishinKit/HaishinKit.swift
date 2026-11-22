@@ -4,6 +4,10 @@ import HaishinKit
 ///
 /// These values are applied when the session creates its `RTCPeerConnection`.
 public struct HTTPSessionConfiguration: StreamSessionConfiguration, RTCConfigurationConvertible {
+    /// Creates default settings that can be customized before building a session.
+    public init() {
+    }
+
     /// The ICE server URLs used to establish the connection.
     public var iceServers: [String] = []
     /// The local IP address to bind to, or `nil` to leave address selection to the library.

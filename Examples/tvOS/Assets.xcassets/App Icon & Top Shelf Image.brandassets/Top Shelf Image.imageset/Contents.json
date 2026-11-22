@@ -1,10 +1,12 @@
 {
   "images" : [
     {
+      "filename" : "HaishinKit-1x.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
+      "filename" : "HaishinKit-2x.png",
       "idiom" : "tv",
       "scale" : "2x"
     }
