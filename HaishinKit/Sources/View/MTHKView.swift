@@ -10,6 +10,9 @@ public class MTHKView: MTKView {
     public var videoTrackId: UInt8? = UInt8.max
     public var audioTrackId: UInt8?
     private var displayImage: CIImage?
+    private var isHDR = false
+    private var isHLG = false
+    private var outputColorSpace: CGColorSpace?
     private lazy var commandQueue: (any MTLCommandQueue)? = {
         return device?.makeCommandQueue()
     }()
@@ -35,7 +38,7 @@ public class MTHKView: MTKView {
             framebufferOnly = false
             enableSetNeedsDisplay = true
             if let device {
-                context = CIContext(mtlDevice: device, options: [.cacheIntermediates: false, .name: "MTHKView"])
+                context = CIContext(mtlDevice: device, options: [.cacheIntermediates: false, .name: "MTHKView", .workingFormat: CIFormat.RGBAh.rawValue])
             }
         }
     }
@@ -101,6 +104,9 @@ public class MTHKView: MTKView {
                 return currentDrawable.texture
             })
 
+        if let outputColorSpace {
+            destination.colorSpace = outputColorSpace
+        }
         _ = try? context.startTask(toRender: scaledImage, to: destination)
 
         commandBuffer.present(currentDrawable)
@@ -124,6 +130,28 @@ public class MTHKView: MTKView {
         }
         return false
     }
+
+    func updateDynamicRange(_ sampleBuffer: CMSampleBuffer) {
+        let isHDR = sampleBuffer.formatDescription?.isHDR == true
+        let isHLG = sampleBuffer.formatDescription.map {
+            CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String == kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String
+        } ?? false
+        guard self.isHDR != isHDR || self.isHLG != isHLG else {
+            return
+        }
+        self.isHDR = isHDR
+        self.isHLG = isHLG
+        #if !os(tvOS)
+        if #available(iOS 16.0, macOS 12.0, *) {
+            let metalLayer = layer as? CAMetalLayer
+            colorPixelFormat = isHDR ? .rgba16Float : .bgra8Unorm
+            outputColorSpace = CGColorSpace(name: isHDR ? CGColorSpace.extendedLinearITUR_2020 : CGColorSpace.sRGB)
+            metalLayer?.colorspace = outputColorSpace
+            metalLayer?.wantsExtendedDynamicRangeContent = isHDR
+            metalLayer?.edrMetadata = isHLG ? .hlg : nil
+        }
+        #endif
+    }
 }
 
 extension MTHKView: MediaMixerOutput {
@@ -144,6 +172,7 @@ extension MTHKView: MediaMixerOutput {
 
     nonisolated public func mixer(_ mixer: MediaMixer, didOutput sampleBuffer: CMSampleBuffer) {
         Task { @MainActor in
+            updateDynamicRange(sampleBuffer)
             displayImage = try? sampleBuffer.imageBuffer?.makeCIImage()
             #if os(macOS)
             self.needsDisplay = true
@@ -161,6 +190,7 @@ extension MTHKView: StreamOutput {
 
     nonisolated public func stream(_ stream: some StreamConvertible, didOutput video: CMSampleBuffer) {
         Task { @MainActor in
+            updateDynamicRange(video)
             displayImage = try? video.imageBuffer?.makeCIImage()
             #if os(macOS)
             self.needsDisplay = true

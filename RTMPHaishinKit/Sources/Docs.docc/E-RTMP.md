@@ -8,6 +8,29 @@ Please check [this repository](https://github.com/veovera/enhanced-rtmp/) for th
 ## Notice
 Enhanced RTMP also requires support on the server side. Please check the support status of the server you are using.
 
+## HDR with HEVC and HLG
+
+To publish the mixer's 10-bit BT.2100 HLG output, configure both the mixer and the encoder before publishing:
+
+```swift
+import HaishinKit
+import RTMPHaishinKit
+import VideoToolbox
+
+try await mixer.setDynamicRangeMode(.hdr)
+var settings = await stream.videoSettings
+settings.profileLevel = kVTProfileLevel_HEVC_Main10_AutoLevel as String
+try await stream.setVideoSettings(settings)
+```
+
+The capture device must support the requested HDR format. The server must accept Enhanced RTMP HEVC and preserve the HEVC configuration and video data.
+
+HLG color information is carried in the HEVC bitstream. Publishing preserves the source color primaries, transfer function, and YCbCr matrix. Playback reads this information from the HEVC sequence header and decodes HDR video to 10-bit pixel buffers; no receiver-side encoder settings are needed.
+
+Use `PiPHKView` for system-managed video display. `MTHKView` automatically enables floating-point EDR output for HDR video on iOS 16 or later and macOS; HDR brightness requires a compatible display. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
+
+This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
+
 ## Supports Enhanced RTMP Status
 ### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
 Support for AV1 is planned to be implemented once the hardware becomes compatible.
