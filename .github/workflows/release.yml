@@ -42,7 +42,7 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-      - name: Build unsigned Apple Silicon macOS example
+      - name: Build and verify ad-hoc signed Apple Silicon macOS example
         run: bundle exec fastlane macos_example "version:$RELEASE_VERSION"
       - name: Upload macOS example to GitHub Release
         env:
@@ -53,10 +53,10 @@ jobs:
           if ! gh release view "$RELEASE_VERSION" > /dev/null 2>&1; then
             gh release create "$RELEASE_VERSION" --verify-tag --draft \
               --title "$RELEASE_VERSION" \
-              --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is unsigned and not notarized; macOS may block it from opening. See .github/macos-release.md for details.'
+              --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is ad-hoc signed, without Developer ID signing or notarization; macOS may block it from opening. See .github/macos-release.md for details.'
           fi
           gh release upload "$RELEASE_VERSION" \
-            "build/macos-example/$RELEASE_VERSION/HaishinKit-macOS-$RELEASE_VERSION-arm64-unsigned.zip" --clobber
+            "build/macos-example/$RELEASE_VERSION/HaishinKit-macOS-$RELEASE_VERSION-arm64-adhoc.zip" --clobber
   build:
     runs-on: macos-26
     env:
