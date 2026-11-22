@@ -10,6 +10,7 @@ public struct SceneFile: Sendable {
     public let resources: [String: Data]
 
     public init(snapshot: ScreenObjectSnapshot, resources: [String: Data] = [:]) throws {
+        guard Set(resources.keys.map { $0.precomposedStringWithCanonicalMapping.lowercased() }).count == resources.count else { throw Error.invalidResource }
         guard resources.count <= 256, resources.keys.allSatisfy(Self.isResourceName) else { throw Error.invalidResource }
         guard resources.values.reduce(0, { $0 + $1.count }) <= Self.maximumResourceBytes else { throw Error.sizeLimitExceeded }
         func portable(_ node: ScreenObjectSnapshot) -> ScreenObjectSnapshot {

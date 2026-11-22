@@ -36,7 +36,7 @@ when the publishing view closes.
 The **Scenes** list stores independent compositions. Its action menu
 creates, duplicates, or deletes a scene; enter a name and press Return to rename
 it. Selecting another scene changes the preview and the outgoing composition.
-Scenes and their layouts are restored the next time the app opens.
+Scenes and their layouts are restored the next time the app opens. Edits in another\nwindow are detected before saving; reopen Publish to load the current version if a\nconflict is reported. Editing the current scene keeps existing video playback running.
 
 Use **Objects → Add** for capture input, text, an image, or a video file. Capture
 input uses the current camera or ScreenCaptureKit source on mixer track 0.

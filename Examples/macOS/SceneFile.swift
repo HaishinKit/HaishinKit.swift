@@ -60,7 +60,8 @@ struct SceneFileDocument: FileDocument, Sendable {
     }
 
     static func validate(_ root: ScreenObjectSnapshot, resources: [String: Data], allowMissingResources: Bool = false) throws {
-        guard resources.keys.allSatisfy(safeFilename), resources.count <= 256,
+        guard Set(resources.keys.map { $0.precomposedStringWithCanonicalMapping.lowercased() }).count == resources.count,
+            resources.keys.allSatisfy(safeFilename), resources.count <= 256,
             resources.values.reduce(0, { $0 + $1.count }) <= SceneFile.maximumResourceBytes
         else {
             throw SceneFileError(message: "Scene resources are invalid or exceed 128 MB.")
@@ -130,6 +131,7 @@ enum SceneSnapshotCodec {
         case .group: type = "container"
         case .unsupported: type = basis?.type ?? "unsupported"
         }
+        if layer.kind == .unsupported, let basis { return basis }
         var elements = basis?.elements ?? [:]
         elements["name"] = layer.name
         switch layer.kind {
@@ -182,7 +184,7 @@ enum SceneSnapshotCodec {
                 height: Double(node.size.height),
                 visible: node.isVisible, text: node.elements["value"] ?? "", fontSize: Double(node.elements["fontSize"] ?? "32") ?? 32,
                 color: node.elements["color"] ?? "#FFFFFFFF",
-                media: (node.elements["source"] ?? "").hasPrefix("media/")
+                media: [.image, .video].contains(kind) && (node.elements["source"] ?? "").hasPrefix("media/")
                     ? try SceneFileDocument.mediaName(node.elements["source"] ?? "") : nil,
                 snapshotData: try encode(node), absoluteLayout: false)
         }
@@ -237,15 +239,6 @@ enum SceneFileRepository {
     static func url(id: String, directory: URL) -> URL { directory.appendingPathComponent(key(id)).appendingPathExtension("json") }
     static func mediaURL(id: String, root: URL) -> URL { root.appendingPathComponent(key(id), isDirectory: true) }
 
-    static func save(_ scenes: [StudioScene], directory: URL, mediaDirectory: URL) throws {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for scene in scenes {
-            let json = try SceneSnapshotCodec.encode(SceneSnapshotCodec.snapshot(scene))
-            let target = url(id: scene.id, directory: directory)
-            if (try? Data(contentsOf: target)) != json { try json.write(to: target, options: .atomic) }
-        }
-    }
-
     static func resources(id: String, mediaDirectory: URL, names: Set<String>? = nil) throws -> [String: Data] {
         let directory = mediaURL(id: id, root: mediaDirectory)
         guard FileManager.default.fileExists(atPath: directory.path) else { return [:] }
@@ -267,18 +260,17 @@ enum SceneFileRepository {
                 names: SceneSnapshotCodec.containsUnsupported(snapshot) ? nil : SceneSnapshotCodec.sources(snapshot)))
     }
 
-    static func readSaved(_ url: URL, mediaDirectory: URL) throws -> StudioScene {
-        let snapshot = try JSONDecoder().decode(ScreenObjectSnapshot.self, from: Data(contentsOf: url))
-        try SceneFileDocument.validate(snapshot, resources: [:], allowMissingResources: true)
-        return try SceneSnapshotCodec.scene(snapshot)
-    }
-
     static func materialize(_ document: SceneFileDocument, mediaDirectory: URL, id: String? = nil) throws -> StudioScene {
         var scene = try SceneSnapshotCodec.scene(document.snapshot)
         if let id { scene.id = id }
         let directory = mediaURL(id: scene.id, root: mediaDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for (name, data) in document.resources { try data.write(to: directory.appendingPathComponent(name), options: .atomic) }
+        do {
+            for (name, data) in document.resources { try data.write(to: directory.appendingPathComponent(name), options: .atomic) }
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
         return scene
     }
 
@@ -286,5 +278,55 @@ enum SceneFileRepository {
         let source = mediaURL(id: sourceID, root: root)
         let destination = mediaURL(id: destinationID, root: root)
         if FileManager.default.fileExists(atPath: source.path) { try FileManager.default.copyItem(at: source, to: destination) }
+    }
+}
+
+/// Serializes in-process writers and rejects stale edits instead of overwriting another window.
+final class SceneSaveSession: @unchecked Sendable {
+    private static let lock = NSLock()
+    private var diskVersions: [URL: Data] = [:]
+    private var snapshots: [URL: Data] = [:]
+
+    func read(_ url: URL, mediaDirectory: URL) throws -> StudioScene {
+        try Self.lock.withLock {
+            let data = try Data(contentsOf: url)
+            let snapshot = try JSONDecoder().decode(ScreenObjectSnapshot.self, from: data)
+            try SceneFileDocument.validate(snapshot, resources: [:], allowMissingResources: true)
+            let scene = try SceneSnapshotCodec.scene(snapshot)
+            diskVersions[url] = data
+            snapshots[url] = try SceneSnapshotCodec.encode(SceneSnapshotCodec.snapshot(scene))
+            return scene
+        }
+    }
+
+    func save(_ scenes: [StudioScene], directory: URL) throws {
+        try Self.lock.withLock {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            for scene in scenes {
+                let url = SceneFileRepository.url(id: scene.id, directory: directory)
+                let data = try SceneSnapshotCodec.encode(SceneSnapshotCodec.snapshot(scene))
+                guard snapshots[url] != data else { continue }
+                guard (try? Data(contentsOf: url)) == diskVersions[url] else {
+                    throw SceneFileError(message: "This scene was changed or deleted in another window. Reopen Publish before editing it.")
+                }
+                try data.write(to: url, options: .atomic)
+                diskVersions[url] = data
+                snapshots[url] = data
+            }
+        }
+    }
+
+    func delete(id: String, directory: URL, mediaDirectory: URL) throws {
+        try Self.lock.withLock {
+            let url = SceneFileRepository.url(id: id, directory: directory)
+            guard (try? Data(contentsOf: url)) == diskVersions[url] else {
+                throw SceneFileError(message: "This scene was changed in another window. Reopen Publish before deleting it.")
+            }
+            if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+            let media = SceneFileRepository.mediaURL(id: id, root: mediaDirectory)
+            if FileManager.default.fileExists(atPath: media.path) { try FileManager.default.removeItem(at: media) }
+            diskVersions[url] = nil
+            snapshots[url] = nil
+        }
     }
 }

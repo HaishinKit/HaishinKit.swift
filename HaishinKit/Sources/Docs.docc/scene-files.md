@@ -12,7 +12,7 @@ A `.haishinscene` file is a regular ZIP containing:
 
 Readers accept ZIP STORE and DEFLATE entries, including Java ZIP data descriptors.
 They also accept standalone snapshot JSON when no external media is needed.
-Resource names are flat filenames; absolute paths and traversal are rejected.
+Resource names are flat filenames, unique after Unicode normalization and case folding; absolute paths and traversal are rejected.
 The limits are 128 MiB of resources, 256 resources, and 4 MiB of snapshot JSON.
 
 The snapshot retains `type`, `id`, `size`, `isVisible`, `layoutMargin`, horizontal

@@ -59,7 +59,7 @@ struct ContentView: View {
         } detail: {
             switch selection ?? .playback {
             case .playback: PlaybackView()
-            case .publish: PublishView(sceneOpenRequest: sceneOpenRequest)
+            case .publish: PublishView(sceneOpenRequest: $sceneOpenRequest)
             case .settings: MacSettingsView()
             case .debug: DebugView(appearance: $appearance)
             }

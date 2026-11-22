@@ -38,7 +38,11 @@ enum VideoEffectItem: String, CaseIterable, Identifiable, Sendable {
 }
 
 struct PublishView: View {
-    var sceneOpenRequest: SceneOpenRequest? = nil
+    @Binding var sceneOpenRequest: SceneOpenRequest?
+
+    init(sceneOpenRequest: Binding<SceneOpenRequest?> = .constant(nil)) {
+        _sceneOpenRequest = sceneOpenRequest
+    }
     @EnvironmentObject private var preference: PreferenceViewModel
     @StateObject private var model = PublishViewModel()
 
@@ -139,7 +143,10 @@ struct PublishView: View {
         .onAppear { model.startRunning(preference) }
         .onDisappear { model.stopRunning() }
         .task(id: sceneOpenRequest?.id) {
-            if let request = sceneOpenRequest { await model.openSceneFileWhenReady(request.url) }
+            if let request = sceneOpenRequest {
+                await model.openSceneFileWhenReady(request.url)
+                if !Task.isCancelled, sceneOpenRequest?.id == request.id { sceneOpenRequest = nil }
+            }
         }
         .onChange(of: model.currentFPS) { _, value in model.setFrameRate(value.frameRate) }
         .onChange(of: model.visualEffectItem) { _, value in model.setVisualEffet(value) }

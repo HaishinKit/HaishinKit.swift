@@ -68,8 +68,10 @@ private final class StudioSceneRenderer {
     private var effect: VideoEffectItem = .none
     private var effects: [String: VideoEffect] = [:]
     private var sceneVisible = true
+    private var installedSceneID: String?
 
     func install(_ scene: StudioScene, mediaDirectory: URL) async throws {
+        try SceneFileDocument.validate(SceneSnapshotCodec.snapshot(scene), resources: [:], allowMissingResources: true)
         let screen = mixer.screen
         let assets = SceneFileRepository.mediaURL(id: scene.id, root: mediaDirectory)
         let targetVisible = scene.rootVisible ?? true
@@ -85,6 +87,11 @@ private final class StudioSceneRenderer {
                         elements["source"] = assets.appendingPathComponent(filename).absoluteString
                     }
                     return elements
+                }
+                if installedSceneID == scene.id, let existing = objects[layer.id] {
+                    replacement[layer.id] = existing
+                    for node in Self.nodes(resolved) { replacementEffects[node.id] = effects[node.id] }
+                    continue
                 }
                 guard let object = ScreenObjectFactory().make(resolved) else {
                     throw SceneFileError(message: "Unsupported screen object: \(raw.type)")
@@ -114,12 +121,14 @@ private final class StudioSceneRenderer {
                 object.isVisible = targetVisible && layer.visible && layer.kind != .unsupported
             }
         } catch {
-            replacement.values.forEach { Self.stopAssets($0, snapshot: ScreenObjectSnapshotFactory().make($0)) }
+            for (id, object) in replacement where objects[id] !== object {
+                Self.stopAssets(object, snapshot: ScreenObjectSnapshotFactory().make(object))
+            }
             throw error
         }
         // Replace the scene in one rendering-actor turn, after every source is ready.
-        for object in objects.values {
-            Self.stopAssets(object, snapshot: ScreenObjectSnapshotFactory().make(object))
+        for (id, object) in objects {
+            if replacement[id] !== object { Self.stopAssets(object, snapshot: ScreenObjectSnapshotFactory().make(object)) }
             screen.removeChild(object)
         }
         let snapshot = ScreenObjectSnapshotFactory().make(screen)
@@ -131,7 +140,11 @@ private final class StudioSceneRenderer {
         objects = replacement
         effects = replacementEffects
         sceneVisible = targetVisible
-        for layer in scene.layers { try screen.addChild(objects[layer.id]) }
+        installedSceneID = scene.id
+        for layer in scene.layers {
+            if let object = objects[layer.id] { apply(layer, to: object) }
+            try screen.addChild(objects[layer.id])
+        }
     }
 
     func update(_ layer: StudioLayer) async {
@@ -200,6 +213,7 @@ private final class StudioSceneRenderer {
     }
 
     func suspend() {
+        installedSceneID = nil
         objects.values.forEach { Self.stopAssets($0, snapshot: ScreenObjectSnapshotFactory().make($0)) }
     }
 
@@ -233,6 +247,7 @@ final class SceneEditorModel: ObservableObject {
     private var operation: Task<Void, Never>?
     private var started = false
     private var loadedFiles = false
+    private let saveSession = SceneSaveSession()
     private var saveTask: Task<Void, Error>?
     let sceneDirectory: URL
     private let defaults: UserDefaults
@@ -327,16 +342,17 @@ final class SceneEditorModel: ObservableObject {
         let previous = saveTask
         let scenes = scenes
         let directory = sceneDirectory
-        let media = mediaDirectory
+        let session = saveSession
         let next = Task.detached {
             _ = try? await previous?.value
-            try SceneFileRepository.save(scenes, directory: directory, mediaDirectory: media)
+            try session.save(scenes, directory: directory)
         }
         saveTask = next
         do { try await next.value } catch { errorMessage = error.localizedDescription }
     }
 
     private func loadSavedFiles() async {
+        let session = saveSession
         let directory = sceneDirectory
         let media = mediaDirectory
         do {
@@ -348,7 +364,7 @@ final class SceneEditorModel: ObservableObject {
                 var failures: [String] = []
                 for file in files {
                     do {
-                        let scene = try SceneFileRepository.readSaved(file, mediaDirectory: media)
+                        let scene = try session.read(file, mediaDirectory: media)
                         guard !restored.contains(where: { $0.id == scene.id }) else {
                             throw SceneFileError(message: "Duplicate scene identifier.")
                         }
@@ -372,6 +388,8 @@ final class SceneEditorModel: ObservableObject {
             errorMessage = "Could not read saved scenes: \(error.localizedDescription)"
         }
     }
+
+    func waitForOperation() async { await operation?.value }
 
     private func perform(_ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }
@@ -402,10 +420,14 @@ final class SceneEditorModel: ObservableObject {
             var scene = duplicate ? self.scene : StudioScene(name: "New scene", layers: [])
             scene.id = UUID().uuidString
             scene.name = duplicate ? scene.name + " copy" : "Scene \(self.scenes.count + 1)"
+            var committed = false
+            let createdID = scene.id
+            defer { if !committed { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: createdID, root: self.mediaDirectory)) } }
             if duplicate { try SceneFileRepository.copyMedia(from: self.scene.id, to: scene.id, root: self.mediaDirectory) }
             scene.layers = try scene.layers.map { try SceneSnapshotCodec.duplicate($0) }
             try await self.renderer.install(scene, mediaDirectory: self.mediaDirectory)
             self.scenes.append(scene)
+            committed = true
             self.selectedSceneID = scene.id
             self.selectedObjectID = nil
         }
@@ -434,8 +456,7 @@ final class SceneEditorModel: ObservableObject {
             let next = self.scenes.first { $0.id != oldID }!
             try await self.renderer.install(next, mediaDirectory: self.mediaDirectory)
             _ = try? await self.saveTask?.value
-            let stored = SceneFileRepository.url(id: oldID, directory: self.sceneDirectory)
-            if FileManager.default.fileExists(atPath: stored.path) { try FileManager.default.removeItem(at: stored) }
+            try self.saveSession.delete(id: oldID, directory: self.sceneDirectory, mediaDirectory: self.mediaDirectory)
             self.scenes.removeAll { $0.id == oldID }
             self.selectedSceneID = next.id
             self.selectedObjectID = nil
@@ -445,6 +466,9 @@ final class SceneEditorModel: ObservableObject {
     func addLayer(_ kind: StudioLayer.Kind, file: URL? = nil) {
         perform {
             var layer = StudioLayer(kind: kind, name: kind.title)
+            var importedFile: URL?
+            var committed = false
+            defer { if !committed, let importedFile { try? FileManager.default.removeItem(at: importedFile) } }
             switch kind {
             case .input:
                 layer.width = 640
@@ -471,6 +495,7 @@ final class SceneEditorModel: ObservableObject {
                     }
                     try data.write(to: destination, options: .atomic)
                 }.value
+                importedFile = destination
                 layer.media = filename
                 layer.name = file.deletingPathExtension().lastPathComponent
                 let sourceSize: CGSize
@@ -505,14 +530,21 @@ final class SceneEditorModel: ObservableObject {
             try await self.renderer.install(updated, mediaDirectory: self.mediaDirectory)
             self.scenes[self.sceneIndex] = updated
             self.selectedObjectID = layer.id
+            committed = true
         }
     }
 
     func updateLayer(_ layer: StudioLayer) {
         var layer = layer
-        layer.absoluteLayout = true
+        if let previous = scene.layers.first(where: { $0.id == layer.id }),
+            previous.x != layer.x || previous.y != layer.y || previous.width != layer.width || previous.height != layer.height {
+            layer.absoluteLayout = true
+        }
         guard !busy, let index = scene.layers.firstIndex(where: { $0.id == layer.id }) else { return }
         perform {
+            var candidate = self.scene
+            candidate.layers[index] = layer
+            try SceneFileDocument.validate(SceneSnapshotCodec.snapshot(candidate), resources: [:], allowMissingResources: true)
             await self.renderer.update(layer)
             self.scenes[self.sceneIndex].layers[index] = layer
         }
@@ -581,12 +613,15 @@ final class SceneEditorModel: ObservableObject {
                 self.scenes.contains(where: { $0.id == candidate })
                     || FileManager.default.fileExists(atPath: SceneFileRepository.mediaURL(id: candidate, root: media).path)
                 ? UUID().uuidString : candidate
+            var committed = false
+            defer { if !committed { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: id, root: media)) } }
             let imported = try await Task.detached {
                 try SceneFileRepository.materialize(document, mediaDirectory: media, id: id)
             }.value
             self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)
             try await self.renderer.install(imported, mediaDirectory: media)
             self.scenes.append(imported)
+            committed = true
             self.selectedSceneID = imported.id
             self.selectedObjectID = nil
         }

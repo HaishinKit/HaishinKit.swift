@@ -101,6 +101,7 @@ import Testing
         #expect(captured.elements["mask"] == "media/mask.bin")
     }
 
+    #if !os(visionOS)
     @ScreenActor @Test func assetSourceSurvivesSnapshotReconstruction() throws {
         let source = try #require(Bundle.module.url(forResource: "SampleVideo_360x240_5mb", withExtension: "mp4"))
         let video = AssetScreenObject(id: "movie")
@@ -117,6 +118,8 @@ import Testing
         #expect(restored.videoGravity == .resizeAspectFill)
         #expect(restored.elements["source"] == source.absoluteString)
     }
+
+    #endif
 
     @ScreenActor @Test func fileImageSourceSurvivesSnapshotReconstruction() throws {
         let fixture = try #require(Bundle.module.url(forResource: "screen_object_snapshot", withExtension: "json"))
@@ -141,4 +144,13 @@ import Testing
         #expect(transform.a == 2)
         #expect(transform.d == 3)
     }
+    @Test func rejectsCaseAndUnicodeEquivalentResourceNames() throws {
+        #expect(throws: (any Error).self) {
+            try SceneFile(snapshot: snapshot(), resources: ["Logo.png": Data([1]), "logo.png": Data([2])])
+        }
+        #expect(throws: (any Error).self) {
+            try SceneFile(snapshot: snapshot(), resources: ["İ.png": Data([1]), "i\u{307}.png": Data([2])])
+        }
+    }
+
 }
