@@ -38,7 +38,7 @@ jobs:
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
       - name: Setup Ruby
-        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
         with:
           ruby-version: .ruby-version
           bundler-cache: true
@@ -76,7 +76,7 @@ jobs:
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
       - name: Setup Ruby
-        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
         with:
           ruby-version: .ruby-version
           bundler-cache: true
