@@ -108,4 +108,4 @@ try session.connect {
 
 ### Scenes
 
-- <doc:scene-archives>
+- <doc:scene-files>

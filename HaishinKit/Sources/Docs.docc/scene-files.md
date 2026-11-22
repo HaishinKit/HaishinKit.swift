@@ -26,16 +26,16 @@ and `resizeAspectFill`; an omitted value means `resizeAspect`.
 
 ```swift
 let snapshot = ScreenObjectSnapshotFactory().make(screenObject)
-let archive = try SceneArchive(snapshot: snapshot, resources: ["overlay.png": imageData])
-try archive.encoded().write(to: destination, options: .atomic)
-let restored = try SceneArchive(data: Data(contentsOf: destination))
+let sceneFile = try SceneFile(snapshot: snapshot, resources: ["overlay.png": imageData])
+try sceneFile.encoded().write(to: destination, options: .atomic)
+let restored = try SceneFile(data: Data(contentsOf: destination))
 ```
 
 Before saving, use relative media references, or supply resources named after the
-local file URL's last path component; the archive converts matching image/asset
+local file URL's last path component; the scene file converts matching image/asset
 file URLs to portable references. After loading, materialize resources in app
 storage and replace known media references with those local file URLs before
-passing the snapshot to ``ScreenObjectFactory``. The archive does not open
+passing the snapshot to ``ScreenObjectFactory``. The scene file does not open
 capture devices, request permissions, or restore transport credentials.
 
 ## Unsupported objects

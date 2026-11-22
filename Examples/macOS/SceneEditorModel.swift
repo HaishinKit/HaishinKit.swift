@@ -466,7 +466,7 @@ final class SceneEditorModel: ObservableObject {
                     .resources.values.reduce(0) { $0 + $1.count }
                 try await Task.detached(priority: .userInitiated) {
                     let data = try Data(contentsOf: file, options: .mappedIfSafe)
-                    guard data.count <= SceneArchive.maximumResourceBytes - existingBytes else {
+                    guard data.count <= SceneFile.maximumResourceBytes - existingBytes else {
                         throw SceneFileError(message: "Scene media exceeds 128 MB.")
                     }
                     try data.write(to: destination, options: .atomic)

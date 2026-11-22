@@ -35,14 +35,14 @@ struct SceneFileDocument: FileDocument, Sendable {
         guard wrapper.isRegularFile, let data = wrapper.regularFileContents else {
             throw SceneFileError(message: "Open a portable .haishinscene ZIP or snapshot JSON.")
         }
-        let archive = try SceneArchive(data: data)
+        let archive = try SceneFile(data: data)
         try self.init(snapshot: archive.snapshot, resources: archive.resources)
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { try wrapper() }
 
     func wrapper() throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: try SceneArchive(snapshot: snapshot, resources: resources).encoded())
+        FileWrapper(regularFileWithContents: try SceneFile(snapshot: snapshot, resources: resources).encoded())
     }
 
     static func read(_ url: URL) throws -> Self { try Self(wrapper: FileWrapper(url: url, options: .immediate)) }
@@ -61,7 +61,7 @@ struct SceneFileDocument: FileDocument, Sendable {
 
     static func validate(_ root: ScreenObjectSnapshot, resources: [String: Data], allowMissingResources: Bool = false) throws {
         guard resources.keys.allSatisfy(safeFilename), resources.count <= 256,
-            resources.values.reduce(0, { $0 + $1.count }) <= SceneArchive.maximumResourceBytes
+            resources.values.reduce(0, { $0 + $1.count }) <= SceneFile.maximumResourceBytes
         else {
             throw SceneFileError(message: "Scene resources are invalid or exceed 128 MB.")
         }

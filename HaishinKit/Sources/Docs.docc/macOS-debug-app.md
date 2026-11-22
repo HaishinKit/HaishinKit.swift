@@ -56,7 +56,7 @@ single `.haishinscene` file. **Open scene file…**, or opening the file in Find
 restores it as a scene. Autosaved snapshots live in `HaishinKit/Scenes`; existing
 preferences are migrated on first launch. Camera/device permissions and network
 credentials are not part of a scene. Unsupported objects remain in the file and
-are invisible on platforms that cannot render them. See <doc:scene-archives>.
+are invisible on platforms that cannot render them. See <doc:scene-files>.
 
 ## Receive SRT on the local network
 

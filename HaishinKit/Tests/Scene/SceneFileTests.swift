@@ -4,7 +4,7 @@ import Testing
 
 @testable import HaishinKit
 
-@Suite struct SceneArchiveTests {
+@Suite struct SceneFileTests {
     private func snapshot() -> ScreenObjectSnapshot {
         .init(
             type: "container", id: "scene", size: .init(width: 1280, height: 720),
@@ -16,33 +16,33 @@ import Testing
     }
 
     @Test func portableArchiveKeepsSnapshotAndOpaqueResources() throws {
-        let original = try SceneArchive(snapshot: snapshot(), resources: ["opaque.bin": Data([0, 1, 2, 3])])
+        let original = try SceneFile(snapshot: snapshot(), resources: ["opaque.bin": Data([0, 1, 2, 3])])
         let encoded = try original.encoded()
         #expect(encoded.prefix(4) == Data([0x50, 0x4b, 0x03, 0x04]))
-        let restored = try SceneArchive(data: encoded)
+        let restored = try SceneFile(data: encoded)
         #expect(restored.resources == original.resources)
         #expect(restored.snapshot.children[0].elements == original.snapshot.children[0].elements)
         #expect(restored.snapshot.children[0].type == "android.custom")
     }
 
     @Test func rejectsCorruptAndTruncatedArchives() throws {
-        let encoded = try SceneArchive(snapshot: snapshot()).encoded()
-        #expect(throws: (any Error).self) { try SceneArchive(data: Data(encoded.dropLast())) }
+        let encoded = try SceneFile(snapshot: snapshot()).encoded()
+        #expect(throws: (any Error).self) { try SceneFile(data: Data(encoded.dropLast())) }
         var corrupted = encoded
         // Alter a stored file payload while preserving the central directory and its CRC.
         let marker = try #require(corrupted.range(of: Data("haishinkit.scene".utf8)))
         corrupted[marker.lowerBound] ^= 1
-        #expect(throws: (any Error).self) { try SceneArchive(data: corrupted) }
+        #expect(throws: (any Error).self) { try SceneFile(data: corrupted) }
     }
 
     @Test func rejectsResourcePathTraversal() {
         for name in ["../escape", "/absolute", "a/b", "a\\b", ".."] {
-            #expect(throws: (any Error).self) { try SceneArchive(snapshot: snapshot(), resources: [name: Data()]) }
+            #expect(throws: (any Error).self) { try SceneFile(snapshot: snapshot(), resources: [name: Data()]) }
         }
     }
 
     @Test func acceptsStandaloneSharedJSON() throws {
-        let restored = try SceneArchive(data: JSONEncoder().encode(snapshot()))
+        let restored = try SceneFile(data: JSONEncoder().encode(snapshot()))
         #expect(restored.snapshot.id == "scene")
         #expect(restored.resources.isEmpty)
     }
@@ -69,24 +69,24 @@ import Testing
 
     @Test func readsJavaDeflateArchive() throws {
         let url = try #require(Bundle.module.url(forResource: "java_scene_deflate", withExtension: "zip"))
-        let restored = try SceneArchive(data: Data(contentsOf: url))
+        let restored = try SceneFile(data: Data(contentsOf: url))
         #expect(restored.snapshot.id == "android-fixture")
         #expect(restored.resources["shared.bin"] == Data([1, 2, 3, 4]))
     }
 
-    @Test func readsArchiveWrittenByAndroidSceneArchive() throws {
+    @Test func readsArchiveWrittenByAndroidSceneFile() throws {
         let url = try #require(Bundle.module.url(forResource: "android_scene_deflate", withExtension: "haishinscene"))
-        let restored = try SceneArchive(data: Data(contentsOf: url))
+        let restored = try SceneFile(data: Data(contentsOf: url))
         #expect(restored.snapshot.id == "root")
         #expect(restored.snapshot.children[1].children[0].elements["value"] == "字幕 🎥\nHaishinKit")
         #expect(restored.resources["movie.bin"] == Data([0, 1, 2, 3]))
     }
 
     @Test func rejectsOversizedDeclaredOutputBeforeDecompression() throws {
-        var encoded = try SceneArchive(snapshot: snapshot()).encoded()
+        var encoded = try SceneFile(snapshot: snapshot()).encoded()
         let central = try #require(encoded.range(of: Data([0x50, 0x4b, 0x01, 0x02])))
         for offset in 24..<28 { encoded[central.lowerBound + offset] = 0xff }
-        #expect(throws: (any Error).self) { try SceneArchive(data: encoded) }
+        #expect(throws: (any Error).self) { try SceneFile(data: encoded) }
     }
 
     @ScreenActor @Test func unsupportedSubtreeKeepsChildrenAndTheirPlatformFields() throws {
@@ -131,9 +131,9 @@ import Testing
         let restored = try #require(ScreenObjectFactory().make(ScreenObjectSnapshotFactory().make(image)) as? ImageScreenObject)
         #expect(restored.ciImage != nil)
         #expect(restored.elements["source"] == file.absoluteString)
-        let archive = try SceneArchive(snapshot: ScreenObjectSnapshotFactory().make(image), resources: [file.lastPathComponent: png])
+        let archive = try SceneFile(snapshot: ScreenObjectSnapshotFactory().make(image), resources: [file.lastPathComponent: png])
         #expect(archive.snapshot.elements["source"] == "media/" + file.lastPathComponent)
-        #expect(try SceneArchive(data: archive.encoded()).resources[file.lastPathComponent] == png)
+        #expect(try SceneFile(data: archive.encoded()).resources[file.lastPathComponent] == png)
     }
 
     @Test func stretchUsesIndependentCanvasDimensions() {
