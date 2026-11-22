@@ -8,7 +8,7 @@
         <true/>
     </dict>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>Discover and announce SRT debug streams on your local network.</string>
+    <string>Discover SRT debug streams and upload video quality samples to VQMetrix on your local network.</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_srt._udp</string>

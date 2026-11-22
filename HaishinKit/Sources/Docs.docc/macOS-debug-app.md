@@ -73,3 +73,38 @@ MediaMTX server. WHIP selects Opus audio. MediaMTX setup and WebRTC network
 requirements are documented in the [MediaMTX reference](https://mediamtx.org/docs/features/publish-and-read).
 The example permits plain HTTP to support local test servers; configure secure
 transport and authentication separately for production applications.
+
+## Upload a VQMetrix comparison
+
+In **Publish → VQMetrix**, choose **Capture preview sample** while the preview is
+running. The app captures 45 composed frames, normalized to a 640 × 360,
+15 fps, limited-range BT.709 reference. It replays those exact pixels through
+an offline encoder using **Evaluation codec** and the **Encoder** video bitrate. Resolution,
+frame rate, codec, and hardware selection in the live encoder controls do not apply to
+this offline encoder. Audio is excluded, and this comparison does not measure
+network effects or the exact live encoded bitstream.
+
+Start **Receive** in VQMetrix, enter its base URL (for example,
+`http://127.0.0.1:8787`) and current four-digit connection code, then choose
+**Upload sample**. HTTP is intended for a trusted network and transmits the
+video and connection code without encryption. HTTPS uses system certificate
+validation. Redirects are rejected.
+
+The app submits a `vqmetrix.capture.v1` ZIP with the raw Y4M reference, encoded
+variant, frame map, and SHA-256 manifest. H.264/HEVC use MP4; AV1 uses
+libaom, and VP8/VP9 use libvpx, stored in IVF. The software codecs require
+Apple silicon and a VQMetrix receiver with IVF upload support. A successful upload displays the accepted
+job ID; evaluation results are available in VQMetrix. Failed uploads retain the
+same package and run ID for retry. Capturing another sample replaces the previous
+package; temporary files are removed when the panel is released. The connection
+code is not persisted.
+
+### Verify the producer
+
+On Apple silicon, run `ruby Examples/Tests/vqmetrix_capture.rb /tmp/vqmetrix-fixtures`
+with a new output directory. This feeds deterministic frames through the actual
+capture/package implementation for all five codecs without opening a camera,
+checks payload hashes and ZIP integrity, and retains the packages. In the updated
+VQMetrix checkout, run
+`VQMETRIX_MACOS_FIXTURES=/tmp/vqmetrix-fixtures swift test --filter actualMacOSProducerArchives`
+to validate, decode, and VMAF-evaluate those exact packages.

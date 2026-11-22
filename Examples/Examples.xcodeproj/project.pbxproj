@@ -42,6 +42,8 @@
 		BCFE62A82E77179F00941209 /* RTCHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = BCFE62A72E77179F00941209 /* RTCHaishinKit */; };
 		BCFE62AA2E77179F00941209 /* RTMPHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = BCFE62A92E77179F00941209 /* RTMPHaishinKit */; };
 		BCFE62AC2E77179F00941209 /* SRTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = BCFE62AB2E77179F00941209 /* SRTHaishinKit */; };
+		CA0000012F00000000000002 /* AOMHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA0000012F00000000000001 /* AOMHaishinKit */; };
+		CA0000022F00000000000002 /* VPXHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA0000022F00000000000001 /* VPXHaishinKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -218,6 +220,8 @@
 			files = (
 				BCFE62912E7710D800941209 /* HaishinKit in Frameworks */,
 				BCFE62AC2E77179F00941209 /* SRTHaishinKit in Frameworks */,
+				CA0000022F00000000000002 /* VPXHaishinKit in Frameworks */,
+				CA0000012F00000000000002 /* AOMHaishinKit in Frameworks */,
 				BCFE62AA2E77179F00941209 /* RTMPHaishinKit in Frameworks */,
 				BCFE62A82E77179F00941209 /* RTCHaishinKit in Frameworks */,
 			);
@@ -402,6 +406,8 @@
 				BCFE62A72E77179F00941209 /* RTCHaishinKit */,
 				BCFE62A92E77179F00941209 /* RTMPHaishinKit */,
 				BCFE62AB2E77179F00941209 /* SRTHaishinKit */,
+				CA0000022F00000000000001 /* VPXHaishinKit */,
+				CA0000012F00000000000001 /* AOMHaishinKit */,
 			);
 			productName = HaishinKit;
 			productReference = BCFE627E2E770A9900941209 /* HaishinKit.app */;
@@ -1305,6 +1311,14 @@
 		BCFE62AB2E77179F00941209 /* SRTHaishinKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SRTHaishinKit;
+		};
+		CA0000012F00000000000001 /* AOMHaishinKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AOMHaishinKit;
+		};
+		CA0000022F00000000000001 /* VPXHaishinKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VPXHaishinKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
