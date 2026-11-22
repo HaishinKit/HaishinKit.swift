@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct SceneOpenRequest: Equatable {
+    let id = UUID()
+    let url: URL
+}
+
 struct ContentView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case playback = "Playback"
@@ -21,6 +26,7 @@ struct ContentView: View {
     @Binding var appearance: String
 
     @State private var selection: Tab? = .playback
+    @State private var sceneOpenRequest: SceneOpenRequest?
 
     var body: some View {
         NavigationSplitView {
@@ -53,12 +59,17 @@ struct ContentView: View {
         } detail: {
             switch selection ?? .playback {
             case .playback: PlaybackView()
-            case .publish: PublishView()
+            case .publish: PublishView(sceneOpenRequest: $sceneOpenRequest)
             case .settings: MacSettingsView()
             case .debug: DebugView(appearance: $appearance)
             }
         }
         .frame(minWidth: 900, minHeight: 620)
         .tint(.accentColor)
+        .onOpenURL { url in
+            guard url.isFileURL, ["scene", "json"].contains(url.pathExtension.lowercased()) else { return }
+            sceneOpenRequest = SceneOpenRequest(url: url)
+            selection = .publish
+        }
     }
 }

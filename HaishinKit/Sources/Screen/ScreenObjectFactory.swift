@@ -28,8 +28,9 @@ public struct ScreenObjectFactory {
     ///
     /// - Parameter snapshot: A snapshot describing the state and
     ///   configuration of a screen object.
-    /// - Returns: A fully configured `ScreenObject` instance if the
-    ///   snapshot's type is supported; otherwise, `nil`.
+    /// Unsupported types become invisible placeholders. Recapturing such a
+    /// placeholder preserves its original snapshot for another platform.
+    /// - Returns: A configured screen object or an invisible placeholder.
     public func make(_ snapshot: ScreenObjectSnapshot) -> ScreenObject? {
         var screenObject: ScreenObject?
         switch snapshot.type {
@@ -45,11 +46,16 @@ public struct ScreenObjectFactory {
             screenObject = TextScreenObject(id: snapshot.id)
         case VideoScreenObject.type:
             screenObject = VideoScreenObject(id: snapshot.id)
+        #if !os(visionOS)
+        case AssetScreenObject.type:
+            screenObject = AssetScreenObject(id: snapshot.id)
+        #endif
         default:
-            break
+            screenObject = UnsupportedScreenObject(snapshot: snapshot)
         }
-        screenObject?.isVisible = snapshot.isVisible
+        screenObject?.isVisible = screenObject is UnsupportedScreenObject ? false : snapshot.isVisible
         screenObject?.size = snapshot.size.cgSize
+        screenObject?.cornerRadius = CGFloat(snapshot.cornerRadius ?? 0)
         screenObject?.elements = snapshot.elements
         screenObject?.horizontalAlignment = .init(rawValue: snapshot.horizontalAlignment) ?? .left
         screenObject?.verticalAlignment = .init(rawValue: snapshot.verticalAlignment) ?? .top
@@ -60,5 +66,17 @@ public struct ScreenObjectFactory {
             right: CGFloat(snapshot.layoutMargin.right)
         )
         return screenObject
+    }
+}
+
+/// Retains an unsupported platform's node without rendering or losing its serialized state.
+@ScreenActor
+final class UnsupportedScreenObject: ScreenObject {
+    let snapshot: ScreenObjectSnapshot
+
+    init(snapshot: ScreenObjectSnapshot) {
+        self.snapshot = snapshot
+        super.init(id: snapshot.id)
+        isVisible = false
     }
 }
