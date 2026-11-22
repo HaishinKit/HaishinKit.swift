@@ -87,6 +87,27 @@ import Testing
               sequenceNumber: sequence, timestamp: 0, ssrc: 1, payload: Data([1]))
     }
 
+    @Test func backwardsWallClockDiscardsRestartProbation() {
+        let result = Result()
+        let buffer = RTPJitterBuffer<Result>()
+        buffer.delegate = result
+        buffer.append(Self.packet(1000), now: 100)
+        buffer.append(Self.packet(41000), now: 102)
+        buffer.append(Self.packet(41001), now: 102)
+        buffer.append(Self.packet(41002), now: 101)
+        buffer.append(Self.packet(41003), now: 101)
+        #expect(result.sequences == [1000])
+        buffer.append(Self.packet(41004), now: 101)
+        buffer.append(Self.packet(41005), now: 101)
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005])
+
+        buffer.append(Self.packet(10000), now: 90)
+        buffer.append(Self.packet(10001), now: 90)
+        buffer.append(Self.packet(10002), now: 90)
+        buffer.append(Self.packet(10003), now: 90)
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005])
+    }
+
     @Test func lostPacket()
  throws {
         let result = Result()
