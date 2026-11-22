@@ -101,6 +101,7 @@ final class TVStudioModel: ObservableObject {
         _ direction: Direction
     ) async {
         guard canConfigure, direction != self.direction else { return }
+        isPreparing = true
         await pausePreview()
         self.direction = direction
         endpoint = ""
@@ -108,6 +109,7 @@ final class TVStudioModel: ObservableObject {
         muted = false
         errorMessage = nil
         preview?.layer.flushAndRemoveImage()
+        isPreparing = false
         await preparePreview()
         if transport == .srt && !isListener { discovery.browse() }
     }
@@ -134,6 +136,7 @@ final class TVStudioModel: ObservableObject {
 
     func selectSource(_ source: Source) async {
         guard canConfigure, source != self.source else { return }
+        isPreparing = true
         await pausePreview()
         self.source = source
         muted = false
@@ -141,11 +144,14 @@ final class TVStudioModel: ObservableObject {
         cameraDevice = nil
         cameraObserver = nil
         preview?.layer.flushAndRemoveImage()
+        isPreparing = false
         await preparePreview()
     }
 
     func useCamera(_ device: AVContinuityDevice) async {
-        guard canConfigure else { return }
+        guard canConfigure, source == .camera else { return }
+        if !previewRunning { await preparePreview() }
+        guard canConfigure, previewRunning else { return }
         isPreparing = true
         defer { isPreparing = false }
         do {
@@ -155,10 +161,12 @@ final class TVStudioModel: ObservableObject {
                 guard !device.isConnected else { return }
                 Task { @MainActor in
                     guard let self, self.cameraDevice === device else { return }
-                    await self.stop()
-                    await self.pausePreview()
                     self.cameraName = nil
                     self.cameraDevice = nil
+                    self.cameraObserver = nil
+                    guard self.direction == .send, self.source == .camera else { return }
+                    await self.stop()
+                    await self.pausePreview()
                     self.errorMessage = "Continuity Camera disconnected. Choose a device again or switch to the test signal."
                     self.preview?.layer.flushAndRemoveImage()
                 }
@@ -167,6 +175,8 @@ final class TVStudioModel: ObservableObject {
             microphone.stop()
             try? await mixer.attachVideo(nil)
             cameraName = nil
+            cameraDevice = nil
+            cameraObserver = nil
             if !(error is CancellationError) { errorMessage = (error as? StudioError)?.errorDescription ?? String(describing: error) }
         }
     }
@@ -489,6 +499,7 @@ final class TVStudioModel: ObservableObject {
     }
     private func pausePreview() async {
         captureGeneration += 1
+        cameraName = nil
         signal.stop()
         microphone.stop()
         try? await mixer.attachVideo(nil)

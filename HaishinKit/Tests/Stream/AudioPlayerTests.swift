@@ -7,6 +7,7 @@ import Testing
     @Test(.enabled(if: !TestEnvironment.isCI))
     func repeatedlyDetachesConnectedPlaybackNodes() async throws {
         let engine = AVAudioEngine()
+        defer { engine.stop() }
         let player = AudioPlayer(audioEngine: engine)
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
         for _ in 0..<3 {
@@ -15,7 +16,19 @@ import Testing
             #expect(await player.isConnected(node))
             await node.detach()
             #expect(await player.isConnected(node) == false)
-            #expect(engine.isRunning == false)
+            #expect(engine.isRunning)
         }
+    }
+
+    @Test(.enabled(if: !TestEnvironment.isCI))
+    func detachingUnusedNodePreservesAnAlreadyRunningEngine() async throws {
+        let engine = AVAudioEngine()
+        _ = engine.mainMixerNode
+        try engine.start()
+        defer { engine.stop() }
+        let player = AudioPlayer(audioEngine: engine)
+        let unusedNode = await player.makePlayerNode()
+        await unusedNode.detach()
+        #expect(engine.isRunning)
     }
 }

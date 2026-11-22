@@ -113,7 +113,7 @@ final class TVQualityClient: NSObject, ObservableObject {
             let local = await Task.detached { TVQualityClient.localAddress(host) }.value
             guard let local else { throw QualityError("Unencrypted HTTP is limited to local network addresses. Use HTTPS for other receivers.") }
             var parts = URLComponents(url: base, resolvingAgainstBaseURL: false)!
-            parts.host = local
+            parts.host = local.contains(":") ? "[\(local)]" : local
             guard let pinned = parts.url else { throw QualityError("Invalid local address.") }
             return pinned.appendingPathComponent("api/v1/runs")
         }
@@ -209,7 +209,7 @@ extension TVQualityClient: @preconcurrency NetServiceBrowserDelegate, @preconcur
         else { return }
         var parts = URLComponents()
         parts.scheme = scheme
-        parts.host = host
+        parts.host = host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
         parts.port = sender.port
         guard let url = parts.url else { return }
         receivers.removeAll { $0.id == sender.name }

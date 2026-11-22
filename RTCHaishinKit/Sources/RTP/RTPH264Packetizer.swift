@@ -192,7 +192,7 @@ _ packet: RTPPacket) {
     }
 
     private func decodeFragmentUnitA(_ packet: RTPPacket) {
-        guard packet.payload.count >= 3 else { return }
+        guard packet.payload.count >= 2 else { return }
         let indicator = packet.payload[0]
         // S | E | R | Type(original)
         let header = packet.payload[1]
@@ -230,7 +230,7 @@ _ packet: RTPPacket) {
     }
 
     private func makeSampleBuffer(_ buffer: inout Data, timestamp: UInt32) -> CMSampleBuffer? {
-        guard formatDescription != nil else {
+        guard formatDescription != nil, !buffer.isEmpty else {
             return nil
         }
         let presentationTimeStamp: CMTime = self.timestamp.convert(timestamp)

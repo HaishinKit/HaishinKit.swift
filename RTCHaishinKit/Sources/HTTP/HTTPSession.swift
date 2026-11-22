@@ -62,6 +62,9 @@ actor HTTPSession: StreamSession {
     }
 
     func close() async throws {
+        // Preserve the existing contract: callers cancel/await negotiation before closing.
+        guard _readyState.value == .open else { return }
+        _readyState.value = .closing
         let location = location
         self.location = nil
         await _stream.close()
@@ -92,7 +95,7 @@ actor HTTPSession: StreamSession {
         return String(data: data, encoding: .utf8) ?? ""
     }
 
-    func makeOffer() async throws -> String {
+    private func makeOffer() async throws -> String {
         let peer = try await makePeerConnection()
         peerConnection = peer
         try peer.setLocalDesciption(.offer)

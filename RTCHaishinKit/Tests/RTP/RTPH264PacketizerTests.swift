@@ -14,6 +14,45 @@ import Testing
     // A 64 × 64 red Baseline H.264 frame, with SPS/PPS aggregated as a server sends them.
     private let units = ["Z0LACtkEJsBEAAADAAQAAAMAejxImSA=", "aMuDyyA=", "ZYiEBLxGKAAKi8cAASjY4AAvrScnJ1111111111114A="]
 
+    @Test func parameterSetOnlyAggregationWaitsForVideo() throws {
+        let output = Output()
+        let decoder = RTPH264Packetizer<Output>(ssrc: 1, payloadType: 98)
+        decoder.delegate = output
+        var parameters = Data([24])
+        for value in units.prefix(2) {
+            let nal = try #require(Data(base64Encoded: value))
+            parameters.append(UInt8(nal.count >> 8))
+            parameters.append(UInt8(nal.count & 255))
+            parameters.append(nal)
+        }
+        decoder.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: true, payloadType: 98,
+                             sequenceNumber: 40000, timestamp: 90000, ssrc: 1, payload: parameters))
+        #expect(output.video.isEmpty)
+        decoder.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: true, payloadType: 98,
+                             sequenceNumber: 40001, timestamp: 90000, ssrc: 1, payload: try #require(Data(base64Encoded: units[2]))))
+        #expect(output.video.count == 1)
+    }
+
+    @Test func headerOnlyFUABoundariesPreserveTheNAL() throws {
+        let output = Output()
+        let decoder = RTPH264Packetizer<Output>(ssrc: 1, payloadType: 98)
+        decoder.delegate = output
+        var sequence: UInt16 = 30000
+        for value in units.prefix(2) {
+            decoder.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: false, payloadType: 98,
+                                 sequenceNumber: sequence, timestamp: 90000, ssrc: 1, payload: try #require(Data(base64Encoded: value))))
+            sequence &+= 1
+        }
+        let idr = try #require(Data(base64Encoded: units[2]))
+        let chunks = [Data([0x7c, 0x85]), Data([0x7c, 0x05]) + idr.dropFirst(), Data([0x7c, 0x45])]
+        for (index, chunk) in chunks.enumerated() {
+            decoder.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: index == chunks.count - 1, payloadType: 98,
+                                 sequenceNumber: sequence, timestamp: 90000, ssrc: 1, payload: chunk))
+            sequence &+= 1
+        }
+        #expect(output.video.count == 1)
+    }
+
     @Test func decodesAggregatedParameterSetsAndIDR() throws {
         let output = Output()
         let decoder = RTPH264Packetizer<Output>(ssrc: 1, payloadType: 98)

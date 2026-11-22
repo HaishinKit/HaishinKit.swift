@@ -41,7 +41,6 @@ public final actor AudioPlayer {
         }
         playerNodes[playerNode] = nil
         connected[playerNode] = nil
-        if playerNodes.isEmpty { audioEngine?.stop() }
     }
 
     func makePlayerNode() -> AudioPlayerNode {
