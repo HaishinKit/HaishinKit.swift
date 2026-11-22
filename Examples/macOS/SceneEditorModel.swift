@@ -70,7 +70,7 @@ private final class StudioSceneRenderer {
     private var sceneVisible = true
     private var installedSceneID: String?
 
-    func install(_ scene: StudioScene, mediaDirectory: URL) async throws {
+    func install(_ scene: StudioScene, mediaDirectory: URL, beforeCommit: (@Sendable () throws -> Void)? = nil) async throws {
         try SceneFileDocument.validate(SceneSnapshotCodec.snapshot(scene), resources: [:], allowMissingResources: true)
         let screen = mixer.screen
         let assets = SceneFileRepository.mediaURL(id: scene.id, root: mediaDirectory)
@@ -120,6 +120,7 @@ private final class StudioSceneRenderer {
                 apply(layer, to: object)
                 object.isVisible = targetVisible && layer.visible && layer.kind != .unsupported
             }
+            try beforeCommit?()
         } catch {
             for (id, object) in replacement where objects[id] !== object {
                 Self.stopAssets(object, snapshot: ScreenObjectSnapshotFactory().make(object))
@@ -174,6 +175,10 @@ private final class StudioSceneRenderer {
         layers.compactMap { layer in
             guard let object = objects[layer.id] else { return layer }
             guard object.parent != nil else { return nil }
+            if let previous = try? SceneSnapshotCodec.node(layer), !Self.captureIsValid(object, snapshot: previous) {
+                Self.restoreGeometry(object, snapshot: previous)
+                return layer
+            }
             var updated = layer
             updated.visible = !sceneVisible || layer.kind == .unsupported ? layer.visible : object.isVisible
             updated.width = object.size.width
@@ -201,6 +206,32 @@ private final class StudioSceneRenderer {
                 updated.color = text.elements["color"] ?? "#FFFFFFFF"
             }
             return updated
+        }
+    }
+
+    private static func captureIsValid(_ object: ScreenObject, snapshot: ScreenObjectSnapshot) -> Bool {
+        nodes(snapshot).allSatisfy { node in
+            guard let target = object.findById(node.id) else { return true }
+            let sizes = [target.size.width, target.size.height]
+            let margins = [target.layoutMargin.top, target.layoutMargin.left, target.layoutMargin.bottom, target.layoutMargin.right]
+            guard sizes.allSatisfy({ $0.isFinite && (0...8192).contains($0) }),
+                margins.allSatisfy({ $0.isFinite && (-8192...8192).contains($0) }) else { return false }
+            if let text = target as? TextScreenObject {
+                guard let font = Double(text.elements["fontSize"] ?? "32"), font.isFinite, (1...1024).contains(font) else { return false }
+            }
+            return true
+        }
+    }
+
+    private static func restoreGeometry(_ object: ScreenObject, snapshot: ScreenObjectSnapshot) {
+        for node in nodes(snapshot) {
+            guard let target = object.findById(node.id) else { continue }
+            target.size = node.size.cgSize
+            target.layoutMargin = .init(top: CGFloat(node.layoutMargin.top), left: CGFloat(node.layoutMargin.left), bottom: CGFloat(node.layoutMargin.bottom), right: CGFloat(node.layoutMargin.right))
+            target.horizontalAlignment = .init(rawValue: node.horizontalAlignment) ?? .left
+            target.verticalAlignment = .init(rawValue: node.verticalAlignment) ?? .top
+            if let text = target as? TextScreenObject { text.elements = node.elements }
+            target.invalidateLayout()
         }
     }
 
@@ -453,17 +484,14 @@ final class SceneEditorModel: ObservableObject {
         guard scenes.count > 1 else { return }
         perform {
             self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)
-            let previous = self.scene
             let oldID = self.selectedSceneID
             let next = self.scenes.first { $0.id != oldID }!
-            try await self.renderer.install(next, mediaDirectory: self.mediaDirectory)
-            _ = try? await self.saveTask?.value
-            do {
-                try self.saveSession.delete(id: oldID, directory: self.sceneDirectory, mediaDirectory: self.mediaDirectory)
-            } catch {
-                try await self.renderer.install(previous, mediaDirectory: self.mediaDirectory)
-                throw error
-            }
+            let session = self.saveSession
+            let directory = self.sceneDirectory
+            let media = self.mediaDirectory
+            try await self.renderer.install(next, mediaDirectory: media, beforeCommit: {
+                try session.delete(id: oldID, directory: directory, mediaDirectory: media)
+            })
             self.scenes.removeAll { $0.id == oldID }
             self.selectedSceneID = next.id
             self.selectedObjectID = nil
@@ -615,6 +643,7 @@ final class SceneEditorModel: ObservableObject {
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             let media = self.mediaDirectory
+            let directory = self.sceneDirectory
             let document = try await Task.detached { try SceneFileDocument.read(url) }.value
             let candidate = document.snapshot.id
             let id =
@@ -625,7 +654,7 @@ final class SceneEditorModel: ObservableObject {
             var reservedID: String?
             defer { if !committed, let reservedID { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: reservedID, root: media)) } }
             let imported = try await Task.detached {
-                try SceneFileRepository.materialize(document, mediaDirectory: media, id: id)
+                try SceneFileRepository.materialize(document, mediaDirectory: media, id: id, sceneDirectory: directory)
             }.value
             reservedID = imported.id
             self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)

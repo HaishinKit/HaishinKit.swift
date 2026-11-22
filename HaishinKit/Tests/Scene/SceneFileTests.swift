@@ -159,4 +159,10 @@ import Testing
         }
     }
 
+    @Test func rejectsSharedConservativeCaseAliases() throws {
+        #expect(throws: (any Error).self) {
+            try SceneFile(snapshot: snapshot(), resources: ["I.png": Data([1]), "ı.png": Data([2])])
+        }
+    }
+
 }
