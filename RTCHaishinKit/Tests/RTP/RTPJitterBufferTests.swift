@@ -87,6 +87,50 @@ import Testing
               sequenceNumber: sequence, timestamp: 0, ssrc: 1, payload: Data([1]))
     }
 
+    @Test func backwardsWallClockDiscardsRestartProbation() {
+        let result = Result()
+        let buffer = RTPJitterBuffer<Result>()
+        buffer.delegate = result
+        buffer.append(Self.packet(1000), now: 100)
+        buffer.append(Self.packet(41000), now: 102)
+        buffer.append(Self.packet(41001), now: 102)
+        buffer.append(Self.packet(41002), now: 101)
+        buffer.append(Self.packet(41003), now: 101)
+        #expect(result.sequences == [1000])
+        buffer.append(Self.packet(41004), now: 101)
+        buffer.append(Self.packet(41005), now: 101)
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005])
+
+        buffer.append(Self.packet(10000), now: 90)
+        buffer.append(Self.packet(10001), now: 90)
+        buffer.append(Self.packet(10002), now: 90)
+        buffer.append(Self.packet(10003), now: 90)
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005])
+        for sequence: UInt16 in [10004, 10005, 10006, 10007] {
+            buffer.append(Self.packet(sequence), now: 91)
+        }
+        #expect(result.sequences == [1000, 41002, 41003, 41004, 41005, 10004, 10005, 10006, 10007])
+    }
+
+    @Test func ignoredPacketsCannotHideClockRollbackOrReviveExpiredProbation() {
+        for ignoredTime in [102.5, 110.0] {
+            let result = Result()
+            let buffer = RTPJitterBuffer<Result>()
+            buffer.delegate = result
+            buffer.append(Self.packet(1000), now: 100)
+            for sequence: UInt16 in [41000, 41001, 41002] {
+                buffer.append(Self.packet(sequence), now: 102)
+            }
+            buffer.append(Self.packet(1000), now: ignoredTime)
+            buffer.append(Self.packet(41003), now: 102.2)
+            #expect(result.sequences == [1000])
+            for sequence: UInt16 in [41004, 41005, 41006, 41007] {
+                buffer.append(Self.packet(sequence), now: 103.2)
+            }
+            #expect(result.sequences == [1000, 41004, 41005, 41006, 41007])
+        }
+    }
+
     @Test func lostPacket()
  throws {
         let result = Result()
