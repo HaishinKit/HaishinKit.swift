@@ -2,7 +2,7 @@ import Foundation
 import zlib
 
 /// A portable scene file: ZIP entries `scene.json`, `manifest.json`, and `media/<filename>`.
-/// The JSON uses the public ScreenObjectSnapshot wire format on Apple and Android.
+/// The JSON uses the public `ScreenObjectSnapshot` serialization format.
 public struct SceneFile: Sendable {
     public enum Error: Swift.Error { case invalidFile, unsupportedVersion, invalidResource, sizeLimitExceeded }
     public static let maximumResourceBytes = 128 * 1024 * 1024

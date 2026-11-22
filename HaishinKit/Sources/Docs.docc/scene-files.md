@@ -1,6 +1,6 @@
 # Portable scene files
 
-Save a ScreenObjectSnapshot and its media in one file shared by Apple and Android.
+Save a ScreenObjectSnapshot and its media in one portable file.
 
 ## File format
 
@@ -10,7 +10,7 @@ A `.scene` file is a regular ZIP containing:
 - `manifest.json`: `{"format":"haishinkit.scene","version":1}`.
 - `media/<filename>`: bundled images, video, or resources for future object types.
 
-Readers accept ZIP STORE and DEFLATE entries, including Java ZIP data descriptors.
+Readers accept ZIP STORE and DEFLATE entries, including streamed ZIP data descriptors.
 They also accept standalone snapshot JSON when no external media is needed.
 Resource names are flat filenames, unique under the shared conservative case key
 (NFC, lowercase, uppercase, lowercase, NFC; Unicode default/ROOT casing); absolute paths and traversal are rejected.
@@ -45,8 +45,8 @@ An unsupported type produces an invisible placeholder. Snapshot capture returns
 its original type, properties, visibility intent, and subtree so another platform
 can restore it later. Do not discard opaque objects or their bundled resources
 when editing or exporting. A saved `isVisible: true` remains true even when the
-current platform cannot draw the object. Android currently treats Apple's
-`asset` video-file objects this way.
+current platform cannot draw the object. Readers without video-file support
+keep `asset` objects this way.
 
 The macOS example uses this format for Open/Export and keeps lightweight snapshot
 JSON plus scene-specific media caches for automatic local saves.
