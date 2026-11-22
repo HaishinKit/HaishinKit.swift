@@ -75,7 +75,7 @@ import Testing
     }
 
     @Test func readsArchiveWrittenByAndroidSceneFile() throws {
-        let url = try #require(Bundle.module.url(forResource: "android_scene_deflate", withExtension: "haishinscene"))
+        let url = try #require(Bundle.module.url(forResource: "android_scene_deflate", withExtension: "scene"))
         let restored = try SceneFile(data: Data(contentsOf: url))
         #expect(restored.snapshot.id == "root")
         #expect(restored.snapshot.children[1].children[0].elements["value"] == "字幕 🎥\nHaishinKit")

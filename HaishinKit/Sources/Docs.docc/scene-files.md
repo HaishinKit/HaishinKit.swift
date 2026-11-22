@@ -4,7 +4,7 @@ Save a ScreenObjectSnapshot and its media in one file shared by Apple and Androi
 
 ## File format
 
-A `.haishinscene` file is a regular ZIP containing:
+A `.scene` file is a regular ZIP containing:
 
 - `scene.json`: a camelCase ``ScreenObjectSnapshot`` object, without an envelope.
 - `manifest.json`: `{"format":"haishinkit.scene","version":1}`.

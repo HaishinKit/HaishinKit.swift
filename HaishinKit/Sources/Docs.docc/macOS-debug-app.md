@@ -54,7 +54,7 @@ the arrows to change its order, the eye to hide it, and the duplicate or trash
 buttons to copy or remove it. The last scene cannot be deleted.
 
 Use **Scenes → Export scene file…** to save the current layout and media as a
-single `.haishinscene` file. **Open scene file…**, or opening the file in Finder,
+single `.scene` file. **Open scene file…**, or opening the file in Finder,
 restores it as a scene. Autosaved snapshots live in `HaishinKit/Scenes`; existing
 preferences are migrated on first launch. Camera/device permissions and network
 credentials are not part of a scene. Unsupported objects remain in the file and

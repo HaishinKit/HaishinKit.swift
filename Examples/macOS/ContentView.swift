@@ -67,7 +67,7 @@ struct ContentView: View {
         .frame(minWidth: 900, minHeight: 620)
         .tint(.accentColor)
         .onOpenURL { url in
-            guard url.isFileURL, ["haishinscene", "json"].contains(url.pathExtension.lowercased()) else { return }
+            guard url.isFileURL, ["scene", "json"].contains(url.pathExtension.lowercased()) else { return }
             sceneOpenRequest = SceneOpenRequest(url: url)
             selection = .publish
         }

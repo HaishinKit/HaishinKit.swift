@@ -33,7 +33,7 @@ struct SceneFileDocument: FileDocument, Sendable {
 
     init(wrapper: FileWrapper) throws {
         guard wrapper.isRegularFile, let data = wrapper.regularFileContents else {
-            throw SceneFileError(message: "Open a portable .haishinscene ZIP or snapshot JSON.")
+            throw SceneFileError(message: "Open a portable .scene ZIP or snapshot JSON.")
         }
         let archive = try SceneFile(data: data)
         try self.init(snapshot: archive.snapshot, resources: archive.resources)
