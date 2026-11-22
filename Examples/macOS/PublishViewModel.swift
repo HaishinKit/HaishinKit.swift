@@ -161,6 +161,13 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
+    func openSceneFileWhenReady(_ url: URL) async {
+        await startupTask?.value
+        while captureIsStarting && !Task.isCancelled { try? await Task.sleep(for: .milliseconds(20)) }
+        guard !Task.isCancelled else { return }
+        sceneEditor.openSceneFile(url)
+    }
+
     func stopRunning() {
 
         startupTask?.cancel()

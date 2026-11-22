@@ -105,3 +105,7 @@ try session.connect {
 
 - <doc:migration-guide>
 
+
+### Scenes
+
+- <doc:scene-archives>

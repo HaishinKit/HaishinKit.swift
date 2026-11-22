@@ -38,6 +38,7 @@ enum VideoEffectItem: String, CaseIterable, Identifiable, Sendable {
 }
 
 struct PublishView: View {
+    var sceneOpenRequest: SceneOpenRequest? = nil
     @EnvironmentObject private var preference: PreferenceViewModel
     @StateObject private var model = PublishViewModel()
 
@@ -62,7 +63,7 @@ struct PublishView: View {
                 HStack {
                     Label("Preview", systemImage: "viewfinder")
                     Spacer()
-                    Text("1280 × 720 · \(model.currentFPS.rawValue) fps")
+                    SceneCanvasCaption(editor: model.sceneEditor, frameRate: model.currentFPS.rawValue)
                         .monospacedDigit()
                 }.font(.callout).foregroundStyle(.secondary)
                 PublishMetricsPanel(model: model)
@@ -137,6 +138,9 @@ struct PublishView: View {
         .navigationTitle("Publish")
         .onAppear { model.startRunning(preference) }
         .onDisappear { model.stopRunning() }
+        .task(id: sceneOpenRequest?.id) {
+            if let request = sceneOpenRequest { await model.openSceneFileWhenReady(request.url) }
+        }
         .onChange(of: model.currentFPS) { _, value in model.setFrameRate(value.frameRate) }
         .onChange(of: model.visualEffectItem) { _, value in model.setVisualEffet(value) }
         .alert("Couldn't publish", isPresented: $model.isShowError) {

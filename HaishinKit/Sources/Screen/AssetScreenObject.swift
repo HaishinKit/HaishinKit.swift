@@ -4,6 +4,25 @@ import CoreImage
 #if !os(visionOS)
 /// An object that manages offscreen rendering an asset resource.
 public final class AssetScreenObject: ScreenObject, ChromaKeyProcessable {
+    override public class var type: String { "asset" }
+
+    private var sourceURL: URL?
+
+    override public var elements: [String: String] {
+        get {
+            ["source": sourceURL?.absoluteString ?? "", "looping": String(isLooping), "videoGravity": videoGravity.snapshotValue]
+        }
+        set {
+            isLooping = newValue["looping"] == "true"
+            videoGravity = .init(snapshotValue: newValue["videoGravity"] ?? AVLayerVideoGravity.resizeAspect.snapshotValue)
+            guard let value = newValue["source"], let url = URL(string: value), !value.isEmpty else {
+                sourceURL = nil
+                cancelReading()
+                return
+            }
+            do { try startReading(AVURLAsset(url: url)) } catch { logger.warn(error) }
+        }
+    }
     public var chromaKeyColor: CGColor?
 
     /// Restarts the asset when its video track reaches the end.
@@ -53,6 +72,7 @@ public final class AssetScreenObject: ScreenObject, ChromaKeyProcessable {
 
     /// Prepares the asset reader to start reading.
     public func startReading(_ asset: AVAsset) throws {
+        sourceURL = (asset as? AVURLAsset)?.url
         reader = try AVAssetReader(asset: asset)
         guard let reader else {
             return

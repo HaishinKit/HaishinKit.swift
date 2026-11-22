@@ -41,14 +41,16 @@ private enum PreviewAction: Sendable {
 private final class PreviewSceneEditor {
     nonisolated static let idPrefix = "example-overlay-"
     private let mixer: MediaMixer
+    private let editAllObjects: Bool
     private var target: ScreenObject?
     private var editingBounds: CGRect?
     private var previous: CGPoint?
     private var gestureStart: CGPoint?
     private var resizeEdit: (id: String, rendered: CGRect, requested: CGRect)?
 
-    nonisolated init(mixer: MediaMixer) {
+    nonisolated init(mixer: MediaMixer, editAllObjects: Bool = false) {
         self.mixer = mixer
+        self.editAllObjects = editAllObjects
     }
 
     func handle(
@@ -207,7 +209,7 @@ private final class PreviewSceneEditor {
     }
 
     private func hitTest(_ editor: ScreenObjectEditor, _ point: CGPoint) -> ScreenObject? {
-        editor.hitTest(point) { $0.id.hasPrefix(Self.idPrefix) }
+        editor.hitTest(point) { editAllObjects || $0.id.hasPrefix(Self.idPrefix) }
     }
 }
 
@@ -242,7 +244,7 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
         usesInspector: Bool = false,
         @ViewBuilder preview: () -> Preview
     ) {
-        _editor = State(initialValue: PreviewSceneEditor(mixer: mixer))
+        _editor = State(initialValue: PreviewSceneEditor(mixer: mixer, editAllObjects: usesInspector))
         self.gravity = gravity
         self.onSwipe = onSwipe
         self.externalSelection = selection

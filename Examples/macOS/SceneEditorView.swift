@@ -2,6 +2,15 @@ import HaishinKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+struct SceneCanvasCaption: View {
+    @ObservedObject var editor: SceneEditorModel
+    let frameRate: String
+
+    var body: some View {
+        Text("\(editor.scene.canvasWidth ?? 1280) × \(editor.scene.canvasHeight ?? 720) · \(frameRate) fps")
+    }
+}
+
 struct StudioEditingPreview: View {
     let source: PublishViewModel
     @ObservedObject var editor: SceneEditorModel
@@ -23,6 +32,9 @@ struct SceneEditorView: View {
     @State private var importKind: StudioLayer.Kind = .image
     @State private var importing = false
     @State private var deletingScene = false
+    @State private var importingScene = false
+    @State private var exportingScene = false
+    @State private var sceneDocument: SceneFileDocument?
     @State private var sceneName = ""
 
     var body: some View {
@@ -32,6 +44,17 @@ struct SceneEditorView: View {
                     Label("Scenes", systemImage: "square.stack").font(.headline)
                     Spacer()
                     Menu {
+                        Button("Open scene file…", systemImage: "folder") { importingScene = true }
+                        Button("Export scene file…", systemImage: "square.and.arrow.up") {
+                            Task {
+                                if let document = await model.sceneDocument() {
+                                    sceneDocument = document
+                                    exportingScene = true
+                                }
+                            }
+                        }
+                        Divider()
+                        Toggle("Scene visible", isOn: Binding(get: { model.scene.rootVisible ?? true }, set: { model.setSceneVisible($0) }))
                         Button("New scene", systemImage: "plus") { model.addScene() }
                         Button("Duplicate scene", systemImage: "plus.square.on.square") {
                             model.addScene(duplicate: true)
@@ -105,6 +128,7 @@ struct SceneEditorView: View {
                                     HStack {
                                         Image(systemName: layer.kind.symbol).frame(width: 16)
                                         Text(layer.name).lineLimit(1)
+                                        if layer.kind == .unsupported { Text("Unsupported").font(.caption).foregroundStyle(.secondary) }
                                         Spacer(minLength: 0)
                                     }.contentShape(Rectangle())
                                 }.buttonStyle(.plain)
@@ -113,10 +137,11 @@ struct SceneEditorView: View {
                                     value.visible.toggle()
                                     model.updateLayer(value)
                                 } label: {
-                                    Image(systemName: layer.visible ? "eye" : "eye.slash")
+                                    Image(systemName: layer.visible && layer.kind != .unsupported ? "eye" : "eye.slash")
                                 }
                                 .buttonStyle(.plain).help(layer.visible ? "Hide object" : "Show object")
                                 .accessibilityLabel(layer.visible ? "Hide object" : "Show object")
+                                .disabled(layer.kind == .unsupported)
                             }.padding(8)
                                 .background(
                                     layer.id == model.selectedObjectID ? Color.accentColor.opacity(0.15) : .clear,
@@ -166,6 +191,17 @@ struct SceneEditorView: View {
             case .failure(let error): model.errorMessage = error.localizedDescription
             }
         }
+        .fileImporter(isPresented: $importingScene, allowedContentTypes: [.haishinKitScene, .json]) { result in
+            switch result {
+            case .success(let url): model.openSceneFile(url)
+            case .failure(let error): model.errorMessage = error.localizedDescription
+            }
+        }
+        .fileExporter(
+            isPresented: $exportingScene, document: sceneDocument, contentType: .haishinKitScene, defaultFilename: model.scene.name
+        ) { result in
+            if case .failure(let error) = result { model.errorMessage = error.localizedDescription }
+        }
         .confirmationDialog(
             "Delete \(model.scene.name)?", isPresented: $deletingScene, titleVisibility: .visible
         ) {
@@ -190,20 +226,25 @@ struct SceneObjectInspector: View {
     @ObservedObject var model: SceneEditorModel
     @State private var draft: StudioLayer?
     @FocusState private var editing: Bool
+    private var canvasWidth: Double { Double(model.scene.canvasWidth ?? 1280) }
+    private var canvasHeight: Double { Double(model.scene.canvasHeight ?? 720) }
 
     var body: some View {
-        StudioSection(title: "Object inspector", subtitle: "Position and size in the 1280 × 720 canvas") {
-            if let layer = draft, model.selectedLayer != nil {
+        StudioSection(title: "Object inspector", subtitle: "Position and size in the \(Int(canvasWidth)) × \(Int(canvasHeight)) canvas") {
+            if model.selectedLayer?.kind == .unsupported {
+                Text("This object is not supported on this platform. Its data is preserved in the scene file, and it is not rendered.")
+                    .font(.callout).foregroundStyle(.secondary)
+            } else if let layer = draft, model.selectedLayer != nil {
                 TextField("Name", text: field(\.name, fallback: layer.name)).focused($editing).onSubmit(
                     apply)
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                     GridRow {
-                        number("X", \.x, range: 0...1280)
-                        number("Y", \.y, range: 0...720)
+                        number("X", \.x, range: 0...canvasWidth)
+                        number("Y", \.y, range: 0...canvasHeight)
                     }
                     GridRow {
-                        number("Width", \.width, range: 24...1280)
-                        number("Height", \.height, range: 24...720)
+                        number("Width", \.width, range: min(24, canvasWidth)...canvasWidth)
+                        number("Height", \.height, range: min(24, canvasHeight)...canvasHeight)
                     }
                 }
                 Button("Apply layout") { apply() }.disabled(model.busy)
@@ -261,10 +302,10 @@ struct SceneObjectInspector: View {
 
     private func apply() {
         guard var value = draft else { return }
-        value.width = min(1280, max(24, value.width.isFinite ? value.width : 320))
-        value.height = min(720, max(24, value.height.isFinite ? value.height : 180))
-        value.x = min(1280 - value.width, max(0, value.x.isFinite ? value.x : 0))
-        value.y = min(720 - value.height, max(0, value.y.isFinite ? value.y : 0))
+        value.width = min(canvasWidth, max(min(24, canvasWidth), value.width.isFinite ? value.width : 320))
+        value.height = min(canvasHeight, max(min(24, canvasHeight), value.height.isFinite ? value.height : 180))
+        value.x = min(canvasWidth - value.width, max(0, value.x.isFinite ? value.x : 0))
+        value.y = min(canvasHeight - value.height, max(0, value.y.isFinite ? value.y : 0))
         value.fontSize = min(300, max(8, value.fontSize.isFinite ? value.fontSize : 40))
         if value.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             value.name = value.kind.title
