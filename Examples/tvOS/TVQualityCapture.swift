@@ -7,6 +7,7 @@ import HaishinKit
 actor TVQualityCapture: MediaMixerOutput {
     nonisolated let videoTrackId: UInt8? = UInt8.max
     nonisolated let audioTrackId: UInt8? = nil
+    private nonisolated let pendingFrame = DispatchSemaphore(value: 1)
     private let width = 640
     private let height = 360
     private let frameLimit = 45
@@ -19,7 +20,12 @@ actor TVQualityCapture: MediaMixerOutput {
     func selectTrack(_ id: UInt8?, mediaType: CMFormatDescription.MediaType) async {}
     nonisolated func mixer(_ mixer: MediaMixer, didOutput buffer: AVAudioPCMBuffer, when: AVAudioTime) {}
     nonisolated func mixer(_ mixer: MediaMixer, didOutput buffer: CMSampleBuffer) {
-        Task { await append(buffer) }
+        // Drop excess frames before retaining a sample in an asynchronous task.
+        guard pendingFrame.wait(timeout: .now()) == .success else { return }
+        Task {
+            defer { pendingFrame.signal() }
+            await append(buffer)
+        }
     }
 
     func capture() async throws -> [Data] {
