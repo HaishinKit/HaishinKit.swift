@@ -21,6 +21,8 @@ Keep both devices on the same local network and allow Local Network access. List
 
 Use the Siri Remote to navigate, mute audio, change the video bitrate while stopped, or enter full screen. Back returns from full screen. Backgrounding stops connections and capture; return to reconnect. **Settings** retains the existing playback and connection settings screens.
 
+Stopping a pending SRT caller can wait for address resolution or the connection timeout. Immediate cancellation requires a separate change to the shared SRT library.
+
 [API reference](https://docs.haishinkit.com/swift/)
 
 ## 🌐 RTMP and WebRTC

@@ -97,7 +97,10 @@ struct ContentView: View {
 
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { Task { await studio.shutdown() } }
+            if phase == .background {
+                qualityClient.cancel()
+                Task { await studio.shutdown() }
+            }
             if phase == .active { Task { await studio.preparePreview() } }
         }
         .continuityDevicePicker(isPresented: $showCameraPicker) { device in
