@@ -11,20 +11,22 @@ final class RTPJitterBuffer<T: RTPJitterBufferDelegate> {
     private var expectedSequence: UInt16?
     private let stalePacketCounts: Int = 4
     private var lastAccepted: TimeInterval?
+    private var lastArrival: TimeInterval?
     private var restartPackets: [RTPPacket] = []
     private var lastRestartPacket: TimeInterval?
 
     func append(_ packet: RTPPacket, now: TimeInterval = Date.timeIntervalSinceReferenceDate) {
         // This is an inactivity heuristic, not a media clock. Discard probation
         // when wall time moves backwards rather than using system boot-time APIs.
-        if let lastAccepted, now < lastAccepted {
-            self.lastAccepted = now
+        if let lastArrival, now < lastArrival {
+            if let lastAccepted, now < lastAccepted { self.lastAccepted = now }
             restartPackets.removeAll(keepingCapacity: true)
             lastRestartPacket = nil
-        } else if let lastRestartPacket, now < lastRestartPacket {
+        } else if let lastRestartPacket, now - lastRestartPacket >= 1 {
             restartPackets.removeAll(keepingCapacity: true)
             self.lastRestartPacket = nil
         }
+        lastArrival = now
         // RTP senders choose a random initial sequence number, not necessarily zero.
         let expected = expectedSequence ?? packet.sequenceNumber
         if Int16(bitPattern: packet.sequenceNumber &- expected) < 0 {

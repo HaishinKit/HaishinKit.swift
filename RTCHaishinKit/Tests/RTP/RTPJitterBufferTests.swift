@@ -112,6 +112,25 @@ import Testing
         #expect(result.sequences == [1000, 41002, 41003, 41004, 41005, 10004, 10005, 10006, 10007])
     }
 
+    @Test func ignoredPacketsCannotHideClockRollbackOrReviveExpiredProbation() {
+        for ignoredTime in [102.5, 110.0] {
+            let result = Result()
+            let buffer = RTPJitterBuffer<Result>()
+            buffer.delegate = result
+            buffer.append(Self.packet(1000), now: 100)
+            for sequence: UInt16 in [41000, 41001, 41002] {
+                buffer.append(Self.packet(sequence), now: 102)
+            }
+            buffer.append(Self.packet(1000), now: ignoredTime)
+            buffer.append(Self.packet(41003), now: 102.2)
+            #expect(result.sequences == [1000])
+            for sequence: UInt16 in [41004, 41005, 41006, 41007] {
+                buffer.append(Self.packet(sequence), now: 103.2)
+            }
+            #expect(result.sequences == [1000, 41004, 41005, 41006, 41007])
+        }
+    }
+
     @Test func lostPacket()
  throws {
         let result = Result()
