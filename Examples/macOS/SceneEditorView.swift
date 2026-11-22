@@ -302,11 +302,7 @@ struct SceneObjectInspector: View {
 
     private func apply() {
         guard var value = draft else { return }
-        value.width = min(canvasWidth, max(min(24, canvasWidth), value.width.isFinite ? value.width : 320))
-        value.height = min(canvasHeight, max(min(24, canvasHeight), value.height.isFinite ? value.height : 180))
-        value.x = min(canvasWidth - value.width, max(0, value.x.isFinite ? value.x : 0))
-        value.y = min(canvasHeight - value.height, max(0, value.y.isFinite ? value.y : 0))
-        value.fontSize = min(300, max(8, value.fontSize.isFinite ? value.fontSize : 40))
+        guard [value.width, value.height, value.x, value.y, value.fontSize].allSatisfy(\.isFinite) else { return }
         if value.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             value.name = value.kind.title
         }

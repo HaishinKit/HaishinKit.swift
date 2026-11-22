@@ -60,7 +60,7 @@ struct SceneFileDocument: FileDocument, Sendable {
     }
 
     static func validate(_ root: ScreenObjectSnapshot, resources: [String: Data], allowMissingResources: Bool = false) throws {
-        guard Set(resources.keys.map { $0.precomposedStringWithCanonicalMapping.lowercased() }).count == resources.count,
+        guard Set(resources.keys.map { $0.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX")).precomposedStringWithCanonicalMapping }).count == resources.count,
             resources.keys.allSatisfy(safeFilename), resources.count <= 256,
             resources.values.reduce(0, { $0 + $1.count }) <= SceneFile.maximumResourceBytes
         else {
@@ -235,6 +235,7 @@ enum SceneSnapshotCodec {
 
 /// Files, rather than UserDefaults-encoded editor models, are the persisted scene data.
 enum SceneFileRepository {
+    private static let mediaLock = NSLock()
     static func key(_ id: String) -> String { SHA256.hash(data: Data(id.utf8)).map { String(format: "%02x", $0) }.joined() }
     static func url(id: String, directory: URL) -> URL { directory.appendingPathComponent(key(id)).appendingPathExtension("json") }
     static func mediaURL(id: String, root: URL) -> URL { root.appendingPathComponent(key(id), isDirectory: true) }
@@ -261,8 +262,11 @@ enum SceneFileRepository {
     }
 
     static func materialize(_ document: SceneFileDocument, mediaDirectory: URL, id: String? = nil) throws -> StudioScene {
+        mediaLock.lock()
+        defer { mediaLock.unlock() }
         var scene = try SceneSnapshotCodec.scene(document.snapshot)
         if let id { scene.id = id }
+        while FileManager.default.fileExists(atPath: mediaURL(id: scene.id, root: mediaDirectory).path) { scene.id = UUID().uuidString }
         let directory = mediaURL(id: scene.id, root: mediaDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         do {

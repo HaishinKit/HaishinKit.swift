@@ -452,11 +452,18 @@ final class SceneEditorModel: ObservableObject {
     func deleteScene() {
         guard scenes.count > 1 else { return }
         perform {
+            self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)
+            let previous = self.scene
             let oldID = self.selectedSceneID
             let next = self.scenes.first { $0.id != oldID }!
             try await self.renderer.install(next, mediaDirectory: self.mediaDirectory)
             _ = try? await self.saveTask?.value
-            try self.saveSession.delete(id: oldID, directory: self.sceneDirectory, mediaDirectory: self.mediaDirectory)
+            do {
+                try self.saveSession.delete(id: oldID, directory: self.sceneDirectory, mediaDirectory: self.mediaDirectory)
+            } catch {
+                try await self.renderer.install(previous, mediaDirectory: self.mediaDirectory)
+                throw error
+            }
             self.scenes.removeAll { $0.id == oldID }
             self.selectedSceneID = next.id
             self.selectedObjectID = nil
@@ -486,8 +493,9 @@ final class SceneEditorModel: ObservableObject {
                     at: sceneMedia, withIntermediateDirectories: true)
                 let filename = UUID().uuidString + "." + file.pathExtension
                 let destination = sceneMedia.appendingPathComponent(filename)
-                let existingBytes = try SceneFileRepository.document(self.scene, mediaDirectory: self.mediaDirectory)
-                    .resources.values.reduce(0) { $0 + $1.count }
+                let existingResources = try SceneFileRepository.document(self.scene, mediaDirectory: self.mediaDirectory).resources
+                guard existingResources.count < 256 else { throw SceneFileError(message: "A scene supports at most 256 media files.") }
+                let existingBytes = existingResources.values.reduce(0) { $0 + $1.count }
                 try await Task.detached(priority: .userInitiated) {
                     let data = try Data(contentsOf: file, options: .mappedIfSafe)
                     guard data.count <= SceneFile.maximumResourceBytes - existingBytes else {
@@ -560,8 +568,8 @@ final class SceneEditorModel: ObservableObject {
             guard var copy = try? SceneSnapshotCodec.duplicate(original) else { return }
             copy.absoluteLayout = true
             copy.name += " copy"
-            copy.x = min(max(0, 1280 - copy.width), copy.x + 24)
-            copy.y = min(max(0, 720 - copy.height), copy.y + 24)
+            copy.x = min(max(0, Double(self.scene.canvasWidth ?? 1280) - copy.width), copy.x + 24)
+            copy.y = min(max(0, Double(self.scene.canvasHeight ?? 720) - copy.height), copy.y + 24)
             layers.append(copy)
         }
     }
@@ -614,10 +622,12 @@ final class SceneEditorModel: ObservableObject {
                     || FileManager.default.fileExists(atPath: SceneFileRepository.mediaURL(id: candidate, root: media).path)
                 ? UUID().uuidString : candidate
             var committed = false
-            defer { if !committed { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: id, root: media)) } }
+            var reservedID: String?
+            defer { if !committed, let reservedID { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: reservedID, root: media)) } }
             let imported = try await Task.detached {
                 try SceneFileRepository.materialize(document, mediaDirectory: media, id: id)
             }.value
+            reservedID = imported.id
             self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)
             try await self.renderer.install(imported, mediaDirectory: media)
             self.scenes.append(imported)

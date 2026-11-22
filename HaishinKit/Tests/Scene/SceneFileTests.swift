@@ -153,4 +153,10 @@ import Testing
         }
     }
 
+    @Test func rejectsCaseFoldingAliases() throws {
+        #expect(throws: (any Error).self) {
+            try SceneFile(snapshot: snapshot(), resources: ["Messages.png": Data([1]), "Meſſages.png": Data([2])])
+        }
+    }
+
 }
