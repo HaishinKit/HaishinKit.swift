@@ -7,13 +7,38 @@ import Testing
 @Suite struct RTPJitterBufferTests {
     final class Result: RTPJitterBufferDelegate {
         var count = 0
+        var sequences: [UInt16] = []
 
         func jitterBuffer(_ buffer: RTPJitterBuffer<RTPJitterBufferTests.Result>, sequenced: RTPPacket) {
             count += 1
+            sequences.append(sequenced.sequenceNumber)
         }
     }
 
-    @Test func lostPacket() throws {
+    @Test func randomStartReordersAndIgnoresDuplicates() {
+        let result = Result()
+        let buffer = RTPJitterBuffer<Result>()
+        buffer.delegate = result
+        for sequence: UInt16 in [45000, 45002, 45001, 45001, 45003] {
+            buffer.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: false, payloadType: 111,
+                                sequenceNumber: sequence, timestamp: 0, ssrc: 1, payload: Data([1])))
+        }
+        #expect(result.sequences == [45000, 45001, 45002, 45003])
+    }
+
+    @Test func sequenceWrapAndLargeLoss() {
+        let result = Result()
+        let buffer = RTPJitterBuffer<Result>()
+        buffer.delegate = result
+        for sequence: UInt16 in [65534, 0, 65535, 1, 1000, 1001, 1002, 1003] {
+            buffer.append(.init(version: 2, padding: false, extension: false, cc: 0, marker: false, payloadType: 111,
+                                sequenceNumber: sequence, timestamp: 0, ssrc: 1, payload: Data([1])))
+        }
+        #expect(result.sequences == [65534, 65535, 0, 1, 1000, 1001, 1002, 1003])
+    }
+
+    @Test func lostPacket()
+ throws {
         let result = Result()
         let buffer = RTPJitterBuffer<Result>()
         buffer.delegate = result

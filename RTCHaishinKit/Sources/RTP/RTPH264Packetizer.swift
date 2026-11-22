@@ -13,6 +13,7 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
     var formatParameter = RTPFormatParameter()
     private var sequenceNumber: UInt16 = 0
     private var buffer = Data()
+    private var accessUnitTimestamp: UInt32?
     private var nalUnitReader = NALUnitReader()
     private var pictureParameterSets: Data?
     private var sequenceParameterSets: Data?
@@ -110,6 +111,10 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         guard !packet.payload.isEmpty else {
             return
         }
+        if accessUnitTimestamp != packet.timestamp {
+            buffer.removeAll(keepingCapacity: true)
+            accessUnitTimestamp = packet.timestamp
+        }
         /**
          Table 1.  Summary of NAL unit types and their payload structures
 
@@ -129,6 +134,8 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         switch nalUnitType {
         case 1...23:
             decodeSingleNALUnit(packet)
+        case 24:
+            decodeSingleTimeAggregation(packet)
         case 28:
             decodeFragmentUnitA(packet)
         default:
@@ -136,7 +143,26 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         }
     }
 
-    private func decodeSingleNALUnit(_ packet: RTPPacket) {
+    private func decodeSingleTimeAggregation(_ packet: RTPPacket) {
+        var offset = 1
+        var units: [Data] = []
+        while offset < packet.payload.count {
+            guard offset + 2 <= packet.payload.count else { return }
+            let size = Int(packet.payload[offset]) << 8 | Int(packet.payload[offset + 1])
+            offset += 2
+            guard size > 0, offset + size <= packet.payload.count else { return }
+            units.append(Data(packet.payload[offset..<(offset + size)]))
+            offset += size
+        }
+        for (index, unit) in units.enumerated() {
+            decodeSingleNALUnit(.init(version: packet.version, padding: false, extension: false, cc: 0,
+                                      marker: packet.marker && index == units.count - 1, payloadType: packet.payloadType,
+                                      sequenceNumber: packet.sequenceNumber, timestamp: packet.timestamp, ssrc: packet.ssrc, payload: unit))
+        }
+    }
+
+    private func decodeSingleNALUnit(
+_ packet: RTPPacket) {
         let nalUnitType = packet.payload[0] & 0x1F
         switch nalUnitType {
         case 5: // idr
@@ -166,6 +192,7 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
     }
 
     private func decodeFragmentUnitA(_ packet: RTPPacket) {
+        guard packet.payload.count >= 3 else { return }
         let indicator = packet.payload[0]
         // S | E | R | Type(original)
         let header = packet.payload[1]
@@ -175,12 +202,12 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         let h264NALUnitType = header & 0x1F
 
         if fragmentedTimestamp != packet.timestamp, fragmentedStarted {
-            // fragmentedBuffer.removeAll(keepingCapacity: false)
-            // fragmentedStarted = false
-            fragmentedTimestamp = packet.timestamp
+            fragmentedBuffer.removeAll(keepingCapacity: true)
+            fragmentedStarted = false
         }
 
         if start {
+            fragmentedTimestamp = packet.timestamp
             fragmentedBuffer.removeAll(keepingCapacity: false)
             fragmentedBuffer.append(RTPH264Packetizer_startCode)
             fragmentedBuffer.append(indicator & 0x60 | indicator & 0x80 | h264NALUnitType)
@@ -191,9 +218,11 @@ final class RTPH264Packetizer<T: RTPPacketizerDelegate>: RTPPacketizer {
         }
 
         if end && fragmentedStarted {
-            if let buffer = makeSampleBuffer(&fragmentedBuffer, timestamp: fragmentedTimestamp) {
-                delegate?.packetizer(self, didOutput: buffer)
-            }
+            // A picture may contain several fragmented slices. Emit only after its RTP marker.
+            decodeSingleNALUnit(.init(version: packet.version, padding: false, extension: false, cc: 0,
+                                      marker: packet.marker, payloadType: packet.payloadType,
+                                      sequenceNumber: packet.sequenceNumber, timestamp: fragmentedTimestamp, ssrc: packet.ssrc,
+                                      payload: Data(fragmentedBuffer.dropFirst(RTPH264Packetizer_startCode.count))))
             // flush buffers
             fragmentedBuffer.removeAll(keepingCapacity: false)
             fragmentedStarted = false

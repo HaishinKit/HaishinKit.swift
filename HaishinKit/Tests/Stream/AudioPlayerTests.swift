@@ -1,0 +1,21 @@
+@preconcurrency import AVFoundation
+import Testing
+
+@testable import HaishinKit
+
+@Suite struct AudioPlayerTests {
+    @Test(.enabled(if: !TestEnvironment.isCI))
+    func repeatedlyDetachesConnectedPlaybackNodes() async throws {
+        let engine = AVAudioEngine()
+        let player = AudioPlayer(audioEngine: engine)
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
+        for _ in 0..<3 {
+            let node = await player.makePlayerNode()
+            await player.connect(node, format: format)
+            #expect(await player.isConnected(node))
+            await node.detach()
+            #expect(await player.isConnected(node) == false)
+            #expect(engine.isRunning == false)
+        }
+    }
+}

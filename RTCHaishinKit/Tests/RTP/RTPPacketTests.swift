@@ -5,7 +5,24 @@ import Testing
 @testable import RTCHaishinKit
 
 @Suite struct RTPPacketTests {
-    @Test func packet1() throws {
+    @Test func removesCSRCHeaderExtensionsAndPaddingFromMediaPayload() throws {
+        let header: [UInt8] = [0xb1, 111, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2]
+        let data = Data(header + [0, 0, 0, 3] + [0xbe, 0xde, 0, 1, 0x10, 0x7f, 0, 0] + [0xfc, 0x23, 0, 2])
+        let packet = try RTPPacket(data)
+        #expect(packet.payload == Data([0xfc, 0x23]))
+        #expect(packet.data == data)
+    }
+
+    @Test(arguments: [
+        Data([0x90, 111, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2, 0xbe, 0xde, 0, 9, 1]),
+        Data([0xa0, 111, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2, 1, 8])
+    ])
+    func rejectsTruncatedExtensionAndInvalidPadding(_ data: Data) {
+        #expect(throws: RTPPacket.Error.self) { try RTPPacket(data) }
+    }
+
+    @Test func packet1()
+ throws {
         let data = Data([128, 226, 2, 7, 0, 1, 201, 8, 14, 44, 247, 214, 28, 76, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128])
         let packet = try RTPPacket(data)
         #expect(packet.version == 2)

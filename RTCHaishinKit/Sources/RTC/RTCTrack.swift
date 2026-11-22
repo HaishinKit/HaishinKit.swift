@@ -122,6 +122,8 @@ class RTCTrack: RTCChannel {
     }
 
     func didReceiveMessage(_ message: Data) {
+        // RTCP shares this callback when RTP/RTCP multiplexing is negotiated.
+        guard message.count >= 2, !(192...223).contains(message[1]) else { return }
         do {
             let packet = try RTPPacket(message)
             packetizer?.append(packet)

@@ -20,7 +20,7 @@ public final actor AudioPlayer {
             return
         }
         if let format {
-            audioEngine.connect(avPlayerNode, to: audioEngine.outputNode, format: format)
+            audioEngine.connect(avPlayerNode, to: audioEngine.mainMixerNode, format: format)
             if !audioEngine.isRunning {
                 try? audioEngine.start()
             }
@@ -36,9 +36,12 @@ public final actor AudioPlayer {
 
     func detach(_ playerNode: AudioPlayerNode) {
         if let playerNode = playerNodes[playerNode] {
+            audioEngine?.disconnectNodeOutput(playerNode)
             audioEngine?.detach(playerNode)
         }
         playerNodes[playerNode] = nil
+        connected[playerNode] = nil
+        if playerNodes.isEmpty { audioEngine?.stop() }
     }
 
     func makePlayerNode() -> AudioPlayerNode {
