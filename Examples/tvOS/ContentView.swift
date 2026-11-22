@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showCameraPicker = false
     @State private var showLegacy = false
     @State private var fullScreen = false
+    @State private var lifecycleTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -82,7 +83,7 @@ struct ContentView: View {
             }
         }
         .task {
-            await studio.preparePreview()
+            await scheduleLifecycle(active: true).value
             await studio.applyLaunchArguments()
             #if DEBUG
                 let arguments = ProcessInfo.processInfo.arguments
@@ -99,9 +100,9 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
                 qualityClient.cancel()
-                Task { await studio.shutdown() }
+                scheduleLifecycle(active: false)
             }
-            if phase == .active { Task { await studio.preparePreview() } }
+            if phase == .active { scheduleLifecycle(active: true) }
         }
         .continuityDevicePicker(isPresented: $showCameraPicker) { device in
             if let device { Task { await studio.useCamera(device) } }
@@ -117,6 +118,17 @@ struct ContentView: View {
                 .toolbar { Button("Done") { showLegacy = false } }
             }
         }
+    }
+
+    @discardableResult
+    private func scheduleLifecycle(active: Bool) -> Task<Void, Never> {
+        let previous = lifecycleTask
+        let next = Task { @MainActor in
+            await previous?.value
+            if active { await studio.preparePreview() } else { await studio.shutdown() }
+        }
+        lifecycleTask = next
+        return next
     }
 
     private var header: some View {
