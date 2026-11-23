@@ -51,13 +51,13 @@ struct PublishView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 16) {
-                StudioEditingPreview(source: model, editor: model.sceneEditor)
+                StudioEditingPreview(source: model, preview: model.preview, editor: model.sceneEditor)
                 .frame(minHeight: 160)
                 .background(.black)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
                 HStack {
-                    Label(String(localized: "Preview"), systemImage: "viewfinder")
+                    PreviewControls(controller: model.preview)
                     Spacer()
                     SceneCanvasCaption(editor: model.sceneEditor, frameRate: model.mixerFPS.rawValue)
                         .monospacedDigit()

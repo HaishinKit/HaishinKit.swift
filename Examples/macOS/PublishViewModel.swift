@@ -38,7 +38,7 @@ final class PublishViewModel: ObservableObject {
     private var shutdownTask: Task<Void, Never>?
     private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
-    private weak var previewView: MTHKView?
+    let preview = PreviewController()
 
     var encodingConfigurationIssue: String? {
         guard mixerDynamicRangeMode != outputCodec.dynamicRangeMode else { return nil }
@@ -56,7 +56,7 @@ final class PublishViewModel: ObservableObject {
             do {
                 try await mixer.setDynamicRangeMode(mode)
                 mixerDynamicRangeMode = await mixer.dynamicRangeMode
-                previewView?.setDynamicRangeMode(mixerDynamicRangeMode)
+                preview.dynamicRangeMode = mixerDynamicRangeMode
             } catch {
                 dynamicRangeIssue = String(localized: "Couldn't change Mixer HDR: \(error.localizedDescription)")
             }
@@ -182,6 +182,7 @@ final class PublishViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             await configureCaptureFrameRate(currentFPS.frameRate)
             try? await mixer.setFrameRate(mixerFPS.frameRate)
+            await mixer.addOutput(preview)
             await sceneEditor.start()
         }
     }
@@ -202,6 +203,7 @@ final class PublishViewModel: ObservableObject {
     }
 
     func stopRunning() {
+        preview.closeFloatingPreview()
 
         startupTask?.cancel()
         publishingTask?.cancel()
@@ -214,6 +216,7 @@ final class PublishViewModel: ObservableObject {
             telemetryTask = nil
             networkReport = nil
             measuredFPS = nil
+            await mixer.removeOutput(preview)
             await sceneEditor.stop()
             await screenCapture.stop(restoreCamera: false)
             try? await session?.close()
@@ -257,16 +260,6 @@ final class PublishViewModel: ObservableObject {
                 do { try video.setFrameRate(fps) }
                 catch { logger.error(error) }
             }
-        }
-    }
-}
-
-extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
-    nonisolated func connect(to view: HaishinKit.MTHKView) {
-        Task { @MainActor in
-            previewView = view
-            view.setDynamicRangeMode(mixerDynamicRangeMode)
-            await mixer.addOutput(view)
         }
     }
 }

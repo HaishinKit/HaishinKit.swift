@@ -28,6 +28,17 @@ when the mixer and encoder dynamic ranges differ. Enhanced RTMP HDR also
 requires a compatible server and player. Both controls are locked during a
 broadcast; HDR can be previewed while disconnected.
 
+Both **Publish** and **Playback** offer **MTHKView** (Metal) and
+**PiPView** (sample-buffer display) below the preview. With **PiPView**,
+**Open floating preview** shows a resizable, always-on-top video window.
+Closing it or switching to MTHKView returns to the inline preview without
+restarting capture or the connection. The floating window shows only video,
+not scene editing handles. It closes when leaving the screen.
+
+This is an application-managed floating window. System Picture in Picture
+for sample-buffer display layers is currently unavailable on macOS; see the
+[framework support clarification](https://developer.apple.com/forums/thread/830764).
+
 New scenes use a 1280 × 720 preview canvas; imported scenes retain their canvas size; encoder output resolution is configured
 separately. Target video bitrate is a setting, not a measured throughput value.
 Use **MediaMixer** to choose a canvas preset or apply a custom width and height

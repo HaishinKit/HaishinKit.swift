@@ -12,7 +12,8 @@ struct SceneCanvasCaption: View {
 }
 
 struct StudioEditingPreview: View {
-    let source: PublishViewModel
+    @ObservedObject var source: PublishViewModel
+    @ObservedObject var preview: PreviewController
     @ObservedObject var editor: SceneEditorModel
 
     var body: some View {
@@ -27,7 +28,8 @@ struct StudioEditingPreview: View {
                 ZStack {
                     Color(nsColor: .underPageBackgroundColor)
                     Color.indigo.opacity(0.18)
-                    MTHKViewRepresentable(previewSource: source)
+                    StudioPreviewSurface(controller: preview, renderer: preview.renderer)
+                        .id(preview.renderer)
                         .frame(width: width, height: height)
                         .overlay(Rectangle().strokeBorder(Color.accentColor.opacity(0.8), lineWidth: 1))
                 }

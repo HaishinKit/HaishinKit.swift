@@ -2790,6 +2790,56 @@
           }
         }
       }
+    },
+    "Preview renderer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューの表示方式"
+          }
+        }
+      }
+    },
+    "Floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フローティングプレビュー"
+          }
+        }
+      }
+    },
+    "Open floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小窓で表示"
+          }
+        }
+      }
+    },
+    "Close floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小窓を閉じる"
+          }
+        }
+      }
+    },
+    "Show video in an always-on-top window.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像を最前面の小窓に表示します。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

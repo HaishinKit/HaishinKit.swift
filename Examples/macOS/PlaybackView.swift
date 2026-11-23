@@ -9,7 +9,7 @@ struct PlaybackView: View {
         HSplitView {
             VStack(alignment: .leading, spacing: 16) {
                 ZStack {
-                    PiPHKViewRepresentable(previewSource: model)
+                    PlaybackPreview(controller: model.preview)
                     if model.readyState == .closed && !model.isBusy {
                         StudioEmptyState(symbol: "play.rectangle", title: String(localized: "Ready when you are"),
                                          subtitle: String(localized: "Enter your stream endpoint, then start playback."))
@@ -27,7 +27,7 @@ struct PlaybackView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
                 HStack {
-                    Label(String(localized: "Stream monitor"), systemImage: "display")
+                    PreviewControls(controller: model.preview)
                     Spacer()
                     Text(model.receiverSummary ?? String(localized: "Playback"))
                 }.font(.callout).foregroundStyle(.secondary)
@@ -76,4 +76,11 @@ struct PlaybackView: View {
 
 #Preview {
     PlaybackView().environmentObject(PreferenceViewModel())
+}
+
+private struct PlaybackPreview: View {
+    @ObservedObject var controller: PreviewController
+    var body: some View {
+        StudioPreviewSurface(controller: controller, renderer: controller.renderer).id(controller.renderer)
+    }
 }
