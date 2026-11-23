@@ -1,3 +1,7 @@
+# Platform support
+
+- watchOS is currently unsupported, including audio-only streaming. Before proposing watchOS support or changing platform declarations, read [Platform Support](HaishinKit/Sources/Docs.docc/platform-support.md) for the implementation constraints and conditions for reconsideration. Dependency watchOS build targets alone do not establish runtime networking support.
+
 # GitHub Actions conventions
 
 - Use Ruby and its standard library for helper scripts in GitHub Actions and Fastlane. Do not introduce Python for workflow helpers.
