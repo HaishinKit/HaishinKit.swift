@@ -19,12 +19,18 @@ enum OutputResolution: String, CaseIterable, Identifiable {
 enum OutputVideoCodec: String, CaseIterable, Identifiable {
     case h264 = "H.264"
     case hevc = "HEVC"
+    case hevcMain10 = "HEVC Main10 (HDR)"
     var id: Self { self }
     var profileLevel: String {
         switch self {
         case .h264: return kVTProfileLevel_H264_Main_AutoLevel as String
         case .hevc: return kVTProfileLevel_HEVC_Main_AutoLevel as String
+        case .hevcMain10: return kVTProfileLevel_HEVC_Main10_AutoLevel as String
         }
+    }
+
+    var dynamicRangeMode: DynamicRangeMode {
+        self == .hevcMain10 ? .hdr : .sdr
     }
 }
 

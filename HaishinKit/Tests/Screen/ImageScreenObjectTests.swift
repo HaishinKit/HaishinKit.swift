@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreImage
 import Testing
 
@@ -5,6 +6,33 @@ import Testing
 
 @ScreenActor
 struct ImageScreenObjectTests {
+    @Test(arguments: [false, true])
+    func imageRemainsVisibleWhenSwitchingDynamicRange(nested: Bool) throws {
+        let screen = Screen()
+        screen.size = .init(width: 64, height: 64)
+        let image = ImageScreenObject()
+        image.ciImage = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 64, height: 64))
+        if nested {
+            let group = ScreenObjectContainer()
+            try group.addChild(image)
+            try screen.addChild(group)
+        } else {
+            try screen.addChild(image)
+        }
+        let modes: [DynamicRangeMode] = [.sdr, .hdr, .sdr, .hdr]
+        for (index, mode) in modes.enumerated() {
+            screen.dynamicRangeMode = mode
+            let sample = try #require(screen.makeSampleBuffer(.init(timestamp: Double(index + 1), targetTimestamp: Double(index + 1) + 1.0 / 30)))
+            let pixel = try #require(sample.imageBuffer)
+            #expect(image.isVisible)
+            #expect(CVPixelBufferLockBaseAddress(pixel, .readOnly) == kCVReturnSuccess)
+            let address = try #require(CVPixelBufferGetBaseAddressOfPlane(pixel, 0))
+            let luma = mode == .hdr ? Int(address.assumingMemoryBound(to: UInt16.self).pointee >> 6) : Int(address.assumingMemoryBound(to: UInt8.self).pointee)
+            #expect(luma > (mode == .hdr ? 512 : 128))
+            #expect(CVPixelBufferUnlockBaseAddress(pixel, .readOnly) == kCVReturnSuccess)
+        }
+    }
+
     @Test func deletingAnOverlayReleasesTheCachedObject() throws {
         let screen = Screen()
         var image: ImageScreenObject? = ImageScreenObject()

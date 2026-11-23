@@ -82,15 +82,34 @@ final class VideoCodec {
             var attributes: [NSString: AnyObject] = [:]
             if let inputFormat {
                 // Specify the pixel format of the uncompressed video.
-                attributes[kCVPixelBufferPixelFormatTypeKey] = inputFormat.mediaType.rawValue as CFNumber
+                attributes[kCVPixelBufferPixelFormatTypeKey] = inputFormat.mediaSubType.rawValue as CFNumber
             }
             return attributes.isEmpty ? nil : attributes
         case .decompression:
-            return [
+            var attributes: [NSString: AnyObject] = [
                 kCVPixelBufferIOSurfacePropertiesKey: NSDictionary(),
                 kCVPixelBufferMetalCompatibilityKey: kCFBooleanTrue
             ]
+            if inputFormat?.isHDR == true {
+                attributes[kCVPixelBufferPixelFormatTypeKey] = kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange as CFNumber
+            }
+            return attributes
         }
+    }
+
+    func makeCompressionOptions() -> Set<VTSessionOption> {
+        var options = settings.makeOptions()
+        // Preserve the source colorimetry in the encoded bitstream and format description.
+        for (extensionKey, optionKey) in [
+            (kCMFormatDescriptionExtension_ColorPrimaries, VTSessionOptionKey.colorPrimaries),
+            (kCMFormatDescriptionExtension_TransferFunction, VTSessionOptionKey.transferFunction),
+            (kCMFormatDescriptionExtension_YCbCrMatrix, VTSessionOptionKey.YCbCrMatrix)
+        ] {
+            if let inputFormat, let value = CMFormatDescriptionGetExtension(inputFormat, extensionKey: extensionKey) {
+                options.insert(.init(key: optionKey, value: value))
+            }
+        }
+        return options
     }
 
     private func useFrame(_ presentationTimeStamp: CMTime) -> Bool {

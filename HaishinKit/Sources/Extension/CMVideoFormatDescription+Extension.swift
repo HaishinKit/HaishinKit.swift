@@ -2,6 +2,14 @@ import CoreImage
 import CoreMedia
 
 extension CMVideoFormatDescription {
+    var isHDR: Bool {
+        guard let transferFunction = CMFormatDescriptionGetExtension(self, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String else {
+            return false
+        }
+        return transferFunction == kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String ||
+            transferFunction == kCMFormatDescriptionTransferFunction_SMPTE_ST_2084_PQ as String
+    }
+
     package var isCompressed: Bool {
         switch CMFormatDescriptionGetMediaSubType(self) {
         case kCVPixelFormatType_1Monochrome,
@@ -41,6 +49,8 @@ extension CMVideoFormatDescription {
              kCVPixelFormatType_422YpCbCr_4A_8BiPlanar,
              kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
              kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+             kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange,
+             kCVPixelFormatType_420YpCbCr10BiPlanarFullRange,
              kCVPixelFormatType_422YpCbCr8_yuvs,
              kCVPixelFormatType_422YpCbCr8FullRange,
              kCVPixelFormatType_OneComponent8,

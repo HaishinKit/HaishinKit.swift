@@ -8,6 +8,35 @@ Please check [this repository](https://github.com/veovera/enhanced-rtmp/) for th
 ## Notice
 Enhanced RTMP also requires support on the server side. Please check the support status of the server you are using.
 
+## HDR with HEVC and HLG
+
+To publish the mixer's 10-bit BT.2100 HLG output, configure both the mixer and the encoder before publishing:
+
+```swift
+import HaishinKit
+import RTMPHaishinKit
+import VideoToolbox
+
+try await mixer.setDynamicRangeMode(.hdr)
+var settings = await stream.videoSettings
+settings.profileLevel = kVTProfileLevel_HEVC_Main10_AutoLevel as String
+try await stream.setVideoSettings(settings)
+```
+
+The capture device must support the requested HDR format. The server must accept Enhanced RTMP HEVC and preserve the HEVC configuration and video data.
+
+HLG color information is carried in the HEVC bitstream. Publishing preserves the source color primaries, transfer function, and YCbCr matrix. Playback reads this information from the HEVC sequence header and decodes HDR video to 10-bit pixel buffers; no receiver-side encoder settings are needed.
+
+Use `PiPHKView` for system-managed video display. When using `MTHKView`, explicitly match its display mode to the mixer or expected incoming stream:
+
+```swift
+hkView.setDynamicRangeMode(.hdr)
+```
+
+Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not change this selection. HDR mode converts HLG video to floating-point linear BT.2020 values for EDR display on iOS 16 or later and macOS; HDR brightness requires a compatible display. This preserves SDR video brightness when composing SDR assets into an HDR mixer. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
+
+This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
+
 ## Supports Enhanced RTMP Status
 ### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
 Support for AV1 is planned to be implemented once the hardware becomes compatible.
@@ -15,10 +44,12 @@ Support for AV1 is planned to be implemented once the hardware becomes compatibl
 - [ ] Defining Additional Video Codecs
   - [ ] Publish
     - [x] HEVC
+    - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
     - [ ] AV1
   - [ ] Playback
     - [x] HEVC
+    - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
     - [ ] AV1
 - [x] [Extending NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md#extending-netconnection-connect-command)
