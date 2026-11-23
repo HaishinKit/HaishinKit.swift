@@ -29,10 +29,11 @@ requires a compatible server and player. Both controls are locked during a
 broadcast; HDR can be previewed while disconnected.
 
 Both **Publish** and **Playback** offer **MTHKView** (Metal) and
-**PiPView** (sample-buffer display) below the preview. With **PiPView**,
+**PiPView** (sample-buffer display) below the preview. With either renderer,
 **Open floating preview** shows a resizable, always-on-top video window.
-Closing it or switching to MTHKView returns to the inline preview without
-restarting capture or the connection. The floating window shows only video,
+Changing the renderer updates both the inline preview and the open floating
+window, retaining the window's size and position. Closing the window leaves
+the inline preview running without restarting capture or the connection. The floating window shows only video,
 not scene editing handles. It closes when leaving the screen.
 
 This is an application-managed floating window. System Picture in Picture

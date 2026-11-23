@@ -8,17 +8,23 @@ import SwiftUI
 final class PreviewController: NSObject, ObservableObject, NSWindowDelegate, MediaMixerOutput, StreamOutput {
     enum Renderer: String, CaseIterable { case metal = "MTHKView", pip = "PiPView" }
     @Published var renderer: Renderer = .metal {
-        didSet { if renderer != .pip { closeFloatingPreview() } }
+        didSet {
+            guard renderer != oldValue else { return }
+            updateFloatingRenderer()
+        }
     }
     @Published private(set) var isFloating = false
     var dynamicRangeMode: DynamicRangeMode = .sdr {
-        didSet { (inlineView as? MTHKView)?.setDynamicRangeMode(dynamicRangeMode) }
+        didSet {
+            (inlineView as? MTHKView)?.setDynamicRangeMode(dynamicRangeMode)
+            (floatingView as? MTHKView)?.setDynamicRangeMode(dynamicRangeMode)
+        }
     }
     var videoTrackId: UInt8? { UInt8.max }
     var audioTrackId: UInt8? { nil }
     private var inlineView: NSView?
     private var panel: NSPanel?
-    private var floatingView: PiPHKView?
+    private var floatingView: NSView?
 
     func install(_ view: NSView) {
         inlineView = view
@@ -26,7 +32,6 @@ final class PreviewController: NSObject, ObservableObject, NSWindowDelegate, Med
     }
 
     func toggleFloatingPreview() {
-        guard renderer == .pip else { return }
         if isFloating { closeFloatingPreview(); return }
         let panel = NSPanel(contentRect: .init(x: 0, y: 0, width: 480, height: 270),
                             styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -37,14 +42,38 @@ final class PreviewController: NSObject, ObservableObject, NSWindowDelegate, Med
         panel.hidesOnDeactivate = false
         panel.contentMinSize = .init(width: 240, height: 135)
         panel.delegate = self
-        let view = PiPHKView(frame: .init(x: 0, y: 0, width: 480, height: 270))
-        view.videoGravity = .resizeAspect
+        let view = makeView(renderer: renderer, frame: .init(x: 0, y: 0, width: 480, height: 270))
         panel.contentView = view
         floatingView = view
         self.panel = panel
         isFloating = true
         panel.center()
         panel.orderFrontRegardless()
+    }
+
+    fileprivate func makeView(renderer: Renderer, frame: CGRect) -> NSView {
+        let view: NSView
+        switch renderer {
+        case .metal:
+            let metal = MTHKView(frame: frame)
+            metal.videoGravity = .resizeAspect
+            metal.setDynamicRangeMode(dynamicRangeMode)
+            view = metal
+        case .pip:
+            let pip = PiPHKView(frame: frame)
+            pip.videoGravity = .resizeAspect
+            view = pip
+        }
+        view.autoresizingMask = [.width, .height]
+        return view
+    }
+
+    private func updateFloatingRenderer() {
+        guard let panel else { return }
+        let size = panel.contentView?.bounds.size ?? CGSize(width: 480, height: 270)
+        let view = makeView(renderer: renderer, frame: CGRect(origin: .zero, size: size))
+        panel.contentView = view
+        floatingView = view
     }
 
     func closeFloatingPreview() {
@@ -67,13 +96,13 @@ final class PreviewController: NSObject, ObservableObject, NSWindowDelegate, Med
     nonisolated func mixer(_ mixer: MediaMixer, didOutput sampleBuffer: CMSampleBuffer) {
         Task { @MainActor in
             (self.inlineView as? any MediaMixerOutput)?.mixer(mixer, didOutput: sampleBuffer)
-            self.floatingView?.mixer(mixer, didOutput: sampleBuffer)
+            (self.floatingView as? any MediaMixerOutput)?.mixer(mixer, didOutput: sampleBuffer)
         }
     }
     nonisolated func stream(_ stream: some StreamConvertible, didOutput video: CMSampleBuffer) {
         Task { @MainActor in
             (self.inlineView as? any StreamOutput)?.stream(stream, didOutput: video)
-            self.floatingView?.stream(stream, didOutput: video)
+            (self.floatingView as? any StreamOutput)?.stream(stream, didOutput: video)
         }
     }
 }
@@ -82,7 +111,7 @@ struct StudioPreviewSurface: NSViewRepresentable {
     let controller: PreviewController
     let renderer: PreviewController.Renderer
     func makeNSView(context: Context) -> NSView {
-        let view: NSView = renderer == .metal ? MTHKView(frame: .zero) : PiPHKView(frame: .zero)
+        let view = controller.makeView(renderer: renderer, frame: .zero)
         controller.install(view)
         return view
     }
@@ -96,15 +125,13 @@ struct PreviewControls: View {
             Picker(String(localized: "Preview renderer"), selection: $controller.renderer) {
                 ForEach(PreviewController.Renderer.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }.labelsHidden().fixedSize().accessibilityLabel(String(localized: "Preview renderer"))
-            if controller.renderer == .pip {
-                Button {
-                    controller.toggleFloatingPreview()
-                } label: {
-                    Label(controller.isFloating ? String(localized: "Close floating preview") : String(localized: "Open floating preview"),
-                          systemImage: controller.isFloating ? "pip.exit" : "pip.enter")
-                }
-                .help(String(localized: "Show video in an always-on-top window."))
+            Button {
+                controller.toggleFloatingPreview()
+            } label: {
+                Label(controller.isFloating ? String(localized: "Close floating preview") : String(localized: "Open floating preview"),
+                      systemImage: controller.isFloating ? "pip.exit" : "pip.enter")
             }
+            .help(String(localized: "Show video in an always-on-top window."))
         }
     }
 }
