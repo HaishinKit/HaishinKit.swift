@@ -4,86 +4,42 @@ import Testing
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPStreamMetadataTests {
-    @Test func publishingMergesAndReplacesMetadata() async throws {
+    @Test func publishingMergesFieldsAndDoesNotRetainThem() async throws {
         let connection = RTMPConnection()
         let stream = RTMPStream(connection: connection)
-        try await stream.setMetadata(["encoder": "Example", "duration": 123, "videodatarate": 4500, "2026": "season"])
-        #expect(await stream.metadata["2026"] as? String == "season")
-        await stream.dispatch(RTMPDataMessage(
-            streamId: 0,
-            objectEncoding: .amf0,
-            timestamp: 0,
-            handlerName: "onMetaData",
-            arguments: [AMFArray(["encoder": "Delayed playback"])]
-        ), type: .zero)
-        let publishing = Task { try await stream.publish("test") }
+        let publishing = Task {
+            try await stream.publish("test", type: .live, metadata: [
+                "encoder": "Example", "duration": 123, "videodatarate": 4500, "2026": "season"
+            ])
+        }
         try await wait(for: .publish, on: stream)
-        await stream.dispatch(RTMPDataMessage(
-            streamId: 0,
-            objectEncoding: .amf0,
-            timestamp: 0,
-            handlerName: "onMetaData",
-            arguments: [AMFArray(["encoder": "Received", "title": "Other stream"])]
-        ), type: .zero)
-        await stream.dispatch(RTMPCommandMessage(
-            streamId: 0,
-            transactionId: 0,
-            objectEncoding: .amf0,
-            commandName: "onStatus",
-            commandObject: nil,
-            arguments: [["level": "status", "code": "NetStream.Publish.Start"] as AMFObject]
-        ), type: .zero)
+        await receiveMetadata(["encoder": "Received", "title": "Other stream"], on: stream)
+        await respond("NetStream.Publish.Start", on: stream)
         _ = try await publishing.value
         let metadata = await stream.metadata
         #expect(metadata["encoder"] as? String == "Example")
         #expect(metadata["duration"] as? Int == 0)
-        #expect(metadata["2026"] as? String == "season")
         #expect(metadata["videodatarate"] as? Int == 4500)
+        #expect(metadata["2026"] as? String == "season")
         #expect(metadata["title"] as? String == nil)
         try await close(stream, code: "NetStream.Unpublish.Success")
         try await publish(stream)
         #expect(await stream.metadata["encoder"] as? String == nil)
         #expect(await stream.metadata["videodatarate"] as? Int == nil)
-        try await stream.setMetadata([:])
-        #expect(await stream.metadata.dict.isEmpty)
+        try await close(stream, code: "NetStream.Unpublish.Success")
+        try await publish(stream, metadata: ["encoder": "Next"])
+        #expect(await stream.metadata["encoder"] as? String == "Next")
         try await close(stream, code: "NetStream.Unpublish.Success")
     }
 
-    @Test func playbackClearsMetadataAndRejectsChanges() async throws {
+    @Test func publishingDoesNotReusePlaybackMetadata() async throws {
         let connection = RTMPConnection()
         let stream = RTMPStream(connection: connection)
-        try await stream.setMetadata(["encoder": "Example"])
         let playing = Task { try await stream.play("test") }
         try await wait(for: .play, on: stream)
-        #expect(await stream.metadata.dict.isEmpty)
-        await #expect {
-            try await stream.setMetadata(["encoder": "Rejected"])
-        } throws: { error in
-            if case RTMPStream.Error.invalidState = error { return true }
-            return false
-        }
-        await stream.dispatch(RTMPCommandMessage(
-            streamId: 0,
-            transactionId: 0,
-            objectEncoding: .amf0,
-            commandName: "onStatus",
-            commandObject: nil,
-            arguments: [["level": "status", "code": "NetStream.Play.Start"] as AMFObject]
-        ), type: .zero)
+        await respond("NetStream.Play.Start", on: stream)
         _ = try await playing.value
-        await #expect {
-            try await stream.setMetadata(["encoder": "Rejected"])
-        } throws: { error in
-            if case RTMPStream.Error.invalidState = error { return true }
-            return false
-        }
-        await stream.dispatch(RTMPDataMessage(
-            streamId: 0,
-            objectEncoding: .amf0,
-            timestamp: 0,
-            handlerName: "onMetaData",
-            arguments: [AMFArray(["title": "Playback title"])]
-        ), type: .zero)
+        await receiveMetadata(["title": "Playback title"], on: stream)
         try await close(stream, code: "NetStream.Play.Stop")
         #expect(await stream.metadata["title"] as? String == "Playback title")
         try await publish(stream)
@@ -91,31 +47,29 @@ import Testing
         try await close(stream, code: "NetStream.Unpublish.Success")
     }
 
-    @Test func metadataSetDuringPublishWaitIsPreservedForNextPublish() async throws {
-        let connection = RTMPConnection()
-        let stream = RTMPStream(connection: connection)
-        try await stream.setMetadata(["encoder": "First"])
-        let publishing = Task { try await stream.publish("test") }
-        try await wait(for: .publish, on: stream)
-        try await stream.setMetadata(["encoder": "Next"])
+    private func receiveMetadata(_ fields: AMFObject, on stream: RTMPStream) async {
+        await stream.dispatch(RTMPDataMessage(
+            streamId: 0,
+            objectEncoding: .amf0,
+            timestamp: 0,
+            handlerName: "onMetaData",
+            arguments: [AMFArray(fields)]
+        ), type: .zero)
+    }
+
+    private func respond(_ code: String, on stream: RTMPStream) async {
         await stream.dispatch(RTMPCommandMessage(
             streamId: 0,
             transactionId: 0,
             objectEncoding: .amf0,
             commandName: "onStatus",
             commandObject: nil,
-            arguments: [["level": "status", "code": "NetStream.Publish.Start"] as AMFObject]
+            arguments: [["level": "status", "code": code] as AMFObject]
         ), type: .zero)
-        _ = try await publishing.value
-        #expect(await stream.metadata["encoder"] as? String == "Next")
-        try await close(stream, code: "NetStream.Unpublish.Success")
-        try await publish(stream)
-        #expect(await stream.metadata["encoder"] as? String == "Next")
-        try await close(stream, code: "NetStream.Unpublish.Success")
     }
 
-    private func publish(_ stream: RTMPStream) async throws {
-        let publishing = Task { try await stream.publish("test") }
+    private func publish(_ stream: RTMPStream, metadata: AMFObject = [:]) async throws {
+        let publishing = Task { try await stream.publish("test", metadata: metadata) }
         try await wait(for: .publish, on: stream)
         await stream.dispatch(RTMPCommandMessage(
             streamId: 0,

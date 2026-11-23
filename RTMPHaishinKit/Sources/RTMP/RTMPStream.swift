@@ -200,7 +200,6 @@ public actor RTMPStream {
     public private(set) var videoTrackId: UInt8? = UInt8.max
     public private(set) var audioTrackId: UInt8? = UInt8.max
 
-    private var hasPendingMetadata = false
     private var isPaused = false
     private var startedAt = Date() {
         didSet {
@@ -299,8 +298,6 @@ public actor RTMPStream {
             }
         }
         do {
-            metadata = .init(count: 0)
-            hasPendingMetadata = false
             audioFormat = nil
             videoFormat = nil
             audioTimestamp.clear()
@@ -353,8 +350,15 @@ public actor RTMPStream {
         ))
     }
 
-    /// Sends streaming audio, vidoe and data message from client.
-    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live) async throws -> RTMPResponse {
+    /// Sends streaming audio, video and data messages from the client.
+    ///
+    /// - Parameters:
+    ///   - name: The stream name, or nil to stop publishing.
+    ///   - type: The publishing mode.
+    ///   - metadata: Additional fields for the initial onMetaData message of this publish call.
+    ///     Generated stream fields take precedence over fields with the same name.
+    ///     These fields are not retained for subsequent publish calls and are ignored when name is nil.
+    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live, metadata: AMFObject = [:]) async throws -> RTMPResponse {
         guard let name else {
             switch readyState {
             case .publishing:
@@ -363,8 +367,6 @@ public actor RTMPStream {
                 throw Error.invalidState
             }
         }
-        let metadataFields = hasPendingMetadata ? metadata.dict : [:]
-        hasPendingMetadata = false
         do {
             audioFormat = nil
             videoFormat = nil
@@ -393,12 +395,9 @@ public actor RTMPStream {
             info.resourceName = name
             howToPublish = type
             startedAt = .init()
-            let metadata = makeMetadata(metadataFields)
-            if !hasPendingMetadata {
-                self.metadata = metadata
-            }
+            self.metadata = makeMetadata(metadata)
             readyState = .publishing
-            try? send("@setDataFrame", arguments: "onMetaData", metadata)
+            try? send("@setDataFrame", arguments: "onMetaData", self.metadata)
             outgoing.startRunning()
             Task {
                 for await audio in outgoing.audioOutputStream {
@@ -456,22 +455,6 @@ public actor RTMPStream {
             ))
             readyState = .idle
         }
-    }
-
-    /// Replaces the metadata fields used when publishing starts.
-    ///
-    /// The fields are captured when ``publish(_:type:)`` is called.
-    /// Call this method before each call to ``publish(_:type:)``, including when republishing.
-    /// Pass an empty object if no additional fields are needed. Fields generated from the stream's
-    /// settings take precedence over fields with the same name. Changes do not send a metadata message.
-    /// Playback clears the metadata, and this method throws ``Error/invalidState`` while playback
-    /// is starting or active.
-    public func setMetadata(_ metadata: AMFObject) throws {
-        guard readyState != .play && readyState != .playing else {
-            throw Error.invalidState
-        }
-        self.metadata = AMFArray(metadata)
-        hasPendingMetadata = true
     }
 
     /// Sends a message on a published stream to all subscribing clients.
@@ -613,9 +596,7 @@ public actor RTMPStream {
         case let message as RTMPDataMessage:
             switch message.handlerName {
             case "onMetaData":
-                if !hasPendingMetadata {
-                    metadata = message.arguments[0] as? AMFArray ?? .init(count: 0)
-                }
+                metadata = message.arguments[0] as? AMFArray ?? .init(count: 0)
             case "|RtmpSampleAccess":
                 audioSampleAccess = message.arguments[0] as? Bool ?? true
                 videoSampleAccess = message.arguments[1] as? Bool ?? true
