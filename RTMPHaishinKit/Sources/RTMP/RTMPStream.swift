@@ -298,6 +298,7 @@ public actor RTMPStream {
             }
         }
         do {
+            metadata = .init(count: 0)
             audioFormat = nil
             videoFormat = nil
             audioTimestamp.clear()
@@ -448,6 +449,20 @@ public actor RTMPStream {
             ))
             readyState = .idle
         }
+    }
+
+    /// Replaces the metadata fields used when publishing starts.
+    ///
+    /// Call this method before each call to ``publish(_:type:)``, including when republishing.
+    /// Pass an empty object if no additional fields are needed. Fields generated from the stream's
+    /// settings take precedence over fields with the same name. Changes do not send a metadata message.
+    /// Playback clears the metadata, and this method throws ``Error/invalidState`` while playback
+    /// is starting or active.
+    public func setMetadata(_ metadata: AMFObject) throws {
+        guard readyState != .play && readyState != .playing else {
+            throw Error.invalidState
+        }
+        self.metadata = AMFArray(metadata)
     }
 
     /// Sends a message on a published stream to all subscribing clients.
@@ -690,7 +705,8 @@ public actor RTMPStream {
     /// Creates flv metadata for a stream.
     private func makeMetadata() -> AMFArray {
         // https://github.com/shogo4405/HaishinKit.swift/issues/1410
-        var metadata: AMFObject = ["duration": 0]
+        var metadata = self.metadata.dict
+        metadata["duration"] = 0
         if outgoing.videoInputFormat != nil {
             metadata["width"] = outgoing.videoSettings.videoSize.width
             metadata["height"] = outgoing.videoSettings.videoSize.height
