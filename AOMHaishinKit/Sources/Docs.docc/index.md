@@ -1,6 +1,10 @@
 # ``AOMHaishinKit``
 
-Standalone software AV1 encoding and decoding for Apple platforms.
+Standalone software AV1 encoding and decoding.
+@Metadata {
+    @PageImage(purpose: icon, source: "aomhaishinkit-icon.png", alt: "AV1 video frame divided into coding blocks")
+    @PageImage(purpose: card, source: "aomhaishinkit-card.png", alt: "AV1 video frame divided into coding blocks")
+}
 
 This optional product exposes ``AOMVideoEncoder``, ``AOMVideoDecoder``, and
 ``AOMVideoCodecSettings`` without depending on the `HaishinKit` target. Applications

@@ -1,6 +1,10 @@
 # ``VPXHaishinKit``
 
-Standalone software VP8 and VP9 encoding and decoding for Apple platforms.
+Standalone software VP8 and VP9 encoding and decoding.
+@Metadata {
+    @PageImage(purpose: icon, source: "vpxhaishinkit-icon.png", alt: "Stacked video frames for VP8 and VP9")
+    @PageImage(purpose: card, source: "vpxhaishinkit-card.png", alt: "Stacked video frames for VP8 and VP9")
+}
 
 This optional product exposes ``VPXVideoEncoder``, ``VPXVideoDecoder``, and
 ``VPXVideoCodecSettings`` without depending on the `HaishinKit` target. Applications

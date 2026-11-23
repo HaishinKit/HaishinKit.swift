@@ -7,7 +7,7 @@ This module supports the RTMP protocol.
 }
 
 ## 🔍 Overview
-RTMPHaishinKit is RTMP protocols stack in Swift. 
+RTMPHaishinKit implements the RTMP protocol.
 
 ## 🎨 Features
 - [x] FMLE-compatible Authentication

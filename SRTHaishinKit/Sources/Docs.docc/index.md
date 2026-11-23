@@ -7,7 +7,7 @@ This module supports the SRT protocol.
 }
 
 ## 🔍 Overview
-SRTHaishinKit is SRT protocols stack in Swift. It internally uses a library that is built from [libsrt](https://github.com/Haivision/srt) and converted into an xcframework.
+SRTHaishinKit implements the SRT protocol. It internally uses a library that is built from [libsrt](https://github.com/Haivision/srt) and converted into an xcframework.
 
 ## 🎨 Features
 - Publish
@@ -21,7 +21,7 @@ SRTHaishinKit is SRT protocols stack in Swift. It internally uses a library that
 
 ## 📓 Usage
 ### Logging
-- Defining a Swift wrapper method for `srt_setloglevel`.
+- You can define a wrapper for `srt_setloglevel`.
 ```swift
 await SRTLogger.shared.setLevel(.debug)
 ```
