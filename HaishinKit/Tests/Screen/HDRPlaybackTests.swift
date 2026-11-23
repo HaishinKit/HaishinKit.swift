@@ -1,3 +1,4 @@
+import Accelerate
 import AVFoundation
 import MetalKit
 import Testing
@@ -29,7 +30,7 @@ import Testing
         #expect(view.dynamicRangeMode == .hdr)
         #expect(view.colorPixelFormat == .rgba16Float)
         #expect(metalLayer.wantsExtendedDynamicRangeContent)
-        #expect(metalLayer.colorspace?.name == CGColorSpace.itur_2100_HLG)
+        #expect(metalLayer.colorspace?.name == CGColorSpace.extendedLinearITUR_2020)
         #expect(metalLayer.edrMetadata == nil)
 
         view.setDynamicRangeMode(.sdr)
@@ -41,7 +42,7 @@ import Testing
     }
 
     @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil, "Requires Metal"), arguments: [UInt16(502), 721, 940])
-    func metalDestinationPreservesHLGSignal(luma: UInt16) throws {
+    func metalDestinationPreservesHDRLuminance(luma: UInt16) throws {
         guard #available(iOS 16.0, macOS 12.0, *) else {
             return
         }
@@ -54,43 +55,72 @@ import Testing
             address.assumingMemoryBound(to: UInt16.self).initialize(repeating: (plane == 0 ? luma : 512) << 6, count: count)
         }
         #expect(CVPixelBufferUnlockBaseAddress(image, []) == kCVReturnSuccess)
+        let input = CIImage(cvPixelBuffer: image)
+        let expected = referenceLinearPixel(input)
         let view = MTHKView(frame: .init(x: 0, y: 0, width: 192, height: 108))
         view.setDynamicRangeMode(.hdr)
+        let pixel = try renderPixel(input, in: view)
+        for channel in 0..<3 {
+            #expect(abs(pixel[channel] - expected[channel]) < 0.02)
+        }
+        if luma == 940 {
+            #expect(pixel[0] > 1)
+        }
+    }
+
+    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil, "Requires Metal"))
+    func sdrAssetRetainsBrightnessInHDRPreview() async throws {
+        guard #available(iOS 16.0, macOS 12.0, *) else { return }
+        let (sample, expected) = try await AssetHDRReference.makeSample()
+        let image = CIImage(cvPixelBuffer: try #require(sample.imageBuffer))
+        let view = MTHKView(frame: image.extent)
+        view.setDynamicRangeMode(.hdr)
+        let pixel = try renderPixel(image, in: view)
+        for channel in 0..<3 {
+            #expect(abs(pixel[channel] - expected[channel]) < 0.025)
+        }
+    }
+
+    private func referenceLinearPixel(_ image: CIImage) -> [Float] {
+        var pixel = [Float](repeating: 0, count: 4)
+        CIContext().render(image, toBitmap: &pixel, rowBytes: 16,
+                           bounds: CGRect(x: image.extent.midX, y: image.extent.midY, width: 1, height: 1),
+                           format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020))
+        return pixel
+    }
+
+    private func renderPixel(_ image: CIImage, in view: MTHKView) throws -> [Float] {
         let layer = try #require(view.layer as? CAMetalLayer)
         let device = try #require(view.device)
         let queue = try #require(device.makeCommandQueue())
         let command = try #require(queue.makeCommandBuffer())
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.colorPixelFormat, width: 192, height: 108, mipmapped: false)
+        let width = Int(image.extent.width), height = Int(image.extent.height)
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.colorPixelFormat, width: width, height: height, mipmapped: false)
         descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
         descriptor.storageMode = .private
         let texture = try #require(device.makeTexture(descriptor: descriptor))
         let readback = try #require(device.makeBuffer(length: 256, options: .storageModeShared))
-        let destination = CIRenderDestination(width: 192, height: 108, pixelFormat: view.colorPixelFormat, commandBuffer: command, mtlTextureProvider: { texture })
+        let destination = CIRenderDestination(width: width, height: height, pixelFormat: view.colorPixelFormat, commandBuffer: command, mtlTextureProvider: { texture })
         destination.colorSpace = try #require(layer.colorspace)
         let context = CIContext(mtlDevice: device, options: [.workingFormat: CIFormat.RGBAh.rawValue])
-        let task = try context.startTask(toRender: CIImage(cvPixelBuffer: image), to: destination)
+        let task = try context.startTask(toRender: image, to: destination)
         let blit = try #require(command.makeBlitCommandEncoder())
         blit.copy(
             from: texture, sourceSlice: 0, sourceLevel: 0,
-            sourceOrigin: .init(x: 96, y: 54, z: 0), sourceSize: .init(width: 1, height: 1, depth: 1),
+            sourceOrigin: .init(x: width / 2, y: height / 2, z: 0), sourceSize: .init(width: 1, height: 1, depth: 1),
             to: readback, destinationOffset: 0, destinationBytesPerRow: 256, destinationBytesPerImage: 256
         )
         blit.endEncoding()
         command.commit()
         command.waitUntilCompleted()
         _ = try task.waitUntilCompleted()
-        let pixel = UnsafeBufferPointer(start: readback.contents().assumingMemoryBound(to: UInt16.self), count: 4)
-        // Positive binary16 values are ordered. These encode HLG levels 0.5, 0.75, and 1.0.
-        // Compare known bits so this test also compiles on Intel macOS, without Float16.
-        let expected: UInt16 = switch luma {
-        case 502: 0x3800
-        case 721: 0x3a00
-        default: 0x3c00
+        var source = vImage_Buffer(data: readback.contents(), height: 1, width: 4, rowBytes: 8)
+        var pixel = [Float](repeating: 0, count: 4)
+        pixel.withUnsafeMutableBytes { bytes in
+            var output = vImage_Buffer(data: bytes.baseAddress!, height: 1, width: 4, rowBytes: 16)
+            #expect(vImageConvert_Planar16FtoPlanarF(&source, &output, vImage_Flags(kvImageNoFlags)) == kvImageNoError)
         }
-        for channel in pixel.prefix(3) {
-            #expect(abs(Int(channel) - Int(expected)) <= 4)
-        }
-        #expect(layer.edrMetadata == nil)
+        return pixel
     }
 
     private func makeSample(_ mode: DynamicRangeMode) throws -> CMSampleBuffer {
@@ -104,6 +134,27 @@ import Testing
         var sample: CMSampleBuffer?
         #expect(CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: try #require(format), sampleTiming: &timing, sampleBufferOut: &sample) == noErr)
         return try #require(sample)
+    }
+}
+
+@ScreenActor private enum AssetHDRReference {
+    static func makeSample() throws -> (CMSampleBuffer, [Float]) {
+        let url = try #require(Bundle.module.url(forResource: "SampleVideo_360x240_5mb", withExtension: "mp4"))
+        let asset = AssetScreenObject()
+        try asset.startReading(AVURLAsset(url: url))
+        defer { asset.cancelReading() }
+        asset.bounds = CGRect(x: 0, y: 0, width: 360, height: 240)
+        let input = try #require(asset.makeImage(ScreenRendererByGPU(dynamicRangeMode: .sdr)))
+        var expected = [Float](repeating: 0, count: 4)
+        CIContext().render(input, toBitmap: &expected, rowBytes: 16,
+                           bounds: CGRect(x: 180, y: 120, width: 1, height: 1),
+                           format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020))
+        let screen = Screen()
+        screen.size = .init(width: 360, height: 240)
+        screen.dynamicRangeMode = .hdr
+        try screen.addChild(asset)
+        let sample = try #require(screen.makeSampleBuffer(.init(timestamp: 1, targetTimestamp: 1 + 1.0 / 30)))
+        return (sample, expected)
     }
 }
 #endif

@@ -9,7 +9,7 @@ public class MTHKView: MTKView {
     public var videoGravity: AVLayerVideoGravity = .resizeAspect
     public var videoTrackId: UInt8? = UInt8.max
     public var audioTrackId: UInt8?
-    /// The explicitly selected display range. HDR uses BT.2100 HLG.
+    /// The explicitly selected display range. HDR expects BT.2100 HLG video.
     public private(set) var dynamicRangeMode: DynamicRangeMode = .sdr
     private var displayImage: CIImage?
     private var outputColorSpace: CGColorSpace?
@@ -159,8 +159,8 @@ public class MTHKView: MTKView {
                     }
                 }
                 colorPixelFormat = .rgba16Float
-                // Keep HLG code values intact; Core Animation applies the HLG transfer function.
-                outputColorSpace = dynamicRangeMode.colorSpace
+                // Floating-point EDR drawables carry display-linear values, including HDR highlights above 1.
+                outputColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020)
                 metalLayer?.colorspace = outputColorSpace
                 metalLayer?.wantsExtendedDynamicRangeContent = true
                 metalLayer?.edrMetadata = nil

@@ -33,7 +33,7 @@ Use `PiPHKView` for system-managed video display. When using `MTHKView`, explici
 hkView.setDynamicRangeMode(.hdr)
 ```
 
-Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not change this selection. HDR mode enables floating-point HLG output on iOS 16 or later and macOS; HDR brightness requires a compatible display. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
+Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not change this selection. HDR mode converts HLG video to floating-point linear BT.2020 values for EDR display on iOS 16 or later and macOS; HDR brightness requires a compatible display. This preserves SDR video brightness when composing SDR assets into an HDR mixer. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
 
 This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
 
