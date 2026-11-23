@@ -12,6 +12,9 @@ final class PublishViewModel: ObservableObject {
     @Published var outputResolution: OutputResolution = .hd720
     @Published var outputCodec: OutputVideoCodec = .h264
     @Published var useHardwareEncoder = true
+    @Published private(set) var mixerDynamicRangeMode: DynamicRangeMode = .sdr
+    @Published private(set) var isChangingDynamicRange = false
+    @Published private(set) var dynamicRangeIssue: String?
     @Published private(set) var networkReport: NetworkMonitorReport?
     @Published private(set) var measuredFPS: UInt16?
     @Published private(set) var activeEncodingDescription: String?
@@ -35,9 +38,33 @@ final class PublishViewModel: ObservableObject {
     private var shutdownTask: Task<Void, Never>?
     private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
+    private weak var previewView: MTHKView?
+
+    var encodingConfigurationIssue: String? {
+        guard mixerDynamicRangeMode != outputCodec.dynamicRangeMode else { return nil }
+        return mixerDynamicRangeMode == .hdr
+            ? String(localized: "Select HEVC Main10 (HDR), or turn off Mixer HDR before publishing.")
+            : String(localized: "Turn on Mixer HDR to publish with HEVC Main10 (HDR).")
+    }
+
+    func setMixerDynamicRangeMode(_ mode: DynamicRangeMode) {
+        guard !isBusy, readyState == .closed, !captureIsStarting, !isChangingDynamicRange else { return }
+        isChangingDynamicRange = true
+        dynamicRangeIssue = nil
+        Task {
+            defer { isChangingDynamicRange = false }
+            do {
+                try await mixer.setDynamicRangeMode(mode)
+                mixerDynamicRangeMode = await mixer.dynamicRangeMode
+                previewView?.setDynamicRangeMode(mixerDynamicRangeMode)
+            } catch {
+                dynamicRangeIssue = String(localized: "Couldn't change Mixer HDR: \(error.localizedDescription)")
+            }
+        }
+    }
 
     func startPublishing(_ preference: PreferenceViewModel) {
-        guard !isBusy, readyState == .closed else { return }
+        guard !isBusy, !isChangingDynamicRange, readyState == .closed, encodingConfigurationIssue == nil else { return }
         isBusy = true
         publishingTask = Task {
             defer { isBusy = false }
@@ -49,8 +76,7 @@ final class PublishViewModel: ObservableObject {
             measuredFPS = nil
             activeEncodingDescription = nil
             session = nil
-            await makeSession(preference)
-            guard let session, !Task.isCancelled else { return }
+            guard await makeSession(preference), let session, !Task.isCancelled else { return }
             do {
                 try await session.connect {
                     Task { @MainActor in
@@ -80,14 +106,14 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
-    func makeSession(_ preference: PreferenceViewModel) async {
+    func makeSession(_ preference: PreferenceViewModel) async -> Bool {
         // Make session.
         do {
             session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
                 .build()
             guard let session else {
-                return
+                return false
             }
             await mixer.addOutput(session.stream)
             let telemetry = PublishTelemetry()
@@ -112,6 +138,7 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
         do {
             if let session {
@@ -122,6 +149,7 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
         do {
             if let session {
@@ -138,7 +166,9 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
+        return true
     }
 
     func startRunning(_ preference: PreferenceViewModel) {
@@ -233,7 +263,9 @@ final class PublishViewModel: ObservableObject {
 
 extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
     nonisolated func connect(to view: HaishinKit.MTHKView) {
-        Task {
+        Task { @MainActor in
+            previewView = view
+            view.setDynamicRangeMode(mixerDynamicRangeMode)
             await mixer.addOutput(view)
         }
     }

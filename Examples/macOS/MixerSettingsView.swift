@@ -35,6 +35,17 @@ struct MixerSettingsView: View {
             Picker(String(localized: "Mixer FPS"), selection: $model.mixerFPS) {
                 ForEach(FPS.allCases) { Text("\($0.rawValue) fps").tag($0) }
             }.pickerStyle(.segmented)
+            Toggle(String(localized: "Mixer HDR (HLG)"), isOn: Binding(
+                get: { model.mixerDynamicRangeMode == .hdr },
+                set: { model.setMixerDynamicRangeMode($0 ? .hdr : .sdr) }
+            ))
+            .disabled(model.isBusy || model.isChangingDynamicRange || model.readyState != .closed || model.captureIsStarting)
+            Text(String(localized: "Mix the scene in 10-bit HLG. Change this before publishing."))
+                .font(.caption).foregroundStyle(.secondary)
+            if let issue = model.dynamicRangeIssue {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
         }
         .disabled(editor.busy)
         .onAppear(perform: synchronize)

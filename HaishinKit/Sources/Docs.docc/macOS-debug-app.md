@@ -19,6 +19,15 @@ resolution, codec, video/audio target bitrates, and hardware encoding for the
 next publishing session. **Settings** contains audio format, bitrate mode, and
 low-latency options.
 
+For HDR publishing, enable **Video → Mixer HDR (HLG)** and select
+**Encoder → Video codec → HEVC Main10 (HDR)** before going live. The mixer
+switch controls 10-bit HLG scene mixing and preview; native camera HDR capture
+depends on the device. The encoder choice selects the HEVC Main10 profile for
+the next stream. The app shows a configuration message and disables **Go live**
+when the mixer and encoder dynamic ranges differ. Enhanced RTMP HDR also
+requires a compatible server and player. Both controls are locked during a
+broadcast; HDR can be previewed while disconnected.
+
 New scenes use a 1280 × 720 preview canvas; imported scenes retain their canvas size; encoder output resolution is configured
 separately. Target video bitrate is a setting, not a measured throughput value.
 Use **MediaMixer** to choose a canvas preset or apply a custom width and height

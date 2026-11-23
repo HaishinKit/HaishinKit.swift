@@ -9,7 +9,11 @@ public class MTHKView: MTKView {
     public var videoGravity: AVLayerVideoGravity = .resizeAspect
     public var videoTrackId: UInt8? = UInt8.max
     public var audioTrackId: UInt8?
+    /// The explicitly selected display range. HDR expects BT.2100 HLG video.
+    public private(set) var dynamicRangeMode: DynamicRangeMode = .sdr
     private var displayImage: CIImage?
+    private var outputColorSpace: CGColorSpace?
+    private var restoreSDRConfiguration: (@MainActor () -> Void)?
     private lazy var commandQueue: (any MTLCommandQueue)? = {
         return device?.makeCommandQueue()
     }()
@@ -35,7 +39,7 @@ public class MTHKView: MTKView {
             framebufferOnly = false
             enableSetNeedsDisplay = true
             if let device {
-                context = CIContext(mtlDevice: device, options: [.cacheIntermediates: false, .name: "MTHKView"])
+                context = CIContext(mtlDevice: device, options: [.cacheIntermediates: false, .name: "MTHKView", .workingFormat: CIFormat.RGBAh.rawValue])
             }
         }
     }
@@ -101,10 +105,17 @@ public class MTHKView: MTKView {
                 return currentDrawable.texture
             })
 
-        _ = try? context.startTask(toRender: scaledImage, to: destination)
+        _ = try? startRendering(scaledImage, to: destination, using: context)
 
         commandBuffer.present(currentDrawable)
         commandBuffer.commit()
+    }
+
+    func startRendering(_ image: CIImage, to destination: CIRenderDestination, using context: CIContext) throws -> CIRenderTask {
+        if let outputColorSpace {
+            destination.colorSpace = outputColorSpace
+        }
+        return try context.startTask(toRender: image, to: destination)
     }
 
     /// Registers a video effect.
@@ -123,6 +134,47 @@ public class MTHKView: MTKView {
             return true
         }
         return false
+    }
+
+    /// Sets the display range to match the mixer or the expected incoming video.
+    ///
+    /// Call this explicitly; incoming sample buffers do not change the selected mode.
+    /// HDR display requires iOS 16 or later or macOS. On tvOS, use `PiPHKView`.
+    public func setDynamicRangeMode(_ dynamicRangeMode: DynamicRangeMode) {
+        guard self.dynamicRangeMode != dynamicRangeMode else {
+            return
+        }
+        self.dynamicRangeMode = dynamicRangeMode
+        #if !os(tvOS)
+        if #available(iOS 16.0, macOS 12.0, *) {
+            let metalLayer = layer as? CAMetalLayer
+            switch dynamicRangeMode {
+            case .hdr:
+                if restoreSDRConfiguration == nil {
+                    let pixelFormat = colorPixelFormat
+                    let colorSpace = metalLayer?.colorspace
+                    let wantsEDR = metalLayer?.wantsExtendedDynamicRangeContent ?? false
+                    let metadata = metalLayer?.edrMetadata
+                    restoreSDRConfiguration = { [weak self, weak metalLayer] in
+                        self?.colorPixelFormat = pixelFormat
+                        metalLayer?.colorspace = colorSpace
+                        metalLayer?.wantsExtendedDynamicRangeContent = wantsEDR
+                        metalLayer?.edrMetadata = metadata
+                    }
+                }
+                colorPixelFormat = .rgba16Float
+                // Floating-point EDR drawables carry display-linear values, including HDR highlights above 1.
+                outputColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearITUR_2020)
+                metalLayer?.colorspace = outputColorSpace
+                metalLayer?.wantsExtendedDynamicRangeContent = true
+                metalLayer?.edrMetadata = nil
+            case .sdr:
+                restoreSDRConfiguration?()
+                restoreSDRConfiguration = nil
+                outputColorSpace = nil
+            }
+        }
+        #endif
     }
 }
 

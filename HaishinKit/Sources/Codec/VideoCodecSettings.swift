@@ -94,7 +94,8 @@ public struct VideoCodecSettings: Codable, Sendable {
     public var videoSize: CGSize
     /// Specifies the bitrate.
     public var bitRate: Int
-    /// Specifies the H264 profileLevel.
+    /// Specifies the H264 or HEVC profile level.
+    /// Use `kVTProfileLevel_HEVC_Main10_AutoLevel` for HDR (HLG) streaming.
     public var profileLevel: String {
         didSet {
             if profileLevel.contains("HEVC") {

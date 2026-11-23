@@ -3,7 +3,7 @@ import CoreImage
 
 /// Defines the dynamic range mode used for rendering or video processing.
 ///
-/// - Note: Live streaming is **not yet supported** when using HDR mode.
+/// - Note: HDR streaming requires HEVC Main10 encoding and a compatible server and player.
 public enum DynamicRangeMode: Sendable {
     private static let colorSpaceITUR709 = CGColorSpace(name: CGColorSpace.itur_709)
     private static let colorSpaceITUR2100 = CGColorSpace(name: CGColorSpace.itur_2100_HLG)

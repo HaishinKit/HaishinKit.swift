@@ -46,7 +46,7 @@ struct PublishView: View {
     @EnvironmentObject private var preference: PreferenceViewModel
     @StateObject private var model = PublishViewModel()
 
-    private var locked: Bool { model.isBusy || model.readyState != .closed }
+    private var locked: Bool { model.isBusy || model.isChangingDynamicRange || model.readyState != .closed }
 
     var body: some View {
         HSplitView {
@@ -89,7 +89,7 @@ struct PublishView: View {
                             Button(String(localized: "Request camera access")) { model.requestCameraAccess(preference) }
                                 .disabled(model.captureIsStarting || locked)
                         }
-                        MixerSettingsView(model: model, editor: model.sceneEditor).disabled(model.isBusy || model.captureIsStarting)
+                        MixerSettingsView(model: model, editor: model.sceneEditor).disabled(model.isBusy || model.isChangingDynamicRange || model.captureIsStarting)
                         StudioSection(title: String(localized: "Capture"), subtitle: String(localized: "Input frame rate and effects")) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(String(localized: "Frame rate")).font(.callout.weight(.medium))
@@ -109,6 +109,10 @@ struct PublishView: View {
                             Picker(String(localized: "Video codec"), selection: $model.outputCodec) {
                                 ForEach(OutputVideoCodec.allCases) { Text($0.rawValue).tag($0) }
                             }
+                            if model.outputCodec == .hevcMain10 {
+                                Text(String(localized: "10-bit HLG over Enhanced RTMP requires a compatible server and player."))
+                                    .font(.callout).foregroundStyle(.secondary)
+                            }
                             Stepper(String(localized: "Video: \(model.videoBitRate / 1000) kbps"), value: $model.videoBitRate, in: 100_000...20_000_000, step: 100_000)
                             Stepper(String(localized: "Audio: \(model.audioBitRate / 1000) kbps"), value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
                             Toggle(String(localized: "Hardware encoding"), isOn: $model.useHardwareEncoder)
@@ -122,6 +126,10 @@ struct PublishView: View {
                 }
                 Divider()
                 VStack(spacing: 12) {
+                    if let issue = model.encodingConfigurationIssue {
+                        Label(issue, systemImage: "exclamationmark.triangle")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                     Button {
                         if model.readyState == .open { model.stopPublishing() }
                         else { model.startPublishing(preference) }

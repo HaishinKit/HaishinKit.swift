@@ -486,6 +486,9 @@ struct RTMPVideoMessage: RTMPMessage {
     }
 
     var compositionTime: Int32 {
+        if isExHeader && packetType != RTMPVideoPacketType.codedFrames.rawValue {
+            return 0
+        }
         let offset = self.offset
         var compositionTime = Int32(data: [0] + payload[2 + offset..<5 + offset]).bigEndian
         compositionTime <<= 8

@@ -21,6 +21,16 @@
         }
       }
     },
+    "10-bit HLG over Enhanced RTMP requires a compatible server and player.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enhanced RTMPで10-bit HLGを使用するには、対応するサーバーとプレーヤーが必要です。"
+          }
+        }
+      }
+    },
     "1080 × 1920 (portrait)": {
       "localizations": {
         "ja": {
@@ -730,6 +740,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このシーンを復元できませんでした：%@"
+          }
+        }
+      }
+    },
+    "Couldn't change Mixer HDR: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミキサーのHDRを変更できませんでした：%@"
           }
         }
       }
@@ -1447,12 +1467,32 @@
         }
       }
     },
+    "Mix the scene in 10-bit HLG. Change this before publishing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンを10-bit HLGで合成します。配信開始前に変更してください。"
+          }
+        }
+      }
+    },
     "Mixer FPS": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ミキサーのFPS"
+          }
+        }
+      }
+    },
+    "Mixer HDR (HLG)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミキサーのHDR（HLG）"
           }
         }
       }
@@ -2058,6 +2098,16 @@
         }
       }
     },
+    "Select HEVC Main10 (HDR), or turn off Mixer HDR before publishing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信するにはHEVC Main10（HDR）を選択するか、ミキサーのHDRをオフにしてください。"
+          }
+        }
+      }
+    },
     "Select an object in the list or preview.": {
       "localizations": {
         "ja": {
@@ -2434,6 +2484,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "色付きの部分は映像の出力範囲外です。"
+          }
+        }
+      }
+    },
+    "Turn on Mixer HDR to publish with HEVC Main10 (HDR).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HEVC Main10（HDR）で配信するには、ミキサーのHDRをオンにしてください。"
           }
         }
       }
