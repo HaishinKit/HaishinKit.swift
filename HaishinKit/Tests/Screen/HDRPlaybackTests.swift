@@ -36,7 +36,7 @@ import Testing
         #expect(metalLayer.edrMetadata === originalMetadata)
     }
 
-    @Test(arguments: [UInt16(502), 721, 940])
+    @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil, "Requires Metal"), arguments: [UInt16(502), 721, 940])
     func metalDestinationPreservesHLGSignal(luma: UInt16) throws {
         guard #available(iOS 16.0, macOS 12.0, *) else {
             return
@@ -58,20 +58,33 @@ import Testing
         let command = try #require(queue.makeCommandBuffer())
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.colorPixelFormat, width: 192, height: 108, mipmapped: false)
         descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
-        descriptor.storageMode = .shared
+        descriptor.storageMode = .private
         let texture = try #require(device.makeTexture(descriptor: descriptor))
+        let readback = try #require(device.makeBuffer(length: 256, options: .storageModeShared))
         let destination = CIRenderDestination(width: 192, height: 108, pixelFormat: view.colorPixelFormat, commandBuffer: command, mtlTextureProvider: { texture })
         destination.colorSpace = try #require(layer.colorspace)
         let context = CIContext(mtlDevice: device, options: [.workingFormat: CIFormat.RGBAh.rawValue])
         let task = try context.startTask(toRender: CIImage(cvPixelBuffer: image), to: destination)
+        let blit = try #require(command.makeBlitCommandEncoder())
+        blit.copy(
+            from: texture, sourceSlice: 0, sourceLevel: 0,
+            sourceOrigin: .init(x: 96, y: 54, z: 0), sourceSize: .init(width: 1, height: 1, depth: 1),
+            to: readback, destinationOffset: 0, destinationBytesPerRow: 256, destinationBytesPerImage: 256
+        )
+        blit.endEncoding()
         command.commit()
         command.waitUntilCompleted()
         _ = try task.waitUntilCompleted()
-        var pixel = [UInt16](repeating: 0, count: 4)
-        texture.getBytes(&pixel, bytesPerRow: 8, from: MTLRegionMake2D(96, 54, 1, 1), mipmapLevel: 0)
-        let expected = (Float(luma) - 64) / 876
+        let pixel = UnsafeBufferPointer(start: readback.contents().assumingMemoryBound(to: UInt16.self), count: 4)
+        // Positive binary16 values are ordered. These encode HLG levels 0.5, 0.75, and 1.0.
+        // Compare known bits so this test also compiles on Intel macOS, without Float16.
+        let expected: UInt16 = switch luma {
+        case 502: 0x3800
+        case 721: 0x3a00
+        default: 0x3c00
+        }
         for channel in pixel.prefix(3) {
-            #expect(abs(Float(Float16(bitPattern: channel)) - expected) < 0.005)
+            #expect(abs(Int(channel) - Int(expected)) <= 4)
         }
         #expect(layer.edrMetadata == nil)
     }
