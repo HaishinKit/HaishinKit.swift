@@ -9,9 +9,9 @@ enum VQMetrixCodec: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .h264: return "H.264"
         case .hevc: return "HEVC"
-        case .av1: return "AV1 (software)"
-        case .vp8: return "VP8 (software)"
-        case .vp9: return "VP9 (software)"
+        case .av1: return String(localized: "AV1 (software)")
+        case .vp8: return String(localized: "VP8 (software)")
+        case .vp9: return String(localized: "VP9 (software)")
         }
     }
     var isSoftware: Bool { self == .av1 || self == .vp8 || self == .vp9 }

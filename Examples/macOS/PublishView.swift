@@ -134,7 +134,7 @@ struct PublishView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(model.readyState == .open ? .red : .accentColor)
-                    .disabled(model.isBusy || model.readyState == .connecting || model.readyState == .closing)
+                    .disabled(model.isBusy || model.isChangingDynamicRange || model.readyState == .connecting || model.readyState == .closing || (model.readyState == .closed && model.encodingConfigurationIssue != nil))
                     Text(String(localized: "Go live sends the preview. Microphone input follows Settings → Capture."))
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20)

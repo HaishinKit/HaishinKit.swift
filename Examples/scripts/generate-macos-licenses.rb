@@ -19,8 +19,8 @@ add = lambda do |name, identity, url, paths|
 end
 add.call('HaishinKit', nil, 'https://github.com/HaishinKit/HaishinKit.swift', [File.join(root, 'LICENSE.md')])
 add.call('Logboard', 'logboard', 'https://github.com/shogo4405/Logboard', [checkout.call('Logboard', 'LICENSE.md')])
-add.call('Sparkle and bundled components', 'sparkle', 'https://github.com/sparkle-project/Sparkle', [File.join(packages, 'artifacts/sparkle/Sparkle/LICENSE')])
-add.call('libdatachannel and bundled components', 'libdatachannel-xcframework', 'https://github.com/HaishinKit/libdatachannel-xcframework', %w[THIRD-PARTY-LICENSES.txt SOURCE-NOTICE.txt SOURCES.json].map { |file| artifact.call('libdatachannel-xcframework', 'libdatachannel', file) })
+add.call('Sparkle', 'sparkle', 'https://github.com/sparkle-project/Sparkle', [File.join(packages, 'artifacts/sparkle/Sparkle/LICENSE')])
+add.call('libdatachannel', 'libdatachannel-xcframework', 'https://github.com/HaishinKit/libdatachannel-xcframework', %w[THIRD-PARTY-LICENSES.txt SOURCE-NOTICE.txt SOURCES.json].map { |file| artifact.call('libdatachannel-xcframework', 'libdatachannel', file) })
 add.call('SRT', 'libsrt-xcframework', 'https://github.com/HaishinKit/libsrt-xcframework', %w[THIRD-PARTY-LICENSES.txt SOURCE-NOTICE.txt SOURCES.json].map { |file| artifact.call('libsrt-xcframework', 'libsrt', file) })
 {'libaom' => %w[LICENSE PATENTS AUTHORS vector-LICENSE fastfeat-LICENSE SOURCES.json], 'libvpx' => %w[LICENSE PATENTS AUTHORS SOURCES.json]}.each do |name, files|
   add.call(name, "#{name}-xcframework", "https://github.com/HaishinKit/#{name}-xcframework", [checkout.call("#{name}-xcframework", 'LICENSE.md')] + files.map { |file| artifact.call("#{name}-xcframework", name, file) })

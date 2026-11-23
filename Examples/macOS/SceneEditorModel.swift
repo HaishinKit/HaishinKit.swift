@@ -169,8 +169,10 @@ private final class StudioSceneRenderer {
         object.isVisible = sceneVisible && layer.visible && layer.kind != .unsupported
         object.size = CGSize(width: layer.width, height: layer.height)
         if layer.keepsImageAspectRatio, let image = object as? ImageScreenObject, let extent = image.ciImage?.extent,
-            extent.width > 0, extent.height > 0, layer.width > 0, layer.height > 0 {
-            let scale = min(layer.width / extent.width, layer.height / extent.height)
+            extent.width > 0, extent.height > 0, layer.width > 0 || layer.height > 0 {
+            let widthScale = layer.width > 0 ? layer.width / extent.width : .infinity
+            let heightScale = layer.height > 0 ? layer.height / extent.height : .infinity
+            let scale = min(widthScale, heightScale, 8192 / max(extent.width, extent.height))
             object.size = CGSize(width: extent.width * scale, height: extent.height * scale)
         }
         if let node = try? SceneSnapshotCodec.node(layer) {
@@ -620,8 +622,8 @@ final class SceneEditorModel: ObservableObject {
         perform {
             let previous = self.scene.layers[index]
             if layer.keepsImageAspectRatio, let ratio = await self.renderer.imageAspectRatio(id: layer.id) {
-                if layer.width != previous.width, layer.height == previous.height { layer.height = layer.width / ratio }
-                else if layer.height != previous.height, layer.width == previous.width { layer.width = layer.height * ratio }
+                if layer.width > 0, layer.width != previous.width, layer.height == previous.height { layer.height = layer.width / ratio }
+                else if layer.height > 0, layer.height != previous.height, layer.width == previous.width { layer.width = layer.height * ratio }
             }
             var candidate = self.scene
             candidate.layers[index] = layer

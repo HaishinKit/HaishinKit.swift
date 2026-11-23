@@ -2960,6 +2960,36 @@
           }
         }
       }
+    },
+    "AV1 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AV1（ソフトウェア）"
+          }
+        }
+      }
+    },
+    "VP8 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VP8（ソフトウェア）"
+          }
+        }
+      }
+    },
+    "VP9 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VP9（ソフトウェア）"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

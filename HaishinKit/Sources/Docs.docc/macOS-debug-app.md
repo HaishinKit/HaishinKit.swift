@@ -19,7 +19,7 @@ resolution, codec, video/audio target bitrates, and hardware encoding for the
 next publishing session. **Settings** contains audio format, bitrate mode, and
 low-latency options.
 
-For HDR publishing, enable **Video → Mixer HDR (HLG)** and select
+For HDR publishing, enable **MediaMixer → Mixer HDR (HLG)** and select
 **Encoder → Video codec → HEVC Main10 (HDR)** before going live. The mixer
 switch controls 10-bit HLG scene mixing and preview; native camera HDR capture
 depends on the device. The encoder choice selects the HEVC Main10 profile for
@@ -83,6 +83,7 @@ loop without supplying audio; microphone settings still control capture audio.
 Editable image layers retain their source aspect ratio, including previously
 stretched layers. Editing either image dimension adjusts the other proportionally. Turn off
 **Keep image aspect ratio** in the inspector to test stretched image layouts.
+An automatic (zero) dimension is derived from the other dimension while aspect locking is enabled.
 Images inside imported, read-only groups retain the geometry authored in the scene
 file; the inspector's aspect-ratio setting does not modify those descendants.
 
