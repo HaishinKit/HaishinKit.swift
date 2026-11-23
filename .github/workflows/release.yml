@@ -61,7 +61,7 @@ jobs:
           fi
           if ! gh release view "$RELEASE_VERSION" > /dev/null 2>&1; then
             release_flags=()
-            if [[ "$RELEASE_VERSION" == *-* ]]; then release_flags+=(--prerelease); fi
+            if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then release_flags+=(--prerelease); fi
             gh release create "$RELEASE_VERSION" --verify-tag --draft "${release_flags[@]}" \
               --title "$RELEASE_VERSION" \
               --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is ad-hoc signed, without Developer ID signing or notarization; macOS may block it from opening. See .github/macos-release.md for details.'

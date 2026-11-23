@@ -170,8 +170,6 @@ private final class PreviewSceneEditor {
         let editor = ScreenObjectEditor(screen: screen)
         if object is ImageScreenObject, !locksImageAspectRatio {
             object.size = CGSize(width: min(8192, width), height: min(8192, height))
-            editor.move(object, to: start.bounds.origin, size: object.size)
-            editingBounds = object.makeBounds(object.size)
         } else {
             let denominator = start.bounds.width * start.bounds.width + start.bounds.height * start.bounds.height
             var scale = (width * start.bounds.width + height * start.bounds.height) / denominator
@@ -179,9 +177,14 @@ private final class PreviewSceneEditor {
                 scale = min(scale, min(8192 / max(1, start.size.width), 8192 / max(1, start.size.height)))
                 if let font = (start.text?["fontSize"]).flatMap(Double.init), font > 0 { scale = min(scale, 1024 / CGFloat(font)) }
             }
-            editingBounds = editor.transform(object, bounds: start.bounds, anchor: start.bounds.origin,
+            _ = editor.transform(object, bounds: start.bounds, anchor: start.bounds.origin,
                 destination: start.bounds.origin, scale: max(0.01, scale))
         }
+        // Corner resizing keeps its opposite corner fixed, including at canvas edges.
+        object.horizontalAlignment = .left
+        object.verticalAlignment = .top
+        object.layoutMargin = .init(top: start.bounds.minY, left: start.bounds.minX, bottom: 0, right: 0)
+        editingBounds = object.makeBounds(object.size)
         object.invalidateLayout()
         target = object
     }

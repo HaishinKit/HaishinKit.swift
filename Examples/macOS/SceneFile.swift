@@ -153,8 +153,13 @@ enum SceneSnapshotCodec {
             }
         case .testSignal, .group, .unsupported: break
         }
+        func pixelDimension(_ value: Double) -> Int {
+            guard layer.keepsImageAspectRatio else { return Int(value) }
+            // Preserve the enclosing fit box, without rounding floating-point noise up a pixel.
+            return Int((value - 8 * value.ulp).rounded(.up))
+        }
         return ScreenObjectSnapshot(
-            type: type, id: layer.id, size: .init(width: Int(layer.width), height: Int(layer.height)), isVisible: layer.visible,
+            type: type, id: layer.id, size: .init(width: pixelDimension(layer.width), height: pixelDimension(layer.height)), isVisible: layer.visible,
             layoutMargin: layer.absoluteLayout == false ? (basis?.layoutMargin ?? .init()) : .init(top: Int(layer.y), left: Int(layer.x)),
             horizontalAlignment: layer.absoluteLayout == false ? (basis?.horizontalAlignment ?? 0) : 0,
             verticalAlignment: layer.absoluteLayout == false ? (basis?.verticalAlignment ?? 0) : 0,

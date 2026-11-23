@@ -80,9 +80,11 @@ Imported files are copied into scene-specific Application Support `HaishinKit/Sc
 directories so moving the original file does not break the scene. Video objects
 loop without supplying audio; microphone settings still control capture audio.
 
-Images retain their source aspect ratio, including previously stretched image
-objects. Editing either image dimension adjusts the other proportionally. Turn off
+Editable image layers retain their source aspect ratio, including previously
+stretched layers. Editing either image dimension adjusts the other proportionally. Turn off
 **Keep image aspect ratio** in the inspector to test stretched image layouts.
+Images inside imported, read-only groups retain the geometry authored in the scene
+file; the inspector's aspect-ratio setting does not modify those descendants.
 
 Select an object in the list or preview. Drag it to move, scroll or use the
 selection's bottom-right handle to resize, and use **Object inspector** for its
