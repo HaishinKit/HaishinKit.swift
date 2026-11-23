@@ -109,6 +109,97 @@ import Testing
         #expect(calls == 0)
     }
 
+    @Test(arguments: [false, true])
+    func nilAndEmptyResultsProduceDifferentOutput(sendEmpty: Bool) async throws {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        try await publish(stream, metadata: { _ in sendEmpty ? [:] : nil })
+        try await close(stream, code: "NetStream.Unpublish.Success")
+        var expectedBytes = RTMPCommandMessage(
+            streamId: 0, transactionId: 0, objectEncoding: .amf0,
+            commandName: "publish", commandObject: nil, arguments: ["test", "live"]
+        ).payload.count
+        expectedBytes += RTMPCommandMessage(
+            streamId: 0, transactionId: 0, objectEncoding: .amf0,
+            commandName: "closeStream", commandObject: nil, arguments: []
+        ).payload.count
+        for code in ["NetStream.Publish.Start", "NetStream.Unpublish.Success"] {
+            expectedBytes += RTMPCommandMessage(
+                streamId: 0, transactionId: 0, objectEncoding: .amf0,
+                commandName: "onStatus", commandObject: nil,
+                arguments: [["level": "status", "code": code] as AMFObject]
+            ).payload.count
+        }
+        if sendEmpty {
+            expectedBytes += RTMPDataMessage(
+                streamId: 0, objectEncoding: .amf0, timestamp: 0,
+                handlerName: "@setDataFrame", arguments: ["onMetaData", AMFArray(count: 0)]
+            ).payload.count
+        }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while await stream.info.byteCount < expectedBytes && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(await stream.info.byteCount == expectedBytes)
+    }
+
+    @Test func rejectedPublishDoesNotInvokeMetadataCallback() async throws {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        let (inputs, captured) = AsyncStream<AMFObject>.makeStream()
+        let publishing = Task {
+            try await stream.publish("test") { generated in
+                captured.yield(generated)
+                return generated
+            }
+        }
+        try await wait(for: .publish, on: stream)
+        await stream.dispatch(RTMPCommandMessage(
+            streamId: 0, transactionId: 0, objectEncoding: .amf0,
+            commandName: "onStatus", commandObject: nil,
+            arguments: [["level": "error", "code": "NetStream.Publish.BadName"] as AMFObject]
+        ), type: .zero)
+        await #expect {
+            _ = try await publishing.value
+        } throws: { error in
+            if case RTMPStream.Error.requestFailed = error { return true }
+            return false
+        }
+        captured.finish()
+        var calls = 0
+        for await _ in inputs { calls += 1 }
+        #expect(calls == 0)
+        #expect(await stream.readyState == .idle)
+    }
+
+    @Test func pendingPublishRejectsOverlappingPublishWithoutRunningItsCallback() async throws {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        let firstPublish = Task {
+            try await stream.publish("first", metadata: { _ in ["encoder": "First"] })
+        }
+        try await wait(for: .publish, on: stream)
+        let (inputs, captured) = AsyncStream<AMFObject>.makeStream()
+        do {
+            _ = try await stream.publish("second") { generated in
+                captured.yield(generated)
+                return ["encoder": "Second"]
+            }
+            Issue.record("An overlapping publish must fail")
+            return
+        } catch RTMPStream.Error.invalidState {
+            // The first publish must keep its pending response and callback.
+        }
+        captured.finish()
+        var calls = 0
+        for await _ in inputs { calls += 1 }
+        #expect(calls == 0)
+        await respond("NetStream.Publish.Start", on: stream)
+        _ = try await firstPublish.value
+        #expect(await stream.metadata["encoder"] as? String == "First")
+        try await close(stream, code: "NetStream.Unpublish.Success")
+    }
+
     private func receiveMetadata(_ fields: AMFObject, on stream: RTMPStream) async {
         await stream.dispatch(RTMPDataMessage(
             streamId: 0,

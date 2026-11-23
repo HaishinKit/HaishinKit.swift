@@ -374,6 +374,9 @@ public actor RTMPStream {
                 throw Error.invalidState
             }
         }
+        guard readyState != .publish else {
+            throw Error.invalidState
+        }
         do {
             audioFormat = nil
             videoFormat = nil
