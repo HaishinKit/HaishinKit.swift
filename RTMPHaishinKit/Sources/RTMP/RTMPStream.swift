@@ -200,6 +200,7 @@ public actor RTMPStream {
     public private(set) var videoTrackId: UInt8? = UInt8.max
     public private(set) var audioTrackId: UInt8? = UInt8.max
 
+    private var hasPendingMetadata = false
     private var isPaused = false
     private var startedAt = Date() {
         didSet {
@@ -299,6 +300,7 @@ public actor RTMPStream {
         }
         do {
             metadata = .init(count: 0)
+            hasPendingMetadata = false
             audioFormat = nil
             videoFormat = nil
             audioTimestamp.clear()
@@ -361,6 +363,8 @@ public actor RTMPStream {
                 throw Error.invalidState
             }
         }
+        let metadataFields = hasPendingMetadata ? metadata.dict : [:]
+        hasPendingMetadata = false
         do {
             audioFormat = nil
             videoFormat = nil
@@ -389,7 +393,7 @@ public actor RTMPStream {
             info.resourceName = name
             howToPublish = type
             startedAt = .init()
-            metadata = makeMetadata()
+            metadata = makeMetadata(metadataFields)
             readyState = .publishing
             try? send("@setDataFrame", arguments: "onMetaData", metadata)
             outgoing.startRunning()
@@ -453,6 +457,7 @@ public actor RTMPStream {
 
     /// Replaces the metadata fields used when publishing starts.
     ///
+    /// The fields are captured when ``publish(_:type:)`` is called.
     /// Call this method before each call to ``publish(_:type:)``, including when republishing.
     /// Pass an empty object if no additional fields are needed. Fields generated from the stream's
     /// settings take precedence over fields with the same name. Changes do not send a metadata message.
@@ -463,6 +468,7 @@ public actor RTMPStream {
             throw Error.invalidState
         }
         self.metadata = AMFArray(metadata)
+        hasPendingMetadata = true
     }
 
     /// Sends a message on a published stream to all subscribing clients.
@@ -703,9 +709,9 @@ public actor RTMPStream {
     }
 
     /// Creates flv metadata for a stream.
-    private func makeMetadata() -> AMFArray {
+    private func makeMetadata(_ fields: AMFObject) -> AMFArray {
         // https://github.com/shogo4405/HaishinKit.swift/issues/1410
-        var metadata = self.metadata.dict
+        var metadata = fields
         metadata["duration"] = 0
         if outgoing.videoInputFormat != nil {
             metadata["width"] = outgoing.videoSettings.videoSize.width
