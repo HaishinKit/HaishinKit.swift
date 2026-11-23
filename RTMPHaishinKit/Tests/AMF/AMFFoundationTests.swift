@@ -26,6 +26,18 @@ import Testing
         #expect(array[1] as? String == "another index")
         array[2] = "fallback"
         #expect(array["2"] as? String == "fallback")
+        array["0"] = "updated field"
+        array["2026"] = "next season"
+        array["-1"] = "updated negative"
+        array["1"] = "was nil"
+        #expect(array["0"] as? String == "updated field")
+        #expect(array[0] as? String == "index")
+        #expect(array["2026"] as? String == "next season")
+        #expect(array["-1"] as? String == "updated negative")
+        #expect(array["1"] as? String == "was nil")
+        array["1"] = nil
+        #expect(array["1"] == nil)
+        #expect(array[1] as? String == "another index")
     }
 
     @Test func xmlDocument() {

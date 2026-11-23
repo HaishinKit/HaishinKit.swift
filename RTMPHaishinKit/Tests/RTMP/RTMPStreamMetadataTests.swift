@@ -47,6 +47,18 @@ import Testing
         try await close(stream, code: "NetStream.Unpublish.Success")
     }
 
+    @Test func originalPublishMethodReferenceRemainsAvailable() async throws {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        let originalPublish = stream.publish(_:type:)
+        let publishing = Task { try await originalPublish("test", .live) }
+        try await wait(for: .publish, on: stream)
+        await respond("NetStream.Publish.Start", on: stream)
+        _ = try await publishing.value
+        #expect(await stream.metadata["duration"] as? Int == 0)
+        try await close(stream, code: "NetStream.Unpublish.Success")
+    }
+
     private func receiveMetadata(_ fields: AMFObject, on stream: RTMPStream) async {
         await stream.dispatch(RTMPDataMessage(
             streamId: 0,

@@ -350,6 +350,11 @@ public actor RTMPStream {
         ))
     }
 
+    /// Sends streaming audio, video and data messages using generated stream metadata.
+    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live) async throws -> RTMPResponse {
+        try await publish(name, type: type, metadata: [:])
+    }
+
     /// Sends streaming audio, video and data messages from the client.
     ///
     /// - Parameters:
@@ -358,7 +363,7 @@ public actor RTMPStream {
     ///   - metadata: Additional fields for the initial onMetaData message of this publish call.
     ///     Generated stream fields take precedence over fields with the same name.
     ///     These fields are not retained for subsequent publish calls and are ignored when name is nil.
-    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live, metadata: AMFObject = [:]) async throws -> RTMPResponse {
+    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live, metadata: AMFObject) async throws -> RTMPResponse {
         guard let name else {
             switch readyState {
             case .publishing:
