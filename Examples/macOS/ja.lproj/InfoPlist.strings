@@ -1,0 +1,4 @@
+"NSCameraUsageDescription" = "配信する映像の撮影にカメラを使用します。";
+"NSMicrophoneUsageDescription" = "配信する音声の収録にマイクを使用します。";
+"NSLocalNetworkUsageDescription" = "ローカルネットワーク上のSRTストリームを検索し、画質比較用の映像をVQMetrixに送信します。";
+"CFBundleTypeName" = "HaishinKit シーン";

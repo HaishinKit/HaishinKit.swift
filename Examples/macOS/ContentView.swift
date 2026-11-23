@@ -37,23 +37,21 @@ struct ContentView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text("HaishinKit").font(.headline)
-                        Text("Development console").font(.caption).foregroundStyle(.secondary)
+                        Text(String(localized: "Development console")).font(.caption).foregroundStyle(.secondary)
                     }
                 }.padding(20)
                 List(selection: $selection) {
-                    Section("Workspace") {
+                    Section(String(localized: "Workspace")) {
                         ForEach([Tab.playback, .publish]) { tab in
-                            Label(tab.rawValue, systemImage: tab.icon).tag(tab)
+                            Label(LocalizedStringKey(tab.rawValue), systemImage: tab.icon).tag(tab)
                         }
                     }
-                    Section("Configuration") {
-                        Label(Tab.settings.rawValue, systemImage: Tab.settings.icon).tag(Tab.settings)
-                        Label(Tab.debug.rawValue, systemImage: Tab.debug.icon).tag(Tab.debug)
+                    Section(String(localized: "Configuration")) {
+                        Label(LocalizedStringKey(Tab.settings.rawValue), systemImage: Tab.settings.icon).tag(Tab.settings)
+                        Label(LocalizedStringKey(Tab.debug.rawValue), systemImage: Tab.debug.icon).tag(Tab.debug)
                     }
                 }
                 .listStyle(.sidebar)
-                Text("macOS Example")
-                    .font(.caption).foregroundStyle(.secondary).padding(20)
             }
             .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: 250)
         } detail: {

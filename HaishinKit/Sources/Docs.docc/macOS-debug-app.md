@@ -8,6 +8,9 @@ Open `Examples/Examples.xcworkspace` and run the `Example macOS` scheme. The
 workspace uses the library in the same checkout. Release ZIPs target Apple
 Silicon and require macOS 15.5 or later.
 
+The interface supports English and Japanese and follows the system's per-app
+language preference.
+
 ## Publish and inspect
 
 Use **Publish** for a camera preview, screen sharing, scene overlay editing,
@@ -18,6 +21,13 @@ low-latency options.
 
 New scenes use a 1280 × 720 preview canvas; imported scenes retain their canvas size; encoder output resolution is configured
 separately. Target video bitrate is a setting, not a measured throughput value.
+Use **MediaMixer** to choose a canvas preset or apply a custom width and height
+(1–8192 pixels), and set the compositor FPS separately from the capture-input FPS.
+Canvas dimensions are saved with the scene. Overlays keep their coordinates;
+full-canvas capture objects follow the new dimensions. The encoder resolution
+remains independent. The tinted area around the preview is outside the video
+canvas and is not sent to the stream.
+
 Measured TX and send queue use transport reports where the selected protocol
 provides them. Output FPS is currently available for RTMP. A dash means a
 measurement is unavailable, including before a session starts.
@@ -45,6 +55,10 @@ input uses the current camera or ScreenCaptureKit source on mixer track 0.
 Imported files are copied into scene-specific Application Support `HaishinKit/SceneWorkspaceMedia`
 directories so moving the original file does not break the scene. Video objects
 loop without supplying audio; microphone settings still control capture audio.
+
+Images retain their source aspect ratio, including previously stretched image
+objects. Editing either image dimension adjusts the other proportionally. Turn off
+**Keep image aspect ratio** in the inspector to test stretched image layouts.
 
 Select an object in the list or preview. Drag it to move, scroll or use the
 preview's plus/minus controls to resize, and use **Object inspector** for its

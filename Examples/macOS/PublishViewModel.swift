@@ -17,6 +17,7 @@ final class PublishViewModel: ObservableObject {
     @Published private(set) var activeEncodingDescription: String?
     @Published private(set) var captureIsStarting = true
     @Published private(set) var captureIssue: String?
+    @Published var mixerFPS: FPS = .fps30
     @Published var currentFPS: FPS = .fps30
     @Published var visualEffectItem: VideoEffectItem = .none
     @Published private(set) var error: Error?
@@ -128,7 +129,7 @@ final class PublishViewModel: ObservableObject {
                 video.bitRate = videoBitRate
                 video.videoSize = outputResolution.size
                 video.profileLevel = outputCodec.profileLevel
-                video.expectedFrameRate = currentFPS.frameRate
+                video.expectedFrameRate = mixerFPS.frameRate
                 video.isHardwareAcceleratedEnabled = useHardwareEncoder
                 try await session.stream.setVideoSettings(video)
                 let audio = await session.stream.audioSettings
@@ -149,6 +150,8 @@ final class PublishViewModel: ObservableObject {
             defer { captureIsStarting = false }
             captureIssue = await MacCaptureCoordinator.shared.activate(mixer, frameRate: currentFPS.frameRate, useAudioEngine: preference.audioCaptureMode == .audioEngine, microphoneEnabled: UserDefaults.standard.bool(forKey: "macos.capture.microphoneEnabled"))
             guard !Task.isCancelled else { return }
+            await configureCaptureFrameRate(currentFPS.frameRate)
+            try? await mixer.setFrameRate(mixerFPS.frameRate)
             await sceneEditor.start()
         }
     }
@@ -197,29 +200,32 @@ final class PublishViewModel: ObservableObject {
         sceneEditor.setEffect(videoEffect)
     }
 
-    func setFrameRate(_ fps: Float64) {
-        screenCapture.setFrameRate(Int(fps))
+    func setMixerFrameRate(_ fps: Float64) {
         Task {
             do {
-                // Sets to input frameRate.
-                try? await mixer.configuration(video: 0) { video in
-                    do {
-                        try video.setFrameRate(fps)
-                    } catch {
-                        logger.error(error)
-                    }
-                }
-                try? await mixer.configuration(video: 1) { video in
-                    do {
-                        try video.setFrameRate(fps)
-                    } catch {
-                        logger.error(error)
-                    }
-                }
-                // Sets to output frameRate.
                 try await mixer.setFrameRate(fps)
+                if let session {
+                    var video = await session.stream.videoSettings
+                    video.expectedFrameRate = fps
+                    try await session.stream.setVideoSettings(video)
+                }
             } catch {
-                logger.error(error)
+                self.error = error
+                isShowError = true
+            }
+        }
+    }
+
+    func setFrameRate(_ fps: Float64) {
+        Task { await configureCaptureFrameRate(fps) }
+    }
+
+    private func configureCaptureFrameRate(_ fps: Float64) async {
+        screenCapture.setFrameRate(Int(fps))
+        for track: UInt8 in [0, 1] {
+            try? await mixer.configuration(video: track) { video in
+                do { try video.setFrameRate(fps) }
+                catch { logger.error(error) }
             }
         }
     }

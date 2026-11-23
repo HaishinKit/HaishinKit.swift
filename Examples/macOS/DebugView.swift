@@ -28,14 +28,14 @@ struct DebugView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Appearance", selection: $appearance) {
-                    Text("System").tag("system")
-                    Text("Light").tag("light")
-                    Text("Dark").tag("dark")
+                Picker(String(localized: "Appearance"), selection: $appearance) {
+                    Text(String(localized: "System")).tag("system")
+                    Text(String(localized: "Light")).tag("light")
+                    Text(String(localized: "Dark")).tag("dark")
                 }
-                Text("Appearance overrides apply until the app closes. Each launch follows the system setting.")
+                Text(String(localized: "Appearance overrides apply until the app closes. Each launch follows the system setting."))
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Verbose logging", isOn: $verboseLogging)
+                Toggle(String(localized: "Verbose logging"), isOn: $verboseLogging)
                     .onChange(of: verboseLogging) { _, value in
                         let level: LBLogger.Level = value ? .debug : .warn
                         LBLogger(kHaishinKitIdentifier).level = level
@@ -47,49 +47,49 @@ struct DebugView: View {
                             await SRTLogger.shared.setLevel(value ? .debug : .warning)
                         }
                     }
-                Text("Inspect library logs in Xcode or Console. Debug logs may contain endpoint URLs or signaling data.")
+                Text(String(localized: "Inspect library logs in Xcode or Console. Debug logs may contain endpoint URLs or signaling data."))
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Diagnostics")
+                Text(String(localized: "Diagnostics"))
             }
             Section {
-                Button("Open publish memory-release test") { preference.showPublishSheet = true }
-                Text("Open and dismiss the publisher repeatedly while inspecting memory in Instruments. Dismissing closes capture and network sessions.")
+                Button(String(localized: "Open publish memory-release test")) { preference.showPublishSheet = true }
+                Text(String(localized: "Open and dismiss the publisher repeatedly while inspecting memory in Instruments. Dismissing closes capture and network sessions."))
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Lifecycle")
+                Text(String(localized: "Lifecycle"))
             }
             Section {
-                TextField("Server host", text: $serverHost)
-                TextField("HTTP port", text: $serverPort)
-                TextField("Stream path", text: $streamPath)
+                TextField(String(localized: "Server host"), text: $serverHost)
+                TextField(String(localized: "HTTP port"), text: $serverPort)
+                TextField(String(localized: "Stream path"), text: $streamPath)
                 HStack {
-                    Button("Use WHIP endpoint") { applyPreset("whip") }
-                    Button("Use WHEP endpoint") { applyPreset("whep") }
+                    Button(String(localized: "Use WHIP endpoint")) { applyPreset("whip") }
+                    Button(String(localized: "Use WHEP endpoint")) { applyPreset("whep") }
                 }
                 .disabled(endpoint("whip") == nil)
                 if let presetMessage { Text(presetMessage).foregroundStyle(.secondary).textSelection(.enabled) }
-                Text("Run MediaMTX separately. These presets configure a client endpoint; they do not start a server. Use Opus audio when publishing with WHIP.")
+                Text(String(localized: "Run MediaMTX separately. These presets configure a client endpoint; they do not start a server. Use Opus audio when publishing with WHIP."))
                     .foregroundStyle(.secondary)
-                Link("MediaMTX setup and supported protocols", destination: URL(string: "https://mediamtx.org/docs/features/publish-and-read")!)
+                Link(String(localized: "MediaMTX setup and supported protocols"), destination: URL(string: "https://mediamtx.org/docs/features/publish-and-read")!)
             } header: {
-                Text("WHIP / WHEP test server")
+                Text(String(localized: "WHIP / WHEP test server"))
             }
-            Section("Environment") {
-                LabeledContent("App version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
-                LabeledContent("Operating system", value: ProcessInfo.processInfo.operatingSystemVersionString)
-                LabeledContent("SRT library", value: SRTConnection.version)
-                LabeledContent("Bonjour service", value: "_srt._udp")
+            Section(String(localized: "Environment")) {
+                LabeledContent(String(localized: "App version"), value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                LabeledContent(String(localized: "Operating system"), value: ProcessInfo.processInfo.operatingSystemVersionString)
+                LabeledContent(String(localized: "SRT library"), value: SRTConnection.version)
+                LabeledContent(String(localized: "Bonjour service"), value: "_srt._udp")
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Debug")
+        .navigationTitle(String(localized: "Debug"))
         .sheet(isPresented: $preference.showPublishSheet) {
             VStack(spacing: 0) {
                 HStack {
-                    Text("Publish lifecycle test").font(.headline)
+                    Text(String(localized: "Publish lifecycle test")).font(.headline)
                     Spacer()
-                    Button("Close") { preference.showPublishSheet = false }
+                    Button(String(localized: "Close")) { preference.showPublishSheet = false }
                         .keyboardShortcut(.cancelAction)
                 }.padding()
                 Divider()
@@ -103,6 +103,6 @@ struct DebugView: View {
         guard let url = endpoint(operation) else { return }
         preference.uri = url.absoluteString
         if operation == "whip" { preference.audioFormat = .opus }
-        presetMessage = "Next session: \(url.absoluteString)"
+        presetMessage = String(localized: "Next session: \(url.absoluteString)")
     }
 }

@@ -53,8 +53,8 @@ struct PublishView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Your broadcast, ready to go.").font(.title2.weight(.semibold))
-                        Text("Compose your scene, then go live.").foregroundStyle(.secondary)
+                        Text(String(localized: "Your broadcast, ready to go.")).font(.title2.weight(.semibold))
+                        Text(String(localized: "Compose your scene, then go live.")).foregroundStyle(.secondary)
                     }
                     Spacer()
                     SessionStatus(state: model.readyState, busy: model.isBusy, publishing: true)
@@ -65,11 +65,12 @@ struct PublishView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
                 HStack {
-                    Label("Preview", systemImage: "viewfinder")
+                    Label(String(localized: "Preview"), systemImage: "viewfinder")
                     Spacer()
-                    SceneCanvasCaption(editor: model.sceneEditor, frameRate: model.currentFPS.rawValue)
+                    SceneCanvasCaption(editor: model.sceneEditor, frameRate: model.mixerFPS.rawValue)
                         .monospacedDigit()
                 }.font(.callout).foregroundStyle(.secondary)
+                Text(String(localized: "Tinted area is outside the video canvas.")).font(.caption).foregroundStyle(.secondary)
                 PublishMetricsPanel(model: model)
                 SceneEditorView(model: model.sceneEditor)
             }
@@ -79,37 +80,38 @@ struct PublishView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 16) {
-                        StudioSection(title: "Destination", subtitle: "Where your broadcast goes") {
+                        StudioSection(title: String(localized: "Destination"), subtitle: String(localized: "Where your broadcast goes")) {
                             ConnectionFields().disabled(locked)
                         }
                         SceneObjectInspector(model: model.sceneEditor)
                         ScreenSourceControls(source: model.screenCapture).disabled(model.captureIsStarting)
                         if AVCaptureDevice.authorizationStatus(for: .video) != .authorized {
-                            Button("Request camera access") { model.requestCameraAccess(preference) }
+                            Button(String(localized: "Request camera access")) { model.requestCameraAccess(preference) }
                                 .disabled(model.captureIsStarting || locked)
                         }
-                        StudioSection(title: "Video", subtitle: "Fine-tune your scene") {
+                        MixerSettingsView(model: model, editor: model.sceneEditor).disabled(model.isBusy || model.captureIsStarting)
+                        StudioSection(title: String(localized: "Capture"), subtitle: String(localized: "Input frame rate and effects")) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Frame rate").font(.callout.weight(.medium))
-                                Picker("Frame rate", selection: $model.currentFPS) {
+                                Text(String(localized: "Frame rate")).font(.callout.weight(.medium))
+                                Picker(String(localized: "Frame rate"), selection: $model.currentFPS) {
                                     ForEach(FPS.allCases) { Text("\($0.rawValue) fps").tag($0) }
                                 }.pickerStyle(.segmented).labelsHidden()
                             }
-                            Picker("Effect", selection: $model.visualEffectItem) {
-                                Text("Original").tag(VideoEffectItem.none)
-                                Text("Monochrome").tag(VideoEffectItem.monochrome)
+                            Picker(String(localized: "Effect"), selection: $model.visualEffectItem) {
+                                Text(String(localized: "Original")).tag(VideoEffectItem.none)
+                                Text(String(localized: "Monochrome")).tag(VideoEffectItem.monochrome)
                             }
                         }
-                        StudioSection(title: "Encoder", subtitle: "Settings for the next broadcast") {
-                            Picker("Resolution", selection: $model.outputResolution) {
+                        StudioSection(title: String(localized: "Encoder"), subtitle: String(localized: "Settings for the next broadcast")) {
+                            Picker(String(localized: "Resolution"), selection: $model.outputResolution) {
                                 ForEach(OutputResolution.allCases) { Text($0.rawValue).tag($0) }
                             }
-                            Picker("Video codec", selection: $model.outputCodec) {
+                            Picker(String(localized: "Video codec"), selection: $model.outputCodec) {
                                 ForEach(OutputVideoCodec.allCases) { Text($0.rawValue).tag($0) }
                             }
-                            Stepper("Video: \(model.videoBitRate / 1000) kbps", value: $model.videoBitRate, in: 100_000...20_000_000, step: 100_000)
-                            Stepper("Audio: \(model.audioBitRate / 1000) kbps", value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
-                            Toggle("Hardware encoding", isOn: $model.useHardwareEncoder)
+                            Stepper(String(localized: "Video: \(model.videoBitRate / 1000) kbps"), value: $model.videoBitRate, in: 100_000...20_000_000, step: 100_000)
+                            Stepper(String(localized: "Audio: \(model.audioBitRate / 1000) kbps"), value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
+                            Toggle(String(localized: "Hardware encoding"), isOn: $model.useHardwareEncoder)
                         }.disabled(locked)
                         VQMetrixPanel(publisher: model)
                         if let issue = model.captureIssue {
@@ -126,21 +128,21 @@ struct PublishView: View {
                     } label: {
                         HStack {
                             if model.isBusy { ProgressView().controlSize(.small) }
-                            Label(model.readyState == .open ? "Stop publishing" : "Go live",
+                            Label(model.readyState == .open ? String(localized: "Stop publishing") : String(localized: "Go live"),
                                   systemImage: model.readyState == .open ? "stop.fill" : "dot.radiowaves.left.and.right")
                         }.frame(maxWidth: .infinity).padding(.vertical, 6)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(model.readyState == .open ? .red : .accentColor)
                     .disabled(model.isBusy || model.readyState == .connecting || model.readyState == .closing)
-                    Text("Go live sends the preview. Microphone input follows Settings → Capture.")
+                    Text(String(localized: "Go live sends the preview. Microphone input follows Settings → Capture."))
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20)
             }
             .frame(minWidth: 280, idealWidth: 310, maxWidth: 360)
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .navigationTitle("Publish")
+        .navigationTitle(String(localized: "Publish"))
         .onAppear { model.startRunning(preference) }
         .onDisappear { model.stopRunning() }
         .task(id: sceneOpenRequest?.id) {
@@ -149,12 +151,13 @@ struct PublishView: View {
                 if !Task.isCancelled, sceneOpenRequest?.id == request.id { sceneOpenRequest = nil }
             }
         }
+        .onChange(of: model.mixerFPS) { _, value in model.setMixerFrameRate(value.frameRate) }
         .onChange(of: model.currentFPS) { _, value in model.setFrameRate(value.frameRate) }
         .onChange(of: model.visualEffectItem) { _, value in model.setVisualEffet(value) }
-        .alert("Couldn't publish", isPresented: $model.isShowError) {
-            Button("OK", role: .cancel) { }
+        .alert(String(localized: "Couldn't publish"), isPresented: $model.isShowError) {
+            Button(String(localized: "OK"), role: .cancel) { }
         } message: {
-            Text(model.error?.localizedDescription ?? "The connection was interrupted. Check your destination and try again.")
+            Text(model.error?.localizedDescription ?? String(localized: "The connection was interrupted. Check your destination and try again."))
         }
     }
 }

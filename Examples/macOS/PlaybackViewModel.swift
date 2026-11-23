@@ -99,7 +99,7 @@ final class PlaybackViewModel: ObservableObject {
                             return
                         }
                         if let stats = await connection.performanceData {
-                            self.receiverSummary = String(format: "SRT RX %.0f kbps · RTT %.1f ms · Lost packets %d", stats.mbpsRecvRate * 1000, stats.msRTT, stats.pktRcvLoss)
+                            self.receiverSummary = String(format: NSLocalizedString("SRT RX %.0f kbps · RTT %.1f ms · Lost packets %d", comment: "SRT receive metrics"), stats.mbpsRecvRate * 1000, stats.msRTT, stats.pktRcvLoss)
                         }
                         try? await Task.sleep(for: .seconds(1))
                     }

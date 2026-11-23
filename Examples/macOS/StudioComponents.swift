@@ -9,13 +9,13 @@ struct SessionStatus: View {
     var waiting = false
 
     private var title: String {
-        if waiting { return "Waiting for sender" }
-        if busy { return state == .open ? "Stopping…" : "Connecting…" }
+        if waiting { return String(localized: "Waiting for sender") }
+        if busy { return state == .open ? String(localized: "Stopping…") : String(localized: "Connecting…") }
         switch state {
-        case .open: return publishing ? "Live" : "Playing"
-        case .connecting: return "Connecting…"
-        case .closing: return "Stopping…"
-        case .closed: return "Standby"
+        case .open: return publishing ? String(localized: "Live") : String(localized: "Playing")
+        case .connecting: return String(localized: "Connecting…")
+        case .closing: return String(localized: "Stopping…")
+        case .closed: return String(localized: "Standby")
         }
     }
 
@@ -30,7 +30,7 @@ struct SessionStatus: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(.quaternary, in: Capsule())
-            .accessibilityLabel("Session status: \(title)")
+            .accessibilityLabel(String(localized: "Session status: \(title)"))
     }
 }
 
@@ -60,19 +60,19 @@ struct ConnectionFields: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Server URL").font(.callout.weight(.medium))
+                Text(String(localized: "Server URL")).font(.callout.weight(.medium))
                 TextField("rtmp://localhost/live", text: $preference.uri)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Server URL")
+                    .accessibilityLabel(String(localized: "Server URL"))
             }
             if preference.uri.lowercased().hasPrefix("rtmp://") || preference.uri.lowercased().hasPrefix("rtmps://") {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Stream name / key").font(.callout.weight(.medium))
-                    SecureField("Stream name or key", text: $preference.streamName)
+                    Text(String(localized: "Stream name / key")).font(.callout.weight(.medium))
+                    SecureField(String(localized: "Stream name or key"), text: $preference.streamName)
                         .textFieldStyle(.roundedBorder)
                 }
             }
-            Text("Use the endpoint provided by your streaming server.")
+            Text(String(localized: "Use the endpoint provided by your streaming server."))
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
@@ -104,56 +104,56 @@ struct MacSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Connection") {
+            Section(String(localized: "Connection")) {
                 ConnectionFields()
             }
             Section {
-                Picker("Audio format", selection: $preference.audioFormat) {
+                Picker(String(localized: "Audio format"), selection: $preference.audioFormat) {
                     ForEach(AudioCodecSettings.Format.allCases, id: \.self) { format in
                         Text(String(describing: format).uppercased()).tag(format)
                     }
                 }
-                Picker("Bitrate mode", selection: $preference.bitRateMode) {
+                Picker(String(localized: "Bitrate mode"), selection: $preference.bitRateMode) {
                     ForEach(preference.bitRateModes, id: \.description) { mode in
                         Text(mode.description).tag(mode)
                     }
                 }
-                Toggle("Low latency", isOn: $preference.isLowLatencyRateControlEnabled)
+                Toggle(String(localized: "Low latency"), isOn: $preference.isLowLatencyRateControlEnabled)
             } header: {
-                Text("Publishing")
+                Text(String(localized: "Publishing"))
             } footer: {
-                Text("Changes apply to the next session. AAC and average bitrate are a good starting point.")
+                Text(String(localized: "Changes apply to the next session. AAC and average bitrate are a good starting point."))
             }
-            Section("Capture") {
-                Toggle("Enable microphone", isOn: $microphoneEnabled)
+            Section(String(localized: "Capture")) {
+                Toggle(String(localized: "Enable microphone"), isOn: $microphoneEnabled)
                 if microphoneEnabled && microphoneAccess != .authorized {
-                    Button("Request microphone access") {
+                    Button(String(localized: "Request microphone access")) {
                         Task {
                             _ = await AVCaptureDevice.requestAccess(for: .audio)
                             microphoneAccess = AVCaptureDevice.authorizationStatus(for: .audio)
                         }
                     }
-                    Text("If access was denied, enable this app in System Settings → Privacy & Security → Microphone.")
+                    Text(String(localized: "If access was denied, enable this app in System Settings → Privacy & Security → Microphone."))
                         .foregroundStyle(.secondary)
                 }
-                Picker("Microphone capture", selection: Binding(
+                Picker(String(localized: "Microphone capture"), selection: Binding(
                     get: { preference.audioCaptureMode == .audioEngine },
                     set: { preference.audioCaptureMode = $0 ? .audioEngine : .audioSource }
                 )) {
-                    Text("Audio Engine (recommended)").tag(true)
+                    Text(String(localized: "Audio Engine (recommended)")).tag(true)
                     Text("AVCaptureSession").tag(false)
                 }
-                Text("Applied when the publisher opens. Audio Engine keeps microphone input separate from camera capture.")
+                Text(String(localized: "Applied when the publisher opens. Audio Engine keeps microphone input separate from camera capture."))
                     .foregroundStyle(.secondary)
             }
-            Section("About") {
+            Section(String(localized: "About")) {
 
-                LabeledContent("Library", value: "HaishinKit.swift")
-                LabeledContent("Platform", value: "macOS · Apple Silicon")
-                Link("API documentation", destination: URL(string: "https://docs.haishinkit.com/swift/latest/")!)
+                LabeledContent(String(localized: "Library"), value: "HaishinKit.swift")
+                LabeledContent(String(localized: "Platform"), value: "macOS · Apple Silicon")
+                Link(String(localized: "API documentation"), destination: URL(string: "https://docs.haishinkit.com/swift/latest/documentation/")!)
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Settings")
+        .navigationTitle(String(localized: "Settings"))
     }
 }

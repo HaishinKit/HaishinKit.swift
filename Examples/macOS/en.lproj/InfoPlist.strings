@@ -1,0 +1,3 @@
+"NSCameraUsageDescription" = "Camera access is requested for live streaming.";
+"NSMicrophoneUsageDescription" = "Microphone access is requested for live streaming.";
+"NSLocalNetworkUsageDescription" = "Discover SRT debug streams and upload video quality samples to VQMetrix on your local network.";

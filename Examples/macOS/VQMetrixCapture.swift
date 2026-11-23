@@ -36,7 +36,7 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
         guard CVPixelBufferCreate(nil, Self.width, Self.height,
                                   kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
                                   attributes as CFDictionary, &pixel) == kCVReturnSuccess, let pixel else {
-            failure = "Cannot allocate reference pixels."
+            failure = String(localized: "Cannot allocate reference pixels.")
             stopped = true
             return
         }
@@ -68,7 +68,7 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
     func package(in directory: URL, id: UUID, codec: VQMetrixCodec, bitrate: Int) async throws -> URL {
         stop()
         if let failure { throw VQMetrixError(message: failure) }
-        guard frames.count == Self.count else { throw VQMetrixError(message: "Not enough video frames. Keep the preview running and try again.") }
+        guard frames.count == Self.count else { throw VQMetrixError(message: String(localized: "Not enough video frames. Keep the preview running and try again.")) }
         let movieName = "\(codec.rawValue)-\(bitrate).\(codec.fileExtension)"
         let movie = directory.appendingPathComponent(movieName)
         let reference = directory.appendingPathComponent("reference.y4m")
@@ -123,9 +123,9 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
                                        AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2]
         ])
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: nil)
-        guard writer.canAdd(input) else { throw VQMetrixError(message: "Encoder unavailable.") }
+        guard writer.canAdd(input) else { throw VQMetrixError(message: String(localized: "Encoder unavailable.")) }
         writer.add(input)
-        guard writer.startWriting() else { throw writer.error ?? VQMetrixError(message: "Cannot start encoder.") }
+        guard writer.startWriting() else { throw writer.error ?? VQMetrixError(message: String(localized: "Cannot start encoder.")) }
         writer.startSession(atSourceTime: .zero)
         do {
             for (index, pixel) in frames.enumerated() {
@@ -133,17 +133,17 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
                 let deadline = ContinuousClock.now + .seconds(15)
                 while !input.isReadyForMoreMediaData {
                     guard writer.status == .writing, ContinuousClock.now < deadline else {
-                        throw writer.error ?? VQMetrixError(message: "Encoder timed out.")
+                        throw writer.error ?? VQMetrixError(message: String(localized: "Encoder timed out."))
                     }
                     try await Task.sleep(for: .milliseconds(10))
                 }
                 guard adaptor.append(pixel, withPresentationTime: CMTime(value: Int64(index), timescale: 15)) else {
-                    throw writer.error ?? VQMetrixError(message: "Cannot encode frame.")
+                    throw writer.error ?? VQMetrixError(message: String(localized: "Cannot encode frame."))
                 }
             }
             input.markAsFinished()
             await writer.finishWriting()
-            guard writer.status == .completed else { throw writer.error ?? VQMetrixError(message: "Encoding failed.") }
+            guard writer.status == .completed else { throw writer.error ?? VQMetrixError(message: String(localized: "Encoding failed.")) }
         } catch {
             writer.cancelWriting()
             throw error
