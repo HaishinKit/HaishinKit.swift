@@ -87,8 +87,10 @@ network effects or the exact live encoded bitstream.
 Start **Receive** in VQMetrix, enter its base URL (for example,
 `http://127.0.0.1:8787`) and current four-digit connection code, then choose
 **Upload sample**. HTTP is intended for a trusted network and transmits the
-video and connection code without encryption. HTTPS uses system certificate
-validation. Redirects are rejected.
+video and connection code without encryption. HTTP accepts private, link-local,
+or loopback IP addresses and `.local` names only. The app validates all resolved
+addresses for a `.local` name and sends to a validated address. HTTPS keeps the
+original hostname and uses system certificate validation. Redirects are rejected.
 
 The app submits a `vqmetrix.capture.v1` ZIP with the raw Y4M reference, encoded
 variant, frame map, and SHA-256 manifest. H.264/HEVC use MP4; AV1 uses
@@ -108,3 +110,7 @@ checks payload hashes and ZIP integrity, and retains the packages. In the update
 VQMetrix checkout, run
 `VQMETRIX_MACOS_FIXTURES=/tmp/vqmetrix-fixtures swift test --filter actualMacOSProducerArchives`
 to validate, decode, and VMAF-evaluate those exact packages.
+
+Run `ruby Examples/Tests/vqmetrix_transfer.rb` to check cancellation before and
+during upload, task-registration races, retry IDs, bounded responses, redirects,
+and local-network URL validation against temporary local test servers.

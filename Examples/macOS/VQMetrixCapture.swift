@@ -3,11 +3,6 @@ import CoreImage
 import CryptoKit
 import HaishinKit
 
-struct VQMetrixError: LocalizedError {
-    let message: String
-    var errorDescription: String? { message }
-}
-
 /// Owns all captured pixels; the mixer may reuse its source buffers immediately.
 final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
     let videoTrackId: UInt8? = .max
@@ -53,9 +48,10 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
         lastTime = time
     }
 
-    func progress() -> Int {
+    func progress() throws -> Int {
         lock.lock()
         defer { lock.unlock() }
+        if let failure { throw VQMetrixError(message: failure) }
         return frames.count
     }
 

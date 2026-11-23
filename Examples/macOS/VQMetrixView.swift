@@ -2,62 +2,6 @@ import Foundation
 import HaishinKit
 import SwiftUI
 
-final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Sendable {
-    private var response = Data()
-    private var continuation: CheckedContinuation<UUID, Error>?
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
-        completionHandler(nil)
-    }
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        // The delegate queue is serial. Never retain an unbounded server response.
-        guard response.count + data.count <= 65_536 else { dataTask.cancel(); return }
-        response.append(data)
-    }
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let continuation else { return }
-        self.continuation = nil
-        if let error { continuation.resume(throwing: error); return }
-        guard let http = task.response as? HTTPURLResponse, [200, 201, 202].contains(http.statusCode) else {
-            let status = (task.response as? HTTPURLResponse)?.statusCode ?? 0
-            continuation.resume(throwing: VQMetrixError(message: "Receiver returned HTTP \(status). Check reception and the connection code."))
-            return
-        }
-        struct Receipt: Decodable { let jobId: UUID }
-        guard let receipt = try? JSONDecoder().decode(Receipt.self, from: response) else {
-            continuation.resume(throwing: VQMetrixError(message: "Invalid receiver receipt.")); return
-        }
-        continuation.resume(returning: receipt.jobId)
-    }
-    func send(file: URL, endpoint: URL, code: String, id: UUID) async throws -> UUID {
-        var request = URLRequest(url: endpoint.appendingPathComponent("api/v1/runs"))
-        request.httpMethod = "POST"
-        request.setValue("application/zip", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(code)", forHTTPHeaderField: "Authorization")
-        request.setValue("1", forHTTPHeaderField: "X-VQMetrix-Protocol")
-        request.setValue(id.uuidString, forHTTPHeaderField: "Idempotency-Key")
-        let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size > 0, size <= 512 * 1024 * 1024 else { throw VQMetrixError(message: "Package exceeds the receiver's 512 MiB limit.") }
-        request.setValue(String(size), forHTTPHeaderField: "Content-Length")
-        let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 180
-        config.httpCookieStorage = nil
-        config.urlCredentialStorage = nil
-        let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
-        defer { session.invalidateAndCancel() }
-        // Delegate callbacks enforce a bounded response before accepting the receipt.
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                self.continuation = continuation
-                session.uploadTask(with: request, fromFile: file).resume()
-            }
-        } onCancel: {
-            session.invalidateAndCancel()
-        }
-    }
-}
-
 @MainActor
 final class VQMetrixModel: ObservableObject {
     @Published var host = "http://127.0.0.1:8787"
@@ -71,12 +15,10 @@ final class VQMetrixModel: ObservableObject {
     private var runID = UUID()
     private var task: Task<Void, Never>?
 
-    var endpoint: URL? {
-        guard let url = URL(string: host.trimmingCharacters(in: .whitespacesAndNewlines)),
-              ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
-              let hostname = url.host, !hostname.isEmpty, url.user == nil, url.password == nil,
-              url.query == nil, url.fragment == nil, ["", "/"].contains(url.path) else { return nil }
-        return url
+    var endpoint: URL? { try? VQMetrixTransfer.endpoint(host) }
+    var endpointError: String? {
+        do { _ = try VQMetrixTransfer.endpoint(host); return nil }
+        catch { return error.localizedDescription }
     }
     var canSend: Bool { endpoint != nil && code.count == 4 && code.allSatisfy({ $0.isASCII && $0.isNumber }) }
 
@@ -92,10 +34,10 @@ final class VQMetrixModel: ObservableObject {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 await mixer.addOutput(capture)
                 let deadline = ContinuousClock.now + .seconds(12)
-                while capture.progress() < VQMetrixCapture.count {
+                while try capture.progress() < VQMetrixCapture.count {
                     try Task.checkCancellation()
                     guard ContinuousClock.now < deadline else { throw VQMetrixError(message: "Video capture timed out. Check that the preview is running.") }
-                    message = "Capturing \(capture.progress()) / \(VQMetrixCapture.count) frames…"
+                    message = "Capturing \(try capture.progress()) / \(VQMetrixCapture.count) frames…"
                     try await Task.sleep(for: .milliseconds(100))
                 }
                 capture.stop()
@@ -184,7 +126,7 @@ struct VQMetrixPanel: View {
                 }
                 Button("Upload sample") { model.upload() }.disabled(model.busy || !model.canSend)
             }
-            if model.endpoint == nil { Text("Enter an HTTP or HTTPS base URL, including the port.").font(.caption).foregroundStyle(.secondary) }
+            if let error = model.endpointError { Text(error).font(.caption).foregroundStyle(.secondary) }
             if model.busy {
                 HStack { ProgressView().controlSize(.small); Button("Cancel") { model.cancel() } }
             }

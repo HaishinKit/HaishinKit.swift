@@ -14,7 +14,7 @@ FileUtils.mkdir_p(output)
 Dir.mktmpdir('vqmetrix-capture-') do |directory|
   sources = File.join(directory, 'Sources', 'Probe')
   FileUtils.mkdir_p(sources)
-  %w[VQMetrixCapture.swift VQMetrixSoftwareEncoder.swift].each do |name|
+  %w[VQMetrixCapture.swift VQMetrixSoftwareEncoder.swift VQMetrixTransfer.swift].each do |name|
     FileUtils.cp(File.join(root, 'Examples', 'macOS', name), sources)
   end
   FileUtils.cp(File.join(__dir__, 'VQMetrixCaptureProbe.swift'), File.join(sources, 'Probe.swift'))
@@ -22,7 +22,7 @@ Dir.mktmpdir('vqmetrix-capture-') do |directory|
     // swift-tools-version:6.0
     import PackageDescription
     let package = Package(name: "VQMetrixCaptureProbe", platforms: [.macOS(.v15)],
-        dependencies: [.package(path: #{JSON.generate(root)})], targets: [
+        dependencies: [.package(name: "HaishinKit.swift", path: #{JSON.generate(root)})], targets: [
             .executableTarget(name: "Probe", dependencies: [
                 .product(name: "HaishinKit", package: "HaishinKit.swift"),
                 .product(name: "AOMHaishinKit", package: "HaishinKit.swift"),
