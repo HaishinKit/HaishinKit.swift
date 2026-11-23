@@ -46,7 +46,7 @@ struct PublishView: View {
     @EnvironmentObject private var preference: PreferenceViewModel
     @StateObject private var model = PublishViewModel()
 
-    private var locked: Bool { model.isBusy || model.readyState != .closed }
+    private var locked: Bool { model.isBusy || model.isChangingDynamicRange || model.readyState != .closed }
 
     var body: some View {
         HSplitView {
@@ -89,6 +89,17 @@ struct PublishView: View {
                                 .disabled(model.captureIsStarting || locked)
                         }
                         StudioSection(title: "Video", subtitle: "Fine-tune your scene") {
+                            Toggle("Mixer HDR (HLG)", isOn: Binding(
+                                get: { model.mixerDynamicRangeMode == .hdr },
+                                set: { model.setMixerDynamicRangeMode($0 ? .hdr : .sdr) }
+                            ))
+                            .disabled(locked || model.captureIsStarting)
+                            Text("Mix the scene in 10-bit HLG. Change this before publishing.")
+                                .font(.callout).foregroundStyle(.secondary)
+                            if let issue = model.dynamicRangeIssue {
+                                Label(issue, systemImage: "exclamationmark.triangle")
+                                    .font(.callout).foregroundStyle(.secondary)
+                            }
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Frame rate").font(.callout.weight(.medium))
                                 Picker("Frame rate", selection: $model.currentFPS) {
@@ -107,6 +118,10 @@ struct PublishView: View {
                             Picker("Video codec", selection: $model.outputCodec) {
                                 ForEach(OutputVideoCodec.allCases) { Text($0.rawValue).tag($0) }
                             }
+                            if model.outputCodec == .hevcMain10 {
+                                Text("10-bit HLG over Enhanced RTMP requires a compatible server and player.")
+                                    .font(.callout).foregroundStyle(.secondary)
+                            }
                             Stepper("Video: \(model.videoBitRate / 1000) kbps", value: $model.videoBitRate, in: 100_000...20_000_000, step: 100_000)
                             Stepper("Audio: \(model.audioBitRate / 1000) kbps", value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
                             Toggle("Hardware encoding", isOn: $model.useHardwareEncoder)
@@ -120,6 +135,10 @@ struct PublishView: View {
                 }
                 Divider()
                 VStack(spacing: 12) {
+                    if let issue = model.encodingConfigurationIssue {
+                        Label(issue, systemImage: "exclamationmark.triangle")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                     Button {
                         if model.readyState == .open { model.stopPublishing() }
                         else { model.startPublishing(preference) }
@@ -132,7 +151,7 @@ struct PublishView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(model.readyState == .open ? .red : .accentColor)
-                    .disabled(model.isBusy || model.readyState == .connecting || model.readyState == .closing)
+                    .disabled(model.isBusy || model.isChangingDynamicRange || model.readyState == .connecting || model.readyState == .closing || (model.readyState == .closed && model.encodingConfigurationIssue != nil))
                     Text("Go live sends the preview. Microphone input follows Settings → Capture.")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20)
