@@ -4,6 +4,13 @@ import Testing
 @testable import HaishinKit
 
 @Suite struct AudioPlayerTests {
+    @Test func unusedNodeHasNoPlaybackClock() async {
+        let player = AudioPlayer(audioEngine: AVAudioEngine())
+        let node = await player.makePlayerNode()
+        #expect(await node.currentTime == nil)
+        await node.detach()
+    }
+
     @Test(.enabled(if: !TestEnvironment.isCI))
     func repeatedlyDetachesConnectedPlaybackNodes() async throws {
         let engine = AVAudioEngine()

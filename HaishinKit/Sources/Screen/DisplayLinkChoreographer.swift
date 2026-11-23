@@ -25,7 +25,7 @@ final class DisplayLink: NSObject, @unchecked Sendable {
             guard preferredFramesPerSecond != oldValue else {
                 return
             }
-            frameInterval = 1.0 / Double(preferredFramesPerSecond)
+            frameInterval = preferredFramesPerSecond > 0 ? 1.0 / Double(preferredFramesPerSecond) : 0
         }
     }
     private(set) var duration = 0.0
@@ -54,7 +54,10 @@ final class DisplayLink: NSObject, @unchecked Sendable {
             }
             if frameInterval == 0 || frameInterval <= inNow.pointee.timestamp - self.timestamp {
                 self.timestamp = Double(inNow.pointee.timestamp)
-                self.targetTimestamp = self.timestamp + frameInterval
+                let refreshPeriod = inNow.pointee.videoRefreshPeriod
+                let timeScale = inNow.pointee.videoTimeScale
+                let interval = refreshPeriod > 0 && timeScale > 0 ? Double(refreshPeriod) / Double(timeScale) : 1.0 / 60.0
+                self.targetTimestamp = self.timestamp + (frameInterval > 0 ? frameInterval : interval)
                 _ = self.delegate?.perform(self.selector, with: self)
             }
             return kCVReturnSuccess
