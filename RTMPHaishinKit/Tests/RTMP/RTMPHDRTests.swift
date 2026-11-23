@@ -7,8 +7,28 @@ import VideoToolbox
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPHDRTests {
-    @Test(arguments: [false, true], [false, true])
-    func videoRoundTrip(hdr: Bool, codedFramesX: Bool) async throws {
+    @Test func sdrVideoRoundTrip() async throws {
+        try await videoRoundTrip(hdr: false, codedFramesX: false)
+    }
+
+    @Test(.enabled(if: Self.supportsHEVCHardwareEncoding, "Requires HEVC hardware encoding"), arguments: [false, true])
+    func hlgVideoRoundTrip(codedFramesX: Bool) async throws {
+        try await videoRoundTrip(hdr: true, codedFramesX: codedFramesX)
+    }
+
+    private static var supportsHEVCHardwareEncoding: Bool {
+        var encoders: CFArray?
+        guard VTCopyVideoEncoderList(nil, &encoders) == noErr,
+              let entries = encoders as? [[String: Any]] else {
+            return false
+        }
+        return entries.contains {
+            ($0[kVTVideoEncoderList_CodecType as String] as? NSNumber)?.uint32Value == kCMVideoCodecType_HEVC &&
+                $0[kVTVideoEncoderList_IsHardwareAccelerated as String] as? Bool == true
+        }
+    }
+
+    private func videoRoundTrip(hdr: Bool, codedFramesX: Bool) async throws {
         let input = try makeInput(hdr: hdr)
         let inputFormat = try #require(input.formatDescription)
         #expect(!inputFormat.isCompressed)
