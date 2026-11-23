@@ -111,6 +111,7 @@ struct PublishView: View {
                             Stepper("Audio: \(model.audioBitRate / 1000) kbps", value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
                             Toggle("Hardware encoding", isOn: $model.useHardwareEncoder)
                         }.disabled(locked)
+                        VQMetrixPanel(publisher: model)
                         if let issue = model.captureIssue {
                             Label(issue, systemImage: "exclamationmark.triangle")
                                 .font(.callout).foregroundStyle(.secondary)
