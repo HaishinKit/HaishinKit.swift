@@ -86,6 +86,10 @@ public final class Screen: ScreenObjectContainerConvertible {
             renderer.bounds = oldValue.bounds
             renderer.backgroundColor = oldValue.backgroundColor
             renderer.synchronizationClock = oldValue.synchronizationClock
+            // A new renderer has no cached images, including those in nested containers.
+            root.invalidateLayout()
+            let objects: [ScreenObject] = root.getScreenObjects()
+            objects.forEach { $0.invalidateLayout() }
         }
     }
     private(set) var targetTimestamp: TimeInterval = 0.0
