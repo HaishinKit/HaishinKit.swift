@@ -352,7 +352,7 @@ public actor RTMPStream {
 
     /// Sends streaming audio, video and data messages using generated stream metadata.
     public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live) async throws -> RTMPResponse {
-        try await publish(name, type: type, metadata: [:])
+        try await publish(name, type: type, metadata: { $0 })
     }
 
     /// Sends streaming audio, video and data messages from the client.
@@ -360,10 +360,12 @@ public actor RTMPStream {
     /// - Parameters:
     ///   - name: The stream name, or nil to stop publishing.
     ///   - type: The publishing mode.
-    ///   - metadata: Additional fields for the initial onMetaData message of this publish call.
-    ///     Generated stream fields take precedence over fields with the same name.
-    ///     These fields are not retained for subsequent publish calls and are ignored when name is nil.
-    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live, metadata: AMFObject) async throws -> RTMPResponse {
+    ///   - metadata: A callback that receives generated stream metadata after publishing is accepted,
+    ///     immediately before the initial onMetaData message is sent. Return the fields to send,
+    ///     or nil to skip that message. An empty object sends an empty metadata message.
+    ///     The callback runs synchronously on the stream actor, once per successful publish call.
+    ///     It is not retained for later calls and is not invoked when name is nil or publishing fails.
+    public func publish(_ name: String?, type: RTMPStream.HowToPublish = .live, metadata: @Sendable (AMFObject) -> AMFObject?) async throws -> RTMPResponse {
         guard let name else {
             switch readyState {
             case .publishing:
@@ -400,9 +402,12 @@ public actor RTMPStream {
             info.resourceName = name
             howToPublish = type
             startedAt = .init()
-            self.metadata = makeMetadata(metadata)
+            let metadata = metadata(makeMetadata()).map { AMFArray($0) }
+            self.metadata = metadata ?? .init(count: 0)
             readyState = .publishing
-            try? send("@setDataFrame", arguments: "onMetaData", self.metadata)
+            if let metadata {
+                try? send("@setDataFrame", arguments: "onMetaData", metadata)
+            }
             outgoing.startRunning()
             Task {
                 for await audio in outgoing.audioOutputStream {
@@ -700,10 +705,9 @@ public actor RTMPStream {
     }
 
     /// Creates flv metadata for a stream.
-    private func makeMetadata(_ fields: AMFObject) -> AMFArray {
+    private func makeMetadata() -> AMFObject {
         // https://github.com/shogo4405/HaishinKit.swift/issues/1410
-        var metadata = fields
-        metadata["duration"] = 0
+        var metadata: AMFObject = ["duration": 0]
         if outgoing.videoInputFormat != nil {
             metadata["width"] = outgoing.videoSettings.videoSize.width
             metadata["height"] = outgoing.videoSettings.videoSize.height
@@ -721,7 +725,7 @@ public actor RTMPStream {
                 output: outgoing.audioSettings.sampleRate
             )
         }
-        return AMFArray(metadata)
+        return metadata
     }
 }
 
