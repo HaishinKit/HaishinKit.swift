@@ -89,7 +89,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        errorMessage = "Bonjour search failed: \(errorDict). Check local network access in System Settings."
+        errorMessage = String(localized: "Bonjour search failed: \(String(describing: errorDict)). Check local network access in System Settings.")
         self.browser = nil
         isBrowsing = false
     }
@@ -105,7 +105,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
-        errorMessage = "Could not resolve \(sender.name): \(errorDict)"
+        errorMessage = String(localized: "Could not resolve \(sender.name): \(String(describing: errorDict))")
     }
 
     func netServiceDidPublish(_ sender: NetService) {
@@ -113,7 +113,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netService(_ sender: NetService, didNotPublish errorDict: [String: NSNumber]) {
-        errorMessage = "Bonjour announcement failed: \(errorDict)"
+        errorMessage = String(localized: "Bonjour announcement failed: \(String(describing: errorDict))")
         stopAdvertising()
     }
 }
@@ -127,13 +127,13 @@ struct SRTNetworkControls: View {
     @State private var port = "9000"
 
     var body: some View {
-        StudioSection(title: "SRT on your network", subtitle: "Discover a source or receive directly") {
-            Button(discovery.isBrowsing ? "Refresh services" : "Find Bonjour services") {
+        StudioSection(title: String(localized: "SRT on your network"), subtitle: String(localized: "Discover a source or receive directly")) {
+            Button(discovery.isBrowsing ? String(localized: "Refresh services") : String(localized: "Find Bonjour services")) {
                 discovery.stop()
                 discovery.startBrowsing()
             }.disabled(receiving || busy)
             if discovery.isBrowsing && discovery.services.isEmpty {
-                Text("Looking for _srt._udp services…").font(.callout).foregroundStyle(.secondary)
+                Text(String(localized: "Looking for _srt._udp services…")).font(.callout).foregroundStyle(.secondary)
             }
             ForEach(discovery.services.filter { !$0.isReceiver }) { service in
                 Button {
@@ -147,24 +147,24 @@ struct SRTNetworkControls: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 6) {
-                Text("Receive port").font(.callout.weight(.medium))
+                Text(String(localized: "Receive port")).font(.callout.weight(.medium))
                 TextField("9000", text: $port)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Receive port")
+                    .accessibilityLabel(String(localized: "Receive port"))
                     .disabled(receiving || busy)
             }
-            Button("Listen for SRT sender") {
+            Button(String(localized: "Listen for SRT sender")) {
                 if let port = Int(port), (1...65535).contains(port) { listen(port) }
             }
             .disabled(receiving || busy || Int(port).map { !(1...65535).contains($0) } ?? true)
             if discovery.isAdvertising {
-                Label("Receiver announced on Bonjour", systemImage: "dot.radiowaves.left.and.right")
+                Label(String(localized: "Receiver announced on Bonjour"), systemImage: "dot.radiowaves.left.and.right")
                     .font(.callout)
             }
             if let error = discovery.errorMessage {
                 Text(error).font(.callout).foregroundStyle(.red)
             }
-            Text("Only services advertising _srt._udp appear here. Listener mode accepts one sender; the sender must use SRT caller mode.")
+            Text(String(localized: "Only services advertising _srt._udp appear here. Listener mode accepts one sender; the sender must use SRT caller mode."))
                 .font(.callout).foregroundStyle(.secondary)
         }
     }

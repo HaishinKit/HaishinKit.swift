@@ -18,13 +18,13 @@ final class PlaybackViewModel: ObservableObject {
     private var receiverStream: SRTStream?
     private var receiverFinished = true
     private var announcementTask: Task<Void, Never>?
-    private var view: PiPHKView?
+    let preview: PreviewController = { let preview = PreviewController(); preview.renderer = .pip; return preview }()
     private var connectionTask: Task<Void, Never>?
     private var stopTask: Task<Void, Never>?
     private var stateTask: Task<Void, Never>?
     private var session: (any StreamSession)?
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
-    private var pictureInPictureController: AVPictureInPictureController?
+
 
     func start(_ preference: PreferenceViewModel, endpoint: URL? = nil) {
         guard !isBusy, readyState == .closed else { return }
@@ -68,7 +68,7 @@ final class PlaybackViewModel: ObservableObject {
             let stream = SRTStream(connection: connection)
             receiver = connection
             receiverStream = stream
-            if let view { await stream.addOutput(view) }
+            await stream.addOutput(preview)
             await stream.attachAudioPlayer(audioPlayer)
             guard !Task.isCancelled else { return }
             readyState = .connecting
@@ -99,7 +99,7 @@ final class PlaybackViewModel: ObservableObject {
                             return
                         }
                         if let stats = await connection.performanceData {
-                            self.receiverSummary = String(format: "SRT RX %.0f kbps · RTT %.1f ms · Lost packets %d", stats.mbpsRecvRate * 1000, stats.msRTT, stats.pktRcvLoss)
+                            self.receiverSummary = String(format: NSLocalizedString("SRT RX %.0f kbps · RTT %.1f ms · Lost packets %d", comment: "SRT receive metrics"), stats.mbpsRecvRate * 1000, stats.msRTT, stats.pktRcvLoss)
                         }
                         try? await Task.sleep(for: .seconds(1))
                     }
@@ -118,6 +118,7 @@ final class PlaybackViewModel: ObservableObject {
     }
 
     func stop() {
+        preview.closeFloatingPreview()
 
         connectionTask?.cancel()
         let connection = connectionTask
@@ -158,9 +159,7 @@ final class PlaybackViewModel: ObservableObject {
             guard let session else {
                 return
             }
-            if let view {
-                await session.stream.addOutput(view)
-            }
+            await session.stream.addOutput(preview)
             await session.stream.attachAudioPlayer(audioPlayer)
             stateTask = Task { [weak self] in
                 for await readyState in await session.readyState {
@@ -171,15 +170,6 @@ final class PlaybackViewModel: ObservableObject {
             self.error = error
             self.isShowError = true
             logger.error(error)
-        }
-    }
-}
-
-extension PlaybackViewModel: PiPHKViewRepresentable.PreviewSource {
-    // MARK: PiPHKSwiftUiView.PreviewSource
-    nonisolated func connect(to view: PiPHKView) {
-        Task { @MainActor in
-            self.view = view
         }
     }
 }

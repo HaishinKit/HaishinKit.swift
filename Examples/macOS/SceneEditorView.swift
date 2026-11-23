@@ -12,15 +12,29 @@ struct SceneCanvasCaption: View {
 }
 
 struct StudioEditingPreview: View {
-    let source: PublishViewModel
+    @ObservedObject var source: PublishViewModel
+    @ObservedObject var preview: PreviewController
     @ObservedObject var editor: SceneEditorModel
 
     var body: some View {
         ScreenObjectEditingPreview(
             mixer: source.mixer, gravity: .resizeAspect, selection: $editor.selectedObjectID,
-            usesInspector: true
+            usesInspector: true, locksImageAspectRatio: editor.selectedLayer?.imageAspectRatioLocked ?? true
         ) {
-            MTHKViewRepresentable(previewSource: source)
+            GeometryReader { geometry in
+                let ratio = CGFloat(editor.scene.canvasWidth ?? 1280) / CGFloat(editor.scene.canvasHeight ?? 720)
+                let width = min(geometry.size.width, geometry.size.height * ratio)
+                let height = width / ratio
+                ZStack {
+                    Color(nsColor: .underPageBackgroundColor)
+                    Color.indigo.opacity(0.18)
+                    StudioPreviewSurface(controller: preview, renderer: preview.renderer)
+                        .id(preview.renderer)
+                        .frame(width: width, height: height)
+                        .overlay(Rectangle().strokeBorder(Color.accentColor.opacity(0.8), lineWidth: 1))
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+            }
         }
         .allowsHitTesting(!editor.busy)
     }
@@ -41,11 +55,11 @@ struct SceneEditorView: View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Scenes", systemImage: "square.stack").font(.headline)
+                    Label(String(localized: "Scenes"), systemImage: "square.stack").font(.headline)
                     Spacer()
                     Menu {
-                        Button("Open scene file…", systemImage: "folder") { importingScene = true }
-                        Button("Export scene file…", systemImage: "square.and.arrow.up") {
+                        Button(String(localized: "Open scene file…"), systemImage: "folder") { importingScene = true }
+                        Button(String(localized: "Export scene file…"), systemImage: "square.and.arrow.up") {
                             Task {
                                 if let document = await model.sceneDocument() {
                                     sceneDocument = document
@@ -54,18 +68,18 @@ struct SceneEditorView: View {
                             }
                         }
                         Divider()
-                        Toggle("Scene visible", isOn: Binding(get: { model.scene.rootVisible ?? true }, set: { model.setSceneVisible($0) }))
-                        Button("New scene", systemImage: "plus") { model.addScene() }
-                        Button("Duplicate scene", systemImage: "plus.square.on.square") {
+                        Toggle(String(localized: "Scene visible"), isOn: Binding(get: { model.scene.rootVisible ?? true }, set: { model.setSceneVisible($0) }))
+                        Button(String(localized: "New scene"), systemImage: "plus") { model.addScene() }
+                        Button(String(localized: "Duplicate scene"), systemImage: "plus.square.on.square") {
                             model.addScene(duplicate: true)
                         }
-                        Button("Delete scene", systemImage: "trash", role: .destructive) {
+                        Button(String(localized: "Delete scene"), systemImage: "trash", role: .destructive) {
                             deletingScene = true
                         }
                         .disabled(model.scenes.count == 1)
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                    }.menuStyle(.borderlessButton).frame(width: 24).help("Scene actions")
+                    }.menuStyle(.borderlessButton).frame(width: 24).help(String(localized: "Scene actions"))
                 }
                 ScrollView {
                     VStack(spacing: 4) {
@@ -87,36 +101,37 @@ struct SceneEditorView: View {
                         }
                     }
                 }.frame(minHeight: 80, maxHeight: 100)
-                Text("Scene name · Return to rename").font(.caption).foregroundStyle(.secondary)
-                TextField("Scene name", text: $sceneName).textFieldStyle(.roundedBorder)
+                Text(String(localized: "Scene name · Return to rename")).font(.caption).foregroundStyle(.secondary)
+                TextField(String(localized: "Scene name"), text: $sceneName).textFieldStyle(.roundedBorder)
                     .onSubmit { model.renameScene(sceneName) }
-                Text("Saved automatically on this Mac").font(.caption).foregroundStyle(.secondary)
+                Text(String(localized: "Saved automatically on this Mac")).font(.caption).foregroundStyle(.secondary)
             }.frame(minWidth: 130, idealWidth: 160, maxWidth: 210)
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Objects", systemImage: "square.3.layers.3d").font(.headline)
+                    Label(String(localized: "Objects"), systemImage: "square.3.layers.3d").font(.headline)
                     Spacer()
                     if model.busy { ProgressView().controlSize(.small) }
                     Menu {
-                        Button("Capture input", systemImage: "video") { model.addLayer(.input) }
-                        Button("Text", systemImage: "textformat") { model.addLayer(.text) }
-                        Button("Image file…", systemImage: "photo") {
+                        Button(String(localized: "Capture input"), systemImage: "video") { model.addLayer(.input) }
+                        Button(String(localized: "Test signal"), systemImage: "tv") { model.addLayer(.testSignal) }
+                        Button(String(localized: "Text"), systemImage: "textformat") { model.addLayer(.text) }
+                        Button(String(localized: "Image file…"), systemImage: "photo") {
                             importKind = .image
                             importing = true
                         }
-                        Button("Video file…", systemImage: "film") {
+                        Button(String(localized: "Video file…"), systemImage: "film") {
                             importKind = .video
                             importing = true
                         }
                     } label: {
-                        Label("Add", systemImage: "plus")
+                        Label(String(localized: "Add"), systemImage: "plus")
                     }.fixedSize()
                 }
                 ScrollView {
                     VStack(spacing: 4) {
                         if model.scene.layers.isEmpty {
-                            Text("Add an object to compose this scene.").font(.callout).foregroundStyle(
+                            Text(String(localized: "Add an object to compose this scene.")).font(.callout).foregroundStyle(
                                 .secondary
                             ).padding(12)
                         }
@@ -128,7 +143,7 @@ struct SceneEditorView: View {
                                     HStack {
                                         Image(systemName: layer.kind.symbol).frame(width: 16)
                                         Text(layer.name).lineLimit(1)
-                                        if layer.kind == .unsupported { Text("Unsupported").font(.caption).foregroundStyle(.secondary) }
+                                        if layer.kind == .unsupported { Text(String(localized: "Unsupported")).font(.caption).foregroundStyle(.secondary) }
                                         Spacer(minLength: 0)
                                     }.contentShape(Rectangle())
                                 }.buttonStyle(.plain)
@@ -139,8 +154,8 @@ struct SceneEditorView: View {
                                 } label: {
                                     Image(systemName: layer.visible && layer.kind != .unsupported ? "eye" : "eye.slash")
                                 }
-                                .buttonStyle(.plain).help(layer.visible ? "Hide object" : "Show object")
-                                .accessibilityLabel(layer.visible ? "Hide object" : "Show object")
+                                .buttonStyle(.plain).help(layer.visible ? String(localized: "Hide object") : String(localized: "Show object"))
+                                .accessibilityLabel(layer.visible ? String(localized: "Hide object") : String(localized: "Show object"))
                                 .disabled(layer.kind == .unsupported)
                             }.padding(8)
                                 .background(
@@ -155,26 +170,26 @@ struct SceneEditorView: View {
                     } label: {
                         Image(systemName: "arrow.up")
                     }
-                    .help("Move forward").accessibilityLabel("Move forward")
+                    .help(String(localized: "Move forward")).accessibilityLabel(String(localized: "Move forward"))
                     Button {
                         if let id = model.selectedObjectID { model.moveLayer(id, forward: false) }
                     } label: {
                         Image(systemName: "arrow.down")
                     }
-                    .help("Move backward").accessibilityLabel("Move backward")
+                    .help(String(localized: "Move backward")).accessibilityLabel(String(localized: "Move backward"))
                     Button {
                         if let id = model.selectedObjectID { model.duplicateLayer(id) }
                     } label: {
                         Image(systemName: "plus.square.on.square")
                     }
-                    .help("Duplicate object").accessibilityLabel("Duplicate object")
+                    .help(String(localized: "Duplicate object")).accessibilityLabel(String(localized: "Duplicate object"))
                     Spacer()
                     Button(role: .destructive) {
                         if let id = model.selectedObjectID { model.removeLayer(id) }
                     } label: {
                         Image(systemName: "trash")
                     }
-                    .help("Delete object").accessibilityLabel("Delete object")
+                    .help(String(localized: "Delete object")).accessibilityLabel(String(localized: "Delete object"))
                 }.disabled(model.selectedLayer == nil)
             }.frame(minWidth: 170, maxWidth: .infinity)
         }
@@ -203,19 +218,19 @@ struct SceneEditorView: View {
             if case .failure(let error) = result { model.errorMessage = error.localizedDescription }
         }
         .confirmationDialog(
-            "Delete \(model.scene.name)?", isPresented: $deletingScene, titleVisibility: .visible
+            String(localized: "Delete \(model.scene.name)?"), isPresented: $deletingScene, titleVisibility: .visible
         ) {
-            Button("Delete scene", role: .destructive) { model.deleteScene() }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "Delete scene"), role: .destructive) { model.deleteScene() }
+            Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
-            Text("This scene and its object layout will be removed.")
+            Text(String(localized: "This scene and its object layout will be removed."))
         }
         .alert(
-            "Scene editor",
+            String(localized: "Scene editor"),
             isPresented: Binding(
                 get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })
         ) {
-            Button("OK", role: .cancel) { model.errorMessage = nil }
+            Button(String(localized: "OK"), role: .cancel) { model.errorMessage = nil }
         } message: {
             Text(model.errorMessage ?? "")
         }
@@ -230,12 +245,12 @@ struct SceneObjectInspector: View {
     private var canvasHeight: Double { Double(model.scene.canvasHeight ?? 720) }
 
     var body: some View {
-        StudioSection(title: "Object inspector", subtitle: "Position and size in the \(Int(canvasWidth)) × \(Int(canvasHeight)) canvas") {
+        StudioSection(title: String(localized: "Object inspector"), subtitle: String(localized: "Position and size in the \(Int(canvasWidth)) × \(Int(canvasHeight)) canvas")) {
             if model.selectedLayer?.kind == .unsupported {
-                Text("This object is not supported on this platform. Its data is preserved in the scene file, and it is not rendered.")
+                Text(String(localized: "This object is not supported on this platform. Its data is preserved in the scene file, and it is not rendered."))
                     .font(.callout).foregroundStyle(.secondary)
             } else if let layer = draft, model.selectedLayer != nil {
-                TextField("Name", text: field(\.name, fallback: layer.name)).focused($editing).onSubmit(
+                TextField(String(localized: "Name"), text: field(\.name, fallback: layer.name)).focused($editing).onSubmit(
                     apply)
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                     GridRow {
@@ -243,19 +258,24 @@ struct SceneObjectInspector: View {
                         number("Y", \.y, range: 0...canvasHeight)
                     }
                     GridRow {
-                        number("Width", \.width, range: min(24, canvasWidth)...canvasWidth)
-                        number("Height", \.height, range: min(24, canvasHeight)...canvasHeight)
+                        number(String(localized: "Width"), \.width, range: min(24, canvasWidth)...canvasWidth)
+                        number(String(localized: "Height"), \.height, range: min(24, canvasHeight)...canvasHeight)
                     }
                 }
-                Button("Apply layout") { apply() }.disabled(model.busy)
+                if layer.kind == .image {
+                    Toggle(String(localized: "Keep image aspect ratio"), isOn: Binding(
+                        get: { draft?.imageAspectRatioLocked ?? true },
+                        set: { draft?.imageAspectRatioLocked = $0 }))
+                }
+                Button(String(localized: "Apply layout")) { apply() }.disabled(model.busy)
                 if layer.kind == .text {
-                    Text("Text").font(.callout.weight(.medium))
+                    Text(String(localized: "Text")).font(.callout.weight(.medium))
                     TextEditor(text: field(\.text, fallback: layer.text))
                         .frame(height: 80).border(.separator).focused($editing)
                     HStack {
-                        number("Font size", \.fontSize, range: 8...300)
+                        number(String(localized: "Font size"), \.fontSize, range: 8...300)
                         ColorPicker(
-                            "Color",
+                            String(localized: "Color"),
                             selection: Binding(
                                 get: { Color(nsColor: color(draft?.color ?? "#FFFFFFFF")) },
                                 set: { value in
@@ -267,12 +287,12 @@ struct SceneObjectInspector: View {
                                         Int((rgb.blueComponent * 255).rounded()))
                                 }))
                     }
-                    Button("Apply text") { apply() }.disabled(model.busy)
+                    Button(String(localized: "Apply text")) { apply() }.disabled(model.busy)
                 }
-                Text("Use Return or Apply to save changes. Drag objects in the preview; scroll to resize.")
+                Text(String(localized: "Use Return or Apply to save changes. Drag objects to move; drag the bottom-right handle to resize."))
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("Select an object in the list or preview.").font(.callout).foregroundStyle(.secondary)
+                Text(String(localized: "Select an object in the list or preview.")).font(.callout).foregroundStyle(.secondary)
             }
         }
         .onAppear { draft = model.selectedLayer }

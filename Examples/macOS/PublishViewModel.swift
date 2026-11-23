@@ -20,6 +20,7 @@ final class PublishViewModel: ObservableObject {
     @Published private(set) var activeEncodingDescription: String?
     @Published private(set) var captureIsStarting = true
     @Published private(set) var captureIssue: String?
+    @Published var mixerFPS: FPS = .fps30
     @Published var currentFPS: FPS = .fps30
     @Published var visualEffectItem: VideoEffectItem = .none
     @Published private(set) var error: Error?
@@ -37,13 +38,13 @@ final class PublishViewModel: ObservableObject {
     private var shutdownTask: Task<Void, Never>?
     private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
-    private weak var previewView: MTHKView?
+    let preview = PreviewController()
 
     var encodingConfigurationIssue: String? {
         guard mixerDynamicRangeMode != outputCodec.dynamicRangeMode else { return nil }
         return mixerDynamicRangeMode == .hdr
-            ? "Select HEVC Main10 (HDR), or turn off Mixer HDR before publishing."
-            : "Turn on Mixer HDR to publish with HEVC Main10 (HDR)."
+            ? String(localized: "Select HEVC Main10 (HDR), or turn off Mixer HDR before publishing.")
+            : String(localized: "Turn on Mixer HDR to publish with HEVC Main10 (HDR).")
     }
 
     func setMixerDynamicRangeMode(_ mode: DynamicRangeMode) {
@@ -55,9 +56,9 @@ final class PublishViewModel: ObservableObject {
             do {
                 try await mixer.setDynamicRangeMode(mode)
                 mixerDynamicRangeMode = await mixer.dynamicRangeMode
-                previewView?.setDynamicRangeMode(mixerDynamicRangeMode)
+                preview.dynamicRangeMode = mixerDynamicRangeMode
             } catch {
-                dynamicRangeIssue = "Couldn't change Mixer HDR: \(error.localizedDescription)"
+                dynamicRangeIssue = String(localized: "Couldn't change Mixer HDR: \(error.localizedDescription)")
             }
         }
     }
@@ -156,7 +157,7 @@ final class PublishViewModel: ObservableObject {
                 video.bitRate = videoBitRate
                 video.videoSize = outputResolution.size
                 video.profileLevel = outputCodec.profileLevel
-                video.expectedFrameRate = currentFPS.frameRate
+                video.expectedFrameRate = mixerFPS.frameRate
                 video.isHardwareAcceleratedEnabled = useHardwareEncoder
                 try await session.stream.setVideoSettings(video)
                 let audio = await session.stream.audioSettings
@@ -179,6 +180,9 @@ final class PublishViewModel: ObservableObject {
             defer { captureIsStarting = false }
             captureIssue = await MacCaptureCoordinator.shared.activate(mixer, frameRate: currentFPS.frameRate, useAudioEngine: preference.audioCaptureMode == .audioEngine, microphoneEnabled: UserDefaults.standard.bool(forKey: "macos.capture.microphoneEnabled"))
             guard !Task.isCancelled else { return }
+            await configureCaptureFrameRate(currentFPS.frameRate)
+            try? await mixer.setFrameRate(mixerFPS.frameRate)
+            await mixer.addOutput(preview)
             await sceneEditor.start()
         }
     }
@@ -199,6 +203,7 @@ final class PublishViewModel: ObservableObject {
     }
 
     func stopRunning() {
+        preview.closeFloatingPreview()
 
         startupTask?.cancel()
         publishingTask?.cancel()
@@ -211,6 +216,7 @@ final class PublishViewModel: ObservableObject {
             telemetryTask = nil
             networkReport = nil
             measuredFPS = nil
+            await mixer.removeOutput(preview)
             await sceneEditor.stop()
             await screenCapture.stop(restoreCamera: false)
             try? await session?.close()
@@ -227,40 +233,33 @@ final class PublishViewModel: ObservableObject {
         sceneEditor.setEffect(videoEffect)
     }
 
-    func setFrameRate(_ fps: Float64) {
-        screenCapture.setFrameRate(Int(fps))
+    func setMixerFrameRate(_ fps: Float64) {
         Task {
             do {
-                // Sets to input frameRate.
-                try? await mixer.configuration(video: 0) { video in
-                    do {
-                        try video.setFrameRate(fps)
-                    } catch {
-                        logger.error(error)
-                    }
-                }
-                try? await mixer.configuration(video: 1) { video in
-                    do {
-                        try video.setFrameRate(fps)
-                    } catch {
-                        logger.error(error)
-                    }
-                }
-                // Sets to output frameRate.
                 try await mixer.setFrameRate(fps)
+                if let session {
+                    var video = await session.stream.videoSettings
+                    video.expectedFrameRate = fps
+                    try await session.stream.setVideoSettings(video)
+                }
             } catch {
-                logger.error(error)
+                self.error = error
+                isShowError = true
             }
         }
     }
-}
 
-extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
-    nonisolated func connect(to view: HaishinKit.MTHKView) {
-        Task { @MainActor in
-            previewView = view
-            view.setDynamicRangeMode(mixerDynamicRangeMode)
-            await mixer.addOutput(view)
+    func setFrameRate(_ fps: Float64) {
+        Task { await configureCaptureFrameRate(fps) }
+    }
+
+    private func configureCaptureFrameRate(_ fps: Float64) async {
+        screenCapture.setFrameRate(Int(fps))
+        for track: UInt8 in [0, 1] {
+            try? await mixer.configuration(video: track) { video in
+                do { try video.setFrameRate(fps) }
+                catch { logger.error(error) }
+            }
         }
     }
 }

@@ -1,10 +1,14 @@
 require 'shellwords'
 require 'tmpdir'
+require_relative 'lib/macos_update_feed'
 
 desc 'Builds the Apple Silicon macOS example ZIP.'
 lane :macos_example do |options|
   version = options[:version].to_s
   UI.user_error!('A release version is required (for example, 2.2.0).') unless version.match?(/\A\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?\z/)
+
+  publish_updates = options[:updates].to_s == 'true' && version.match?(/\A\d+\.\d+\.\d+\z/)
+  UI.user_error!('SPARKLE_ED_PRIVATE_KEY is required to publish updates.') if publish_updates && ENV['SPARKLE_ED_PRIVATE_KEY'].to_s.empty?
 
   root = File.expand_path('..', __dir__)
   output = File.join(root, 'build', 'macos-example', version)
@@ -19,18 +23,40 @@ lane :macos_example do |options|
     '-scheme', 'Example macOS', '-configuration', 'Release',
     '-destination', 'generic/platform=macOS', '-derivedDataPath', derived_data,
     'ARCHS=arm64', 'ONLY_ACTIVE_ARCH=NO', 'CODE_SIGNING_ALLOWED=NO',
-    "MARKETING_VERSION=#{version.split(/[-+]/).first}", 'build'
+    "MARKETING_VERSION=#{version.split(/[-+]/).first}", "CURRENT_PROJECT_VERSION=#{version.split(/[-+]/).first}", 'build'
   ])
   UI.user_error!("Missing app: #{app}") unless File.directory?(app)
   sh Shellwords.join(['lipo', File.join(app, 'Contents', 'MacOS', 'HaishinKit'), '-verify_arch', 'arm64'])
-  # Replace linker-only signatures with an ad-hoc signature covering the whole bundle.
-  sh Shellwords.join(['codesign', '--force', '--deep', '--sign', '-', app])
+  # Sign nested Sparkle helpers inside-out; keep their individual entitlements.
+  sparkle = File.join(app, 'Contents/Frameworks/Sparkle.framework/Versions/B')
+  UI.user_error!('Sparkle is missing from the app bundle.') unless File.directory?(sparkle)
+  %w[XPCServices/Installer.xpc XPCServices/Downloader.xpc Autoupdate Updater.app].each do |relative|
+    sh Shellwords.join(['codesign', '--force', '--sign', '-', '--preserve-metadata=entitlements', File.join(sparkle, relative)])
+  end
+  Dir.glob(File.join(app, 'Contents/Frameworks/*.framework')).sort.each do |framework|
+    sh Shellwords.join(['codesign', '--force', '--sign', '-', framework])
+  end
+  entitlements = File.join(output, 'HaishinKit.entitlements')
+  File.write(entitlements, File.read(File.join(root, 'Examples/macOS/HaishinApp.entitlements'))
+    .gsub('$(PRODUCT_BUNDLE_IDENTIFIER)', 'com.haishinkit.Example-macOS'))
+  sh Shellwords.join(['codesign', '--force', '--sign', '-', '--entitlements', entitlements, app])
   sh Shellwords.join(['codesign', '--verify', '--deep', '--strict', '--verbose=2', app])
   sh Shellwords.join(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
   # Verify the distributed bundle too, after an actual ZIP round trip.
   Dir.mktmpdir('haishinkit-macos-release-') do |unpacked|
     sh Shellwords.join(['ditto', '-x', '-k', zip, unpacked])
     sh Shellwords.join(['codesign', '--verify', '--deep', '--strict', '--verbose=2', File.join(unpacked, File.basename(app))])
+  end
+  if publish_updates
+    # Keep the generator directory limited to update ZIPs, not DerivedData or signing inputs.
+    Dir.mktmpdir('haishinkit-appcast-') do |archives|
+      archive = File.join(archives, File.basename(zip))
+      FileUtils.cp(zip, archive)
+      tool_dir = File.join(derived_data, 'SourcePackages/artifacts/sparkle/Sparkle/bin')
+      feed = MacOSUpdateFeed.generate(tool_dir: tool_dir, directory: archives,
+        archive: archive, version: version, private_key: ENV['SPARKLE_ED_PRIVATE_KEY'])
+      FileUtils.cp(feed, File.join(output, 'appcast.xml'))
+    end
   end
   UI.success("Created #{zip}")
 end

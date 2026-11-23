@@ -34,12 +34,12 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
         if let error { continuation.resume(throwing: error); return }
         guard let http = task.response as? HTTPURLResponse, [200, 201, 202].contains(http.statusCode) else {
             let status = (task.response as? HTTPURLResponse)?.statusCode ?? 0
-            continuation.resume(throwing: VQMetrixError(message: "Receiver returned HTTP \(status). Check reception and the connection code."))
+            continuation.resume(throwing: VQMetrixError(message: String(localized: "Receiver returned HTTP \(status). Check reception and the connection code.")))
             return
         }
         struct Receipt: Decodable { let jobId: UUID }
         guard let receipt = try? JSONDecoder().decode(Receipt.self, from: response) else {
-            continuation.resume(throwing: VQMetrixError(message: "Invalid receiver receipt.")); return
+            continuation.resume(throwing: VQMetrixError(message: String(localized: "Invalid receiver receipt."))); return
         }
         continuation.resume(returning: receipt.jobId)
     }
@@ -56,7 +56,7 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
         request.setValue("1", forHTTPHeaderField: "X-VQMetrix-Protocol")
         request.setValue(id.uuidString, forHTTPHeaderField: "Idempotency-Key")
         let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size > 0, size <= 512 * 1024 * 1024 else { throw VQMetrixError(message: "Package exceeds the receiver's 512 MiB limit.") }
+        guard size > 0, size <= 512 * 1024 * 1024 else { throw VQMetrixError(message: String(localized: "Package exceeds the receiver's 512 MiB limit.")) }
         request.setValue(String(size), forHTTPHeaderField: "Content-Length")
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 60
@@ -104,16 +104,16 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
               url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
               url.port.map({ (1...65535).contains($0) }) ?? true,
               ["", "/"].contains(url.path), var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            throw VQMetrixError(message: "Enter an HTTP or HTTPS base URL with a valid port and no credentials, path, or query.")
+            throw VQMetrixError(message: String(localized: "Enter an HTTP or HTTPS base URL with a valid port and no credentials, path, or query."))
         }
         if scheme == "http" {
             let host = unbracket(hostname).lowercased()
             guard host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".local.") || isLocalAddress(host) else {
-                throw VQMetrixError(message: "HTTP requires a local network IP address or .local name. Use HTTPS for public receivers.")
+                throw VQMetrixError(message: String(localized: "HTTP requires a local network IP address or .local name. Use HTTPS for public receivers."))
             }
         }
         components.scheme = scheme
-        guard let endpoint = components.url else { throw VQMetrixError(message: "Invalid receiver URL.") }
+        guard let endpoint = components.url else { throw VQMetrixError(message: String(localized: "Invalid receiver URL.")) }
         return endpoint
     }
 
@@ -134,12 +134,12 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
         try Task.checkCancellation()
         guard !addresses.isEmpty, addresses.allSatisfy(isLocalAddress),
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            throw VQMetrixError(message: "The HTTP receiver must resolve only to local network addresses.")
+            throw VQMetrixError(message: String(localized: "The HTTP receiver must resolve only to local network addresses."))
         }
         // Prefer IPv4 where both families are advertised; preserve IPv6 scope identifiers.
         let address = addresses.first(where: { !$0.contains(":") }) ?? addresses[0]
         components.host = address.contains(":") ? "[\(address)]" : address
-        guard let endpoint = components.url else { throw VQMetrixError(message: "Invalid resolved receiver URL.") }
+        guard let endpoint = components.url else { throw VQMetrixError(message: String(localized: "Invalid resolved receiver URL.")) }
         return endpoint
     }
 
@@ -149,7 +149,7 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
         hints.ai_socktype = SOCK_STREAM
         var result: UnsafeMutablePointer<addrinfo>?
         guard getaddrinfo(host, nil, &hints, &result) == 0, let first = result else {
-            throw VQMetrixError(message: "Cannot resolve the local receiver. Check its address and that reception is running.")
+            throw VQMetrixError(message: String(localized: "Cannot resolve the local receiver. Check its address and that reception is running."))
         }
         defer { freeaddrinfo(first) }
         var addresses: [String] = []
@@ -159,7 +159,7 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
             if info.ai_family == AF_INET || info.ai_family == AF_INET6, let address = info.ai_addr {
                 var name = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                 guard getnameinfo(address, info.ai_addrlen, &name, socklen_t(name.count), nil, 0, NI_NUMERICHOST) == 0 else {
-                    throw VQMetrixError(message: "Cannot read the local receiver address.")
+                    throw VQMetrixError(message: String(localized: "Cannot read the local receiver address."))
                 }
                 addresses.append(String(cString: name))
             }

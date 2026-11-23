@@ -8,24 +8,16 @@ struct PlaybackView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("A window into your stream.").font(.title2.weight(.semibold))
-                        Text("Connect to a stream and watch it here.").foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    SessionStatus(state: model.readyState, busy: model.isBusy, waiting: model.isWaitingForSender)
-                }
                 ZStack {
-                    PiPHKViewRepresentable(previewSource: model)
+                    PlaybackPreview(controller: model.preview)
                     if model.readyState == .closed && !model.isBusy {
-                        StudioEmptyState(symbol: "play.rectangle", title: "Ready when you are",
-                                         subtitle: "Enter your stream endpoint, then start playback.")
+                        StudioEmptyState(symbol: "play.rectangle", title: String(localized: "Ready when you are"),
+                                         subtitle: String(localized: "Enter your stream endpoint, then start playback."))
                     }
                     if model.readyState == .connecting || (model.isBusy && model.readyState != .open) {
                         VStack(spacing: 12) {
                             ProgressView().controlSize(.large)
-                            Text(model.isWaitingForSender ? "Waiting for SRT sender…" : "Connecting to stream…").font(.callout)
+                            Text(model.isWaitingForSender ? String(localized: "Waiting for SRT sender…") : String(localized: "Connecting to stream…")).font(.callout)
                         }
                         .padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     }
@@ -35,9 +27,9 @@ struct PlaybackView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
                 HStack {
-                    Label("Stream monitor", systemImage: "display")
+                    PreviewControls(controller: model.preview)
                     Spacer()
-                    Text(model.receiverSummary ?? "Playback")
+                    Text(model.receiverSummary ?? String(localized: "Playback"))
                 }.font(.callout).foregroundStyle(.secondary)
             }
             .padding(24)
@@ -45,7 +37,7 @@ struct PlaybackView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 16) {
-                        StudioSection(title: "Source", subtitle: "Choose a stream to watch") {
+                        StudioSection(title: String(localized: "Source"), subtitle: String(localized: "Choose a stream to watch")) {
                             ConnectionFields().disabled(model.isBusy || model.readyState != .closed)
                         }
                         SRTNetworkControls(discovery: model.discovery, receiving: model.readyState != .closed, busy: model.isBusy, connect: { model.start(preference, endpoint: $0) }, listen: { model.listen(port: $0) })
@@ -59,29 +51,36 @@ struct PlaybackView: View {
                     } label: {
                         HStack {
                             if model.isBusy { ProgressView().controlSize(.small) }
-                            Label(model.readyState == .connecting ? "Cancel receiving" : (model.readyState == .open ? "Stop playback" : "Start playback"),
+                            Label(model.readyState == .connecting ? String(localized: "Cancel receiving") : (model.readyState == .open ? String(localized: "Stop playback") : String(localized: "Start playback")),
                                   systemImage: model.readyState != .closed ? "stop.fill" : "play.fill")
                         }.frame(maxWidth: .infinity).padding(.vertical, 6)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isBusy || model.readyState == .closing)
-                    Text("Video and audio play through your Mac. Stop playback before changing the source.")
+                    Text(String(localized: "Video and audio play through your Mac. Stop playback before changing the source."))
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(20)
             }
             .frame(minWidth: 280, idealWidth: 310, maxWidth: 360)
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .navigationTitle("Playback")
+        .navigationTitle(String(localized: "Playback") + " · " + SessionStatus(state: model.readyState, busy: model.isBusy, waiting: model.isWaitingForSender).title)
         .onDisappear { model.stop(); model.discovery.stop() }
-        .alert("Couldn't play stream", isPresented: $model.isShowError) {
-            Button("OK", role: .cancel) { }
+        .alert(String(localized: "Couldn't play stream"), isPresented: $model.isShowError) {
+            Button(String(localized: "OK"), role: .cancel) { }
         } message: {
-            Text(model.error?.localizedDescription ?? "The connection was interrupted. Check your source and try again.")
+            Text(model.error?.localizedDescription ?? String(localized: "The connection was interrupted. Check your source and try again."))
         }
     }
 }
 
 #Preview {
     PlaybackView().environmentObject(PreferenceViewModel())
+}
+
+private struct PlaybackPreview: View {
+    @ObservedObject var controller: PreviewController
+    var body: some View {
+        StudioPreviewSurface(controller: controller, renderer: controller.renderer).id(controller.renderer)
+    }
 }

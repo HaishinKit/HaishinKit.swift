@@ -5,15 +5,16 @@ import SwiftUI
 
 struct StudioLayer: Codable, Identifiable, Equatable, Sendable {
     enum Kind: String, Codable, CaseIterable, Sendable {
-        case input, text, image, video, group, unsupported
+        case input, text, image, video, testSignal, group, unsupported
         var title: String {
             switch self {
-            case .input: "Capture input"
-            case .text: "Text"
-            case .image: "Image"
-            case .video: "Video"
-            case .group: "Group"
-            case .unsupported: "Unsupported object"
+            case .input: String(localized: "Capture input")
+            case .text: String(localized: "Text")
+            case .image: String(localized: "Image")
+            case .video: String(localized: "Video")
+            case .testSignal: String(localized: "Test signal")
+            case .group: String(localized: "Group")
+            case .unsupported: String(localized: "Unsupported object")
             }
         }
         var symbol: String {
@@ -22,6 +23,7 @@ struct StudioLayer: Codable, Identifiable, Equatable, Sendable {
             case .text: "textformat"
             case .image: "photo"
             case .video: "film"
+            case .testSignal: "tv"
             case .group: "square.stack.3d.up"
             case .unsupported: "eye.slash"
             }
@@ -35,12 +37,15 @@ struct StudioLayer: Codable, Identifiable, Equatable, Sendable {
     var width: Double = 320
     var height: Double = 180
     var visible = true
-    var text = "New text"
+    var text = String(localized: "New text")
     var fontSize: Double = 40
     var color = "#FFFFFFFF"
     var media: String?
     var snapshotData: Data?
     var absoluteLayout: Bool?
+    var imageAspectRatioLocked: Bool?
+
+    var keepsImageAspectRatio: Bool { kind == .image && (imageAspectRatioLocked ?? true) }
 }
 
 struct StudioScene: Codable, Identifiable, Equatable, Sendable {
@@ -53,9 +58,9 @@ struct StudioScene: Codable, Identifiable, Equatable, Sendable {
     var rootVisible: Bool?
     static func initial() -> Self {
         Self(
-            name: "Scene 1",
+            name: String(localized: "Scene 1"),
             layers: [
-                StudioLayer(kind: .input, name: "Capture input", x: 0, y: 0, width: 1280, height: 720)
+                StudioLayer(kind: .input, name: String(localized: "Capture input"), x: 0, y: 0, width: 1280, height: 720)
             ])
     }
 }
@@ -64,6 +69,7 @@ struct StudioScene: Codable, Identifiable, Equatable, Sendable {
 private final class StudioSceneRenderer {
     nonisolated init(mixer: MediaMixer) { self.mixer = mixer }
     private let mixer: MediaMixer
+    private let signalDelegate = TestSignalSceneDelegate()
     private var objects: [String: ScreenObject] = [:]
     private var effect: VideoEffectItem = .none
     private var effects: [String: VideoEffect] = [:]
@@ -93,11 +99,11 @@ private final class StudioSceneRenderer {
                     for node in Self.nodes(resolved) { replacementEffects[node.id] = effects[node.id] }
                     continue
                 }
-                guard let object = ScreenObjectFactory().make(resolved) else {
-                    throw SceneFileError(message: "Unsupported screen object: \(raw.type)")
+                guard let object = ExampleScreenObjectFactory.make(resolved) else {
+                    throw SceneFileError(message: String(localized: "Unsupported screen object: \(raw.type)"))
                 }
                 func validate(_ node: ScreenObjectSnapshot) throws {
-                    guard ["screen", "container", "video", "text", "image", "asset"].contains(node.type) else { return }
+                    guard ["screen", "container", "video", "text", "image", "asset", "testSignal"].contains(node.type) else { return }
                     if node.type == "image", (object.findById(node.id) as? ImageScreenObject)?.ciImage == nil {
                         throw CocoaError(.fileReadCorruptFile)
                     }
@@ -146,6 +152,12 @@ private final class StudioSceneRenderer {
             if let object = objects[layer.id] { apply(layer, to: object) }
             try screen.addChild(objects[layer.id])
         }
+        signalDelegate.attach(to: screen)
+    }
+
+    func imageAspectRatio(id: String) -> Double? {
+        guard let image = objects[id] as? ImageScreenObject, let size = image.ciImage?.extent.size, size.width > 0, size.height > 0 else { return nil }
+        return size.width / size.height
     }
 
     func update(_ layer: StudioLayer) async {
@@ -156,6 +168,13 @@ private final class StudioSceneRenderer {
     private func apply(_ layer: StudioLayer, to object: ScreenObject) {
         object.isVisible = sceneVisible && layer.visible && layer.kind != .unsupported
         object.size = CGSize(width: layer.width, height: layer.height)
+        if layer.keepsImageAspectRatio, let image = object as? ImageScreenObject, let extent = image.ciImage?.extent,
+            extent.width > 0, extent.height > 0, layer.width > 0 || layer.height > 0 {
+            let widthScale = layer.width > 0 ? layer.width / extent.width : .infinity
+            let heightScale = layer.height > 0 ? layer.height / extent.height : .infinity
+            let scale = min(widthScale, heightScale, 8192 / max(extent.width, extent.height))
+            object.size = CGSize(width: extent.width * scale, height: extent.height * scale)
+        }
         if let node = try? SceneSnapshotCodec.node(layer) {
             object.horizontalAlignment = .init(rawValue: node.horizontalAlignment) ?? .left
             object.verticalAlignment = .init(rawValue: node.verticalAlignment) ?? .top
@@ -244,6 +263,7 @@ private final class StudioSceneRenderer {
     }
 
     func suspend() {
+        signalDelegate.detach(from: mixer.screen)
         installedSceneID = nil
         objects.values.forEach { Self.stopAssets($0, snapshot: ScreenObjectSnapshotFactory().make($0)) }
     }
@@ -333,7 +353,7 @@ final class SceneEditorModel: ObservableObject {
             loadedFiles = true
         }
         do { try await renderer.install(scene, mediaDirectory: mediaDirectory) } catch {
-            errorMessage = "Could not restore this scene: \(error.localizedDescription)"
+            errorMessage = String(localized: "Could not restore this scene: \(error.localizedDescription)")
         }
         await save()
         busy = false
@@ -397,7 +417,7 @@ final class SceneEditorModel: ObservableObject {
                     do {
                         let scene = try session.read(file, mediaDirectory: media)
                         guard !restored.contains(where: { $0.id == scene.id }) else {
-                            throw SceneFileError(message: "Duplicate scene identifier.")
+                            throw SceneFileError(message: String(localized: "Duplicate scene identifier."))
                         }
                         restored.append(scene)
                     } catch { failures.append(file.lastPathComponent + ": " + error.localizedDescription) }
@@ -411,12 +431,12 @@ final class SceneEditorModel: ObservableObject {
             }
             if !scenes.contains(where: { $0.id == selectedSceneID }) { selectedSceneID = scenes[0].id }
             if !result.1.isEmpty {
-                errorMessage = "Some scene files could not be opened. They were preserved.\n" + result.1.joined(separator: "\n")
+                errorMessage = String(localized: "Some scene files could not be opened. They were preserved.\n") + result.1.joined(separator: "\n")
             }
         } catch {
             scenes = [.initial()]
             selectedSceneID = scenes[0].id
-            errorMessage = "Could not read saved scenes: \(error.localizedDescription)"
+            errorMessage = String(localized: "Could not read saved scenes: \(error.localizedDescription)")
         }
     }
 
@@ -448,9 +468,9 @@ final class SceneEditorModel: ObservableObject {
     func addScene(duplicate: Bool = false) {
         perform {
             self.scenes[self.sceneIndex].layers = await self.renderer.read(self.scene.layers)
-            var scene = duplicate ? self.scene : StudioScene(name: "New scene", layers: [])
+            var scene = duplicate ? self.scene : StudioScene(name: String(localized: "New scene"), layers: [])
             scene.id = UUID().uuidString
-            scene.name = duplicate ? scene.name + " copy" : "Scene \(self.scenes.count + 1)"
+            scene.name = duplicate ? String(localized: "\(scene.name) copy") : String(localized: "Scene \(self.scenes.count + 1)")
             var committed = false
             let createdID = scene.id
             defer { if !committed { try? FileManager.default.removeItem(at: SceneFileRepository.mediaURL(id: createdID, root: self.mediaDirectory)) } }
@@ -468,6 +488,28 @@ final class SceneEditorModel: ObservableObject {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !busy, !trimmed.isEmpty else { return }
         perform { self.scenes[self.sceneIndex].name = trimmed }
+    }
+
+    func setCanvasSize(width: Int, height: Int) {
+        guard (1...8192).contains(width), (1...8192).contains(height) else { return }
+        perform {
+            var updated = self.scene
+            updated.layers = await self.renderer.read(updated.layers)
+            let oldWidth = Double(updated.canvasWidth ?? 1280)
+            let oldHeight = Double(updated.canvasHeight ?? 720)
+            // Keep overlay coordinates; full-canvas capture follows the new canvas.
+            for index in updated.layers.indices where updated.layers[index].kind == .input {
+                if updated.layers[index].x == 0, updated.layers[index].y == 0,
+                    updated.layers[index].width == oldWidth, updated.layers[index].height == oldHeight {
+                    updated.layers[index].width = Double(width)
+                    updated.layers[index].height = Double(height)
+                }
+            }
+            updated.canvasWidth = width
+            updated.canvasHeight = height
+            try await self.renderer.install(updated, mediaDirectory: self.mediaDirectory)
+            self.scenes[self.sceneIndex] = updated
+        }
     }
 
     func setSceneVisible(_ visible: Bool) {
@@ -505,7 +547,7 @@ final class SceneEditorModel: ObservableObject {
             var committed = false
             defer { if !committed, let importedFile { try? FileManager.default.removeItem(at: importedFile) } }
             switch kind {
-            case .input:
+            case .input, .testSignal:
                 layer.width = 640
                 layer.height = 360
             case .text:
@@ -522,12 +564,12 @@ final class SceneEditorModel: ObservableObject {
                 let filename = UUID().uuidString + "." + file.pathExtension
                 let destination = sceneMedia.appendingPathComponent(filename)
                 let existingResources = try SceneFileRepository.document(self.scene, mediaDirectory: self.mediaDirectory).resources
-                guard existingResources.count < 256 else { throw SceneFileError(message: "A scene supports at most 256 media files.") }
+                guard existingResources.count < 256 else { throw SceneFileError(message: String(localized: "A scene supports at most 256 media files.")) }
                 let existingBytes = existingResources.values.reduce(0) { $0 + $1.count }
                 try await Task.detached(priority: .userInitiated) {
                     let data = try Data(contentsOf: file, options: .mappedIfSafe)
                     guard data.count <= SceneFile.maximumResourceBytes - existingBytes else {
-                        throw SceneFileError(message: "Scene media exceeds 128 MB.")
+                        throw SceneFileError(message: String(localized: "Scene media exceeds 128 MB."))
                     }
                     try data.write(to: destination, options: .atomic)
                 }.value
@@ -578,6 +620,11 @@ final class SceneEditorModel: ObservableObject {
         }
         guard !busy, let index = scene.layers.firstIndex(where: { $0.id == layer.id }) else { return }
         perform {
+            let previous = self.scene.layers[index]
+            if layer.keepsImageAspectRatio, let ratio = await self.renderer.imageAspectRatio(id: layer.id) {
+                if layer.width > 0, layer.width != previous.width, layer.height == previous.height { layer.height = layer.width / ratio }
+                else if layer.height > 0, layer.height != previous.height, layer.width == previous.width { layer.width = layer.height * ratio }
+            }
             var candidate = self.scene
             candidate.layers[index] = layer
             try SceneFileDocument.validate(SceneSnapshotCodec.snapshot(candidate), resources: [:], allowMissingResources: true)
@@ -595,7 +642,7 @@ final class SceneEditorModel: ObservableObject {
             guard let original = layers.first(where: { $0.id == id }) else { return }
             guard var copy = try? SceneSnapshotCodec.duplicate(original) else { return }
             copy.absoluteLayout = true
-            copy.name += " copy"
+            copy.name = String(localized: "\(copy.name) copy")
             copy.x = min(max(0, Double(self.scene.canvasWidth ?? 1280) - copy.width), copy.x + 24)
             copy.y = min(max(0, Double(self.scene.canvasHeight ?? 720) - copy.height), copy.y + 24)
             layers.append(copy)

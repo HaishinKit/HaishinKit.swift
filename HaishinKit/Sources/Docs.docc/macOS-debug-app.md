@@ -8,6 +8,9 @@ Open `Examples/Examples.xcworkspace` and run the `Example macOS` scheme. The
 workspace uses the library in the same checkout. Release ZIPs target Apple
 Silicon and require macOS 15.5 or later.
 
+The interface supports English and Japanese and follows the system's per-app
+language preference.
+
 ## Publish and inspect
 
 Use **Publish** for a camera preview, screen sharing, scene overlay editing,
@@ -16,7 +19,7 @@ resolution, codec, video/audio target bitrates, and hardware encoding for the
 next publishing session. **Settings** contains audio format, bitrate mode, and
 low-latency options.
 
-For HDR publishing, enable **Video → Mixer HDR (HLG)** and select
+For HDR publishing, enable **MediaMixer → Mixer HDR (HLG)** and select
 **Encoder → Video codec → HEVC Main10 (HDR)** before going live. The mixer
 switch controls 10-bit HLG scene mixing and preview; native camera HDR capture
 depends on the device. The encoder choice selects the HEVC Main10 profile for
@@ -25,8 +28,27 @@ when the mixer and encoder dynamic ranges differ. Enhanced RTMP HDR also
 requires a compatible server and player. Both controls are locked during a
 broadcast; HDR can be previewed while disconnected.
 
+Both **Publish** and **Playback** offer **MTHKView** (Metal) and
+**PiPView** (sample-buffer display) below the preview. With either renderer,
+**Open floating preview** shows a resizable, always-on-top video window.
+Changing the renderer updates both the inline preview and the open floating
+window, retaining the window's size and position. Closing the window leaves
+the inline preview running without restarting capture or the connection. The floating window shows only video,
+not scene editing handles. It closes when leaving the screen.
+
+This is an application-managed floating window. System Picture in Picture
+for sample-buffer display layers is currently unavailable on macOS; see the
+[framework support clarification](https://developer.apple.com/forums/thread/830764).
+
 New scenes use a 1280 × 720 preview canvas; imported scenes retain their canvas size; encoder output resolution is configured
 separately. Target video bitrate is a setting, not a measured throughput value.
+Use **MediaMixer** to choose a canvas preset or apply a custom width and height
+(1–8192 pixels), and set the compositor FPS separately from the capture-input FPS.
+Canvas dimensions are saved with the scene. Overlays keep their coordinates;
+full-canvas capture objects follow the new dimensions. The encoder resolution
+remains independent. The tinted area around the preview is outside the video
+canvas and is not sent to the stream.
+
 Measured TX and send queue use transport reports where the selected protocol
 provides them. Output FPS is currently available for RTMP. A dash means a
 measurement is unavailable, including before a session starts.
@@ -49,14 +71,24 @@ Scenes and their layouts are restored the next time the app opens. Edits in anot
 window are detected before saving; reopen Publish to load the current version if a
 conflict is reported. Editing the current scene keeps existing video playback running.
 
-Use **Objects → Add** for capture input, text, an image, or a video file. Capture
+Use **Objects → Add** for capture input, a video-only test signal, text, an image,
+or a video file. The test signal is a shared example ScreenObject with color bars,
+a moving marker, and a frame counter. Its `testSignal` snapshot node is saved
+with the scene; readers without this example type retain it invisibly. Capture
 input uses the current camera or ScreenCaptureKit source on mixer track 0.
 Imported files are copied into scene-specific Application Support `HaishinKit/SceneWorkspaceMedia`
 directories so moving the original file does not break the scene. Video objects
 loop without supplying audio; microphone settings still control capture audio.
 
+Editable image layers retain their source aspect ratio, including previously
+stretched layers. Editing either image dimension adjusts the other proportionally. Turn off
+**Keep image aspect ratio** in the inspector to test stretched image layouts.
+An automatic (zero) dimension is derived from the other dimension while aspect locking is enabled.
+Images inside imported, read-only groups retain the geometry authored in the scene
+file; the inspector's aspect-ratio setting does not modify those descendants.
+
 Select an object in the list or preview. Drag it to move, scroll or use the
-preview's plus/minus controls to resize, and use **Object inspector** for its
+selection's bottom-right handle to resize, and use **Object inspector** for its
 name, position, dimensions, text, font size, and color. Press Return or Apply
 to commit inspector edits. The top object in the list is drawn in front; use
 the arrows to change its order, the eye to hide it, and the duplicate or trash
@@ -154,3 +186,14 @@ to validate, decode, and VMAF-evaluate those exact packages.
 Run `ruby Examples/Tests/vqmetrix_transfer.rb` to check cancellation before and
 during upload, task-registration races, retry IDs, bounded responses, redirects,
 and local-network URL validation against temporary local test servers.
+
+## Updates and licenses
+
+Choose **HaishinKit → Check for Updates…** to check GitHub Releases, or configure
+automatic checks and downloads under **Settings → App updates**. Installation
+uses signed update files; restart after finishing any active debug session.
+The first release containing this updater requires a manual installation.
+
+**Configuration → Licenses** contains searchable, selectable license text and
+source-availability notices for the components used by the app. These notices
+are available offline and follow the dependencies resolved for that build.

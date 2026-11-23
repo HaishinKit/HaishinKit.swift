@@ -172,24 +172,24 @@ struct ScreenSourceControls: View {
     @ObservedObject var source: ScreenCaptureSource
 
     var body: some View {
-        StudioSection(title: "Video source", subtitle: source.isCapturing ? "Sharing your selected content" : "Camera preview") {
+        StudioSection(title: String(localized: "Video source"), subtitle: source.isCapturing ? String(localized: "Sharing your selected content") : String(localized: "Camera preview")) {
             Button {
                 source.chooseContent()
             } label: {
-                Label(source.isCapturing ? "Change shared content…" : "Share screen or window…", systemImage: "rectangle.on.rectangle")
+                Label(source.isCapturing ? String(localized: "Change shared content…") : String(localized: "Share screen or window…"), systemImage: "rectangle.on.rectangle")
                     .frame(maxWidth: .infinity)
             }.disabled(source.isBusy)
             if source.isCapturing {
-                Button("Stop sharing · Use camera") {
+                Button(String(localized: "Stop sharing · Use camera")) {
                     Task { await source.stop() }
                 }.disabled(source.isBusy)
             }
-            if source.isBusy { ProgressView("Updating source…").controlSize(.small) }
+            if source.isBusy { ProgressView(String(localized: "Updating source…")).controlSize(.small) }
             if let error = source.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.red).textSelection(.enabled)
             }
-            Text("Choose content in the macOS sharing picker. Microphone audio follows Settings → Capture.")
+            Text(String(localized: "Choose content in the macOS sharing picker. Microphone audio follows Settings → Capture."))
                 .font(.callout).foregroundStyle(.secondary)
         }
     }

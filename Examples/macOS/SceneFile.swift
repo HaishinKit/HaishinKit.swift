@@ -33,7 +33,7 @@ struct SceneFileDocument: FileDocument, Sendable {
 
     init(wrapper: FileWrapper) throws {
         guard wrapper.isRegularFile, let data = wrapper.regularFileContents else {
-            throw SceneFileError(message: "Open a portable .scene ZIP or snapshot JSON.")
+            throw SceneFileError(message: String(localized: "Open a portable .scene ZIP or snapshot JSON."))
         }
         let archive = try SceneFile(data: data)
         try self.init(snapshot: archive.snapshot, resources: archive.resources)
@@ -54,7 +54,7 @@ struct SceneFileDocument: FileDocument, Sendable {
 
     static func mediaName(_ source: String) throws -> String {
         guard source.hasPrefix("media/"), safeFilename(String(source.dropFirst(6))) else {
-            throw SceneFileError(message: "Media references must point to files inside this scene's media folder.")
+            throw SceneFileError(message: String(localized: "Media references must point to files inside this scene's media folder."))
         }
         return String(source.dropFirst(6))
     }
@@ -64,12 +64,12 @@ struct SceneFileDocument: FileDocument, Sendable {
             resources.keys.allSatisfy(safeFilename), resources.count <= 256,
             resources.values.reduce(0, { $0 + $1.count }) <= SceneFile.maximumResourceBytes
         else {
-            throw SceneFileError(message: "Scene resources are invalid or exceed 128 MB.")
+            throw SceneFileError(message: String(localized: "Scene resources are invalid or exceed 128 MB."))
         }
         guard ["screen", "container"].contains(root.type), !root.id.isEmpty,
             (1...8192).contains(root.size.width), (1...8192).contains(root.size.height)
         else {
-            throw SceneFileError(message: "Use a screen or container with a canvas between 1 and 8192 pixels.")
+            throw SceneFileError(message: String(localized: "Use a screen or container with a canvas between 1 and 8192 pixels."))
         }
         var ids = Set<String>()
         var count = 0
@@ -84,27 +84,27 @@ struct SceneFileDocument: FileDocument, Sendable {
                     (-8192...8192).contains($0)
                 })
             else {
-                throw SceneFileError(message: "The snapshot contains unsupported nodes, duplicate identifiers, or invalid layout values.")
+                throw SceneFileError(message: String(localized: "The snapshot contains unsupported nodes, duplicate identifiers, or invalid layout values."))
             }
             if node.type == "text" {
                 guard let size = Double(node.elements["fontSize"] ?? "32"), size.isFinite, (1...1024).contains(size) else {
-                    throw SceneFileError(message: "A text object's font size is invalid.")
+                    throw SceneFileError(message: String(localized: "A text object's font size is invalid."))
                 }
             }
             if node.type == "video", UInt8(node.elements["track"] ?? "0") == nil {
-                throw SceneFileError(message: "A capture input track is invalid.")
+                throw SceneFileError(message: String(localized: "A capture input track is invalid."))
             }
             if node.type == "image" || node.type == "asset" {
                 let source = node.elements["source"] ?? ""
                 if !(node.type == "image" && source.hasPrefix("data:")) {
                     let name = try mediaName(source)
                     guard allowMissingResources || resources[name] != nil else {
-                        throw SceneFileError(message: "Missing scene media: \(name)")
+                        throw SceneFileError(message: String(localized: "Missing scene media: \(name)"))
                     }
                 }
             }
-            if ["video", "text", "image", "asset"].contains(node.type), !node.children.isEmpty {
-                throw SceneFileError(message: "Only containers can contain child objects.")
+            if ["video", "text", "image", "asset", "testSignal"].contains(node.type), !node.children.isEmpty {
+                throw SceneFileError(message: String(localized: "Only containers can contain child objects."))
             }
             for child in node.children { try visit(child, depth: depth + 1) }
         }
@@ -128,13 +128,14 @@ enum SceneSnapshotCodec {
         case .text: type = "text"
         case .image: type = "image"
         case .video: type = "asset"
+        case .testSignal: type = TestSignalScreenObject.typeIdentifier
         case .group: type = "container"
         case .unsupported: type = basis?.type ?? "unsupported"
         }
         if layer.kind == .unsupported, let basis { return basis }
         guard [layer.width, layer.height].allSatisfy({ $0.isFinite && (0...8192).contains($0) }),
             layer.absoluteLayout == false || [layer.x, layer.y].allSatisfy({ $0.isFinite && (-8192...8192).contains($0) }) else {
-            throw SceneFileError(message: "Object geometry is outside the scene file limits.")
+            throw SceneFileError(message: String(localized: "Object geometry is outside the scene file limits."))
         }
         var elements = basis?.elements ?? [:]
         elements["name"] = layer.name
@@ -145,14 +146,20 @@ enum SceneSnapshotCodec {
         case .text: elements.merge(["value": layer.text, "fontSize": String(layer.fontSize), "color": layer.color]) { _, value in value }
         case .image, .video:
             if let media = layer.media { elements["source"] = "media/" + media }
+            if layer.kind == .image, let locked = layer.imageAspectRatioLocked { elements["preservesAspectRatio"] = String(locked) }
             if layer.kind == .video, basis == nil {
                 elements["looping"] = "true"
                 elements["videoGravity"] = "resizeAspectFill"
             }
-        case .group, .unsupported: break
+        case .testSignal, .group, .unsupported: break
+        }
+        func pixelDimension(_ value: Double) -> Int {
+            guard layer.keepsImageAspectRatio else { return Int(value) }
+            // Preserve the enclosing fit box, without rounding floating-point noise up a pixel.
+            return Int((value - 8 * value.ulp).rounded(.up))
         }
         return ScreenObjectSnapshot(
-            type: type, id: layer.id, size: .init(width: Int(layer.width), height: Int(layer.height)), isVisible: layer.visible,
+            type: type, id: layer.id, size: .init(width: pixelDimension(layer.width), height: pixelDimension(layer.height)), isVisible: layer.visible,
             layoutMargin: layer.absoluteLayout == false ? (basis?.layoutMargin ?? .init()) : .init(top: Int(layer.y), left: Int(layer.x)),
             horizontalAlignment: layer.absoluteLayout == false ? (basis?.horizontalAlignment ?? 0) : 0,
             verticalAlignment: layer.absoluteLayout == false ? (basis?.verticalAlignment ?? 0) : 0,
@@ -179,21 +186,23 @@ enum SceneSnapshotCodec {
             case "text": kind = .text
             case "image": kind = .image
             case "asset": kind = .video
+            case TestSignalScreenObject.typeIdentifier: kind = .testSignal
             case "screen", "container": kind = .group
             default: kind = .unsupported
             }
             return StudioLayer(
-                id: node.id, kind: kind, name: node.elements["name"] ?? (kind == .unsupported ? "Unsupported (\(node.type))" : kind.title),
+                id: node.id, kind: kind, name: node.elements["name"] ?? (kind == .unsupported ? String(localized: "Unsupported (\(node.type))") : kind.title),
                 x: Double(node.layoutMargin.left), y: Double(node.layoutMargin.top), width: Double(node.size.width),
                 height: Double(node.size.height),
                 visible: node.isVisible, text: node.elements["value"] ?? "", fontSize: Double(node.elements["fontSize"] ?? "32") ?? 32,
                 color: node.elements["color"] ?? "#FFFFFFFF",
                 media: [.image, .video].contains(kind) && (node.elements["source"] ?? "").hasPrefix("media/")
                     ? try SceneFileDocument.mediaName(node.elements["source"] ?? "") : nil,
-                snapshotData: try encode(node), absoluteLayout: false)
+                snapshotData: try encode(node), absoluteLayout: false,
+                imageAspectRatioLocked: node.elements["preservesAspectRatio"].map { $0 != "false" })
         }
         return StudioScene(
-            id: snapshot.id, name: snapshot.elements["name"] ?? "Scene", layers: layers,
+            id: snapshot.id, name: snapshot.elements["name"] ?? String(localized: "Scene"), layers: layers,
             canvasWidth: snapshot.size.width, canvasHeight: snapshot.size.height, snapshotData: try encode(snapshot),
             rootVisible: snapshot.isVisible)
     }
@@ -217,7 +226,7 @@ enum SceneSnapshotCodec {
     }
 
     static func containsUnsupported(_ node: ScreenObjectSnapshot) -> Bool {
-        !["screen", "container", "video", "text", "image", "asset"].contains(node.type)
+        !["screen", "container", "video", "text", "image", "asset", "testSignal"].contains(node.type)
             || node.children.contains(where: containsUnsupported)
     }
 
@@ -250,7 +259,7 @@ enum SceneFileRepository {
         var files: [String: Data] = [:]
         for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
             if let names, !names.contains(url.lastPathComponent) { continue }
-            guard SceneFileDocument.safeFilename(url.lastPathComponent) else { throw SceneFileError(message: "Invalid scene media name.") }
+            guard SceneFileDocument.safeFilename(url.lastPathComponent) else { throw SceneFileError(message: String(localized: "Invalid scene media name.")) }
             files[url.lastPathComponent] = try Data(contentsOf: url, options: .mappedIfSafe)
         }
         return files
@@ -322,7 +331,7 @@ final class SceneSaveSession: @unchecked Sendable {
                 let data = try SceneSnapshotCodec.encode(snapshot)
                 guard snapshots[key] != data else { continue }
                 guard (try? Data(contentsOf: url)) == diskVersions[key] else {
-                    throw SceneFileError(message: "This scene was changed or deleted in another window. Reopen Publish before editing it.")
+                    throw SceneFileError(message: String(localized: "This scene was changed or deleted in another window. Reopen Publish before editing it."))
                 }
                 try data.write(to: url, options: .atomic)
                 diskVersions[key] = data
@@ -336,7 +345,7 @@ final class SceneSaveSession: @unchecked Sendable {
             let url = SceneFileRepository.url(id: id, directory: directory)
             let key = url.standardizedFileURL.path
             guard (try? Data(contentsOf: url)) == diskVersions[key] else {
-                throw SceneFileError(message: "This scene was changed in another window. Reopen Publish before deleting it.")
+                throw SceneFileError(message: String(localized: "This scene was changed in another window. Reopen Publish before deleting it."))
             }
             if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
             let media = SceneFileRepository.mediaURL(id: id, root: mediaDirectory)

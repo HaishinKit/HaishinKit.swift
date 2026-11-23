@@ -1,0 +1,2996 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ You can retry the same package.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 同じパッケージで再試行できます。"
+          }
+        }
+      }
+    },
+    "%@ copy": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@のコピー"
+          }
+        }
+      }
+    },
+    "10-bit HLG over Enhanced RTMP requires a compatible server and player.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enhanced RTMPで10-bit HLGを使用するには、対応するサーバーとプレーヤーが必要です。"
+          }
+        }
+      }
+    },
+    "1080 × 1920 (portrait)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1080 × 1920（縦向き）"
+          }
+        }
+      }
+    },
+    "4-digit connection code": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4桁の接続コード"
+          }
+        }
+      }
+    },
+    "A capture input track is invalid.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ入力のトラックが不正です。"
+          }
+        }
+      }
+    },
+    "A scene supports at most 256 media files.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1つのシーンに保存できる素材は256ファイルまでです。"
+          }
+        }
+      }
+    },
+    "A text object's font size is invalid.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストのフォントサイズが不正です。"
+          }
+        }
+      }
+    },
+    "AAC is widely supported. Opus offers better quality at low bitrates.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AACは幅広く対応しています。Opusは低ビットレートでも高い音質を得られます。"
+          }
+        }
+      }
+    },
+    "API documentation": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APIドキュメント"
+          }
+        }
+      }
+    },
+    "AVCaptureSession": {
+      "shouldTranslate": false
+    },
+    "About": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアプリについて"
+          }
+        }
+      }
+    },
+    "Accepted by VQMetrix: %@. Check the receiver for evaluation results.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VQMetrixが受け付けました：%@。評価結果は受信側で確認してください。"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        }
+      }
+    },
+    "Add an object to compose this scene.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを追加してシーンを作成します。"
+          }
+        }
+      }
+    },
+    "Add object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを追加"
+          }
+        }
+      }
+    },
+    "App version": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリのバージョン"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観"
+          }
+        }
+      }
+    },
+    "Appearance overrides apply until the app closes. Each launch follows the system setting.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観の変更はアプリを終了するまで有効です。起動時はシステム設定に従います。"
+          }
+        }
+      }
+    },
+    "Applied when the publisher opens. Audio Engine keeps microphone input separate from camera capture.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信画面を開いたときに適用します。Audio Engineはマイク入力をカメラのキャプチャから分離します。"
+          }
+        }
+      }
+    },
+    "Apply canvas size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンバスサイズを適用"
+          }
+        }
+      }
+    },
+    "Apply layout": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置を適用"
+          }
+        }
+      }
+    },
+    "Apply text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストを適用"
+          }
+        }
+      }
+    },
+    "Audio Capture": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声キャプチャ"
+          }
+        }
+      }
+    },
+    "Audio Codec Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声コーデック設定"
+          }
+        }
+      }
+    },
+    "Audio Engine (recommended)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio Engine（推奨）"
+          }
+        }
+      }
+    },
+    "Audio format": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声形式"
+          }
+        }
+      }
+    },
+    "Audio: %lld kbps": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声：%lld kbps"
+          }
+        }
+      }
+    },
+    "BitRate Mode": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビットレートモード"
+          }
+        }
+      }
+    },
+    "Bitrate mode": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビットレートモード"
+          }
+        }
+      }
+    },
+    "Bonjour announcement failed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonjourでの公開に失敗しました：%@"
+          }
+        }
+      }
+    },
+    "Bonjour search failed: %@. Check local network access in System Settings.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonjourの検索に失敗しました：%@。システム設定でローカルネットワークへのアクセスを確認してください。"
+          }
+        }
+      }
+    },
+    "Bonjour service": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonjourサービス"
+          }
+        }
+      }
+    },
+    "Camera preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラのプレビュー"
+          }
+        }
+      }
+    },
+    "Camera unavailable or access not granted. You can share a screen or window instead.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラが利用できないか、アクセスが許可されていません。画面またはウィンドウを共有できます。"
+          }
+        }
+      }
+    },
+    "Camera: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラ：%@"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
+          }
+        }
+      }
+    },
+    "Cancel receiving": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信をキャンセル"
+          }
+        }
+      }
+    },
+    "Cancelling…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル中…"
+          }
+        }
+      }
+    },
+    "Cannot allocate I420 pixels.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I420のピクセルバッファを確保できません。"
+          }
+        }
+      }
+    },
+    "Cannot allocate reference pixels.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参照映像のピクセルバッファを確保できません。"
+          }
+        }
+      }
+    },
+    "Cannot copy compressed packet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圧縮パケットをコピーできません。"
+          }
+        }
+      }
+    },
+    "Cannot create I420 sample.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I420のサンプルを作成できません。"
+          }
+        }
+      }
+    },
+    "Cannot describe I420 pixels.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I420の映像形式を作成できません。"
+          }
+        }
+      }
+    },
+    "Cannot encode frame.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フレームをエンコードできません。"
+          }
+        }
+      }
+    },
+    "Cannot read the local receiver address.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローカルの受信側アドレスを読み取れません。"
+          }
+        }
+      }
+    },
+    "Cannot resolve the local receiver. Check its address and that reception is running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローカルの受信側を解決できません。アドレスと受信が開始されているかを確認してください。"
+          }
+        }
+      }
+    },
+    "Cannot start encoder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコーダーを開始できません。"
+          }
+        }
+      }
+    },
+    "Canvas presets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンバスのプリセット"
+          }
+        }
+      }
+    },
+    "Capture": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ"
+          }
+        }
+      }
+    },
+    "Capture 3 seconds of the composed preview at 640 × 360, 15 fps.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合成したプレビューを640 × 360・15fpsで3秒間キャプチャします。"
+          }
+        }
+      }
+    },
+    "Capture Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ設定"
+          }
+        }
+      }
+    },
+    "Capture and upload a quality comparison": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画質比較用の映像をキャプチャして送信"
+          }
+        }
+      }
+    },
+    "Capture cancelled.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャをキャンセルしました。"
+          }
+        }
+      }
+    },
+    "Capture input": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ入力"
+          }
+        }
+      }
+    },
+    "Capture preview sample": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューのサンプルを取得"
+          }
+        }
+      }
+    },
+    "Capturing %lld / %lld frames…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / %lld フレームをキャプチャ中…"
+          }
+        }
+      }
+    },
+    "Change shared content…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有する画面を変更…"
+          }
+        }
+      }
+    },
+    "Changes apply to the next session. AAC and average bitrate are a good starting point.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更は次回の接続から適用されます。まずはAACと平均ビットレートでお試しください。"
+          }
+        }
+      }
+    },
+    "Choose a stream to watch": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴するストリームを選択"
+          }
+        }
+      }
+    },
+    "Choose content in the macOS sharing picker. Microphone audio follows Settings → Capture.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの共有ピッカーで画面を選択します。マイク音声は「設定 → キャプチャ」に従います。"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        }
+      }
+    },
+    "Color": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "色"
+          }
+        }
+      }
+    },
+    "Composition size and output timing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合成映像のサイズと出力タイミング"
+          }
+        }
+      }
+    },
+    "Configuration": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "構成"
+          }
+        }
+      }
+    },
+    "Connecting to stream…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリームに接続中…"
+          }
+        }
+      }
+    },
+    "Connecting…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続中…"
+          }
+        }
+      }
+    },
+    "Connection": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続"
+          }
+        }
+      }
+    },
+    "Could not add object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを追加できませんでした"
+          }
+        }
+      }
+    },
+    "Could not read saved scenes: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存したシーンを読み込めませんでした：%@"
+          }
+        }
+      }
+    },
+    "Could not resolve %@: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のアドレスを解決できませんでした：%@"
+          }
+        }
+      }
+    },
+    "Could not restore this scene: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このシーンを復元できませんでした：%@"
+          }
+        }
+      }
+    },
+    "Couldn't change Mixer HDR: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミキサーのHDRを変更できませんでした：%@"
+          }
+        }
+      }
+    },
+    "Couldn't play stream": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生できませんでした"
+          }
+        }
+      }
+    },
+    "Couldn't publish": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信できませんでした"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダーク"
+          }
+        }
+      }
+    },
+    "Debug": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッグ"
+          }
+        }
+      }
+    },
+    "Delete %@?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を削除しますか？"
+          }
+        }
+      }
+    },
+    "Delete object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを削除"
+          }
+        }
+      }
+    },
+    "Delete scene": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンを削除"
+          }
+        }
+      }
+    },
+    "Destination": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信先"
+          }
+        }
+      }
+    },
+    "Development console": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開発コンソール"
+          }
+        }
+      }
+    },
+    "Diagnostics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "診断"
+          }
+        }
+      }
+    },
+    "Discover a source or receive directly": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信元を検索するか、直接受信します"
+          }
+        }
+      }
+    },
+    "Drag the bottom-right handle to resize.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右下のハンドルをドラッグして拡大・縮小します。"
+          }
+        }
+      }
+    },
+    "Duplicate object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを複製"
+          }
+        }
+      }
+    },
+    "Duplicate scene": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンを複製"
+          }
+        }
+      }
+    },
+    "Duplicate scene identifier.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの識別子が重複しています。"
+          }
+        }
+      }
+    },
+    "Edit text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストを編集"
+          }
+        }
+      }
+    },
+    "Effect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エフェクト"
+          }
+        }
+      }
+    },
+    "Enable microphone": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクを有効にする"
+          }
+        }
+      }
+    },
+    "Encoder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコーダー"
+          }
+        }
+      }
+    },
+    "Encoder settings below apply when you start publishing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコーダーの設定は配信開始時に適用します。"
+          }
+        }
+      }
+    },
+    "Encoder timed out.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコーダーがタイムアウトしました。"
+          }
+        }
+      }
+    },
+    "Encoder unavailable.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコーダーが利用できません。"
+          }
+        }
+      }
+    },
+    "Encoding and packaging…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコードとパッケージを作成中…"
+          }
+        }
+      }
+    },
+    "Encoding failed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコードに失敗しました。"
+          }
+        }
+      }
+    },
+    "Enter an HTTP or HTTPS base URL with a valid port and no credentials, path, or query.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効なポートを持つHTTPまたはHTTPSのベースURLを入力してください。認証情報、パス、クエリは含めないでください。"
+          }
+        }
+      }
+    },
+    "Enter your stream endpoint, then start playback.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリームの接続先を入力し、再生を開始してください。"
+          }
+        }
+      }
+    },
+    "Environment": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行環境"
+          }
+        }
+      }
+    },
+    "Evaluation codec": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価用コーデック"
+          }
+        }
+      }
+    },
+    "Export scene file…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンファイルを書き出す…"
+          }
+        }
+      }
+    },
+    "Find Bonjour services": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonjourサービスを検索"
+          }
+        }
+      }
+    },
+    "Font size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォントサイズ"
+          }
+        }
+      }
+    },
+    "Format": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "形式"
+          }
+        }
+      }
+    },
+    "Frame rate": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フレームレート"
+          }
+        }
+      }
+    },
+    "Go live": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信開始"
+          }
+        }
+      }
+    },
+    "Go live sends the preview. Microphone input follows Settings → Capture.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューの映像を配信します。マイク入力は「設定 → キャプチャ」に従います。"
+          }
+        }
+      }
+    },
+    "Group": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ"
+          }
+        }
+      }
+    },
+    "HDR Video": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDR映像"
+          }
+        }
+      }
+    },
+    "HDR captures wider color range. Low latency reduces delay but may affect quality. Average bitrate is recommended for most streams.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDRは広い色域で撮影します。低遅延設定は遅れを抑えますが、画質に影響する場合があります。通常は平均ビットレートを推奨します。"
+          }
+        }
+      }
+    },
+    "HTTP port": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPポート"
+          }
+        }
+      }
+    },
+    "HTTP requires a local network IP address or .local name. Use HTTPS for public receivers.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPにはローカルIPアドレスまたは.local名が必要です。公開された受信側にはHTTPSを使用してください。"
+          }
+        }
+      }
+    },
+    "HaishinKit": {
+      "shouldTranslate": false
+    },
+    "Hardware encoding": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハードウェアエンコード"
+          }
+        }
+      }
+    },
+    "Height": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高さ"
+          }
+        }
+      }
+    },
+    "Hide object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを非表示"
+          }
+        }
+      }
+    },
+    "If access was denied, enable this app in System Settings → Privacy & Security → Microphone.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセスが拒否された場合は、「システム設定 → プライバシーとセキュリティ → マイク」でこのアプリを許可してください。"
+          }
+        }
+      }
+    },
+    "Image": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像"
+          }
+        }
+      }
+    },
+    "Image file…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像ファイル…"
+          }
+        }
+      }
+    },
+    "Input frame rate and effects": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力のフレームレートとエフェクト"
+          }
+        }
+      }
+    },
+    "Inspect library logs in Xcode or Console. Debug logs may contain endpoint URLs or signaling data.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログはXcodeまたはコンソールで確認できます。デバッグログには接続先URLやシグナリング情報が含まれる場合があります。"
+          }
+        }
+      }
+    },
+    "Invalid encoded packet size.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンコードしたパケットのサイズが不正です。"
+          }
+        }
+      }
+    },
+    "Invalid receiver URL.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信側のURLが不正です。"
+          }
+        }
+      }
+    },
+    "Invalid receiver receipt.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信側からの応答が不正です。"
+          }
+        }
+      }
+    },
+    "Invalid resolved receiver URL.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解決した受信側のURLが不正です。"
+          }
+        }
+      }
+    },
+    "Invalid scene media name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの素材名が不正です。"
+          }
+        }
+      }
+    },
+    "Keep image aspect ratio": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像の縦横比を固定"
+          }
+        }
+      }
+    },
+    "Library": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリ"
+          }
+        }
+      }
+    },
+    "Lifecycle": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライフサイクル"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト"
+          }
+        }
+      }
+    },
+    "Listen for SRT sender": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRTの送信を待ち受ける"
+          }
+        }
+      }
+    },
+    "Live": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信中"
+          }
+        }
+      }
+    },
+    "Looking for _srt._udp services…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "_srt._udpサービスを検索中…"
+          }
+        }
+      }
+    },
+    "Low Latency Mode": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低遅延モード"
+          }
+        }
+      }
+    },
+    "Low latency": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低遅延"
+          }
+        }
+      }
+    },
+    "Measured TX": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実測送信レート"
+          }
+        }
+      }
+    },
+    "Media references must point to files inside this scene's media folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "素材の参照先には、このシーンの素材フォルダ内のファイルを指定してください。"
+          }
+        }
+      }
+    },
+    "MediaMTX setup and supported protocols": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MediaMTXの設定と対応プロトコル"
+          }
+        }
+      }
+    },
+    "Memory release test for PublishView": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信画面のメモリ解放テスト"
+          }
+        }
+      }
+    },
+    "Metal preview is faster. AudioEngine mode is recommended for stability.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalプレビューは高速です。安定した動作にはAudioEngineモードを推奨します。"
+          }
+        }
+      }
+    },
+    "Microphone capture": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクのキャプチャ方式"
+          }
+        }
+      }
+    },
+    "Microphone is off. Enable it in Settings → Capture.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクはオフです。「設定 → キャプチャ」で有効にしてください。"
+          }
+        }
+      }
+    },
+    "Microphone unavailable or access not granted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクが利用できないか、アクセスが許可されていません。"
+          }
+        }
+      }
+    },
+    "Microphone: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイク：%@"
+          }
+        }
+      }
+    },
+    "Missing scene media: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの素材が見つかりません：%@"
+          }
+        }
+      }
+    },
+    "Mix the scene in 10-bit HLG. Change this before publishing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンを10-bit HLGで合成します。配信開始前に変更してください。"
+          }
+        }
+      }
+    },
+    "Mixer FPS": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミキサーのFPS"
+          }
+        }
+      }
+    },
+    "Mixer HDR (HLG)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミキサーのHDR（HLG）"
+          }
+        }
+      }
+    },
+    "Monochrome": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モノクロ"
+          }
+        }
+      }
+    },
+    "Move backward": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "背面へ移動"
+          }
+        }
+      }
+    },
+    "Move forward": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前面へ移動"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前"
+          }
+        }
+      }
+    },
+    "New scene": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいシーン"
+          }
+        }
+      }
+    },
+    "New text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいテキスト"
+          }
+        }
+      }
+    },
+    "Next session: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回の接続先：%@"
+          }
+        }
+      }
+    },
+    "Not enough video frames. Keep the preview running and try again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像フレームが不足しています。プレビューを動かしたまま、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Object geometry is outside the scene file limits.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトの位置またはサイズがシーンファイルの上限を超えています。"
+          }
+        }
+      }
+    },
+    "Object inspector": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトの設定"
+          }
+        }
+      }
+    },
+    "Objects": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクト"
+          }
+        }
+      }
+    },
+    "Only containers can contain child objects.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "子オブジェクトを含められるのはコンテナのみです。"
+          }
+        }
+      }
+    },
+    "Only services advertising _srt._udp appear here. Listener mode accepts one sender; the sender must use SRT caller mode.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "_srt._udpを公開するサービスのみ表示します。待受モードでは送信側を1台受け付けます。送信側はSRTのcallerモードで接続してください。"
+          }
+        }
+      }
+    },
+    "Open a portable .scene ZIP or snapshot JSON.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".sceneファイルまたはスナップショットのJSONを開いてください。"
+          }
+        }
+      }
+    },
+    "Open and dismiss the publisher repeatedly while inspecting memory in Instruments. Dismissing closes capture and network sessions.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrumentsでメモリを確認しながら配信画面を繰り返し開閉します。画面を閉じるとキャプチャとネットワーク接続を終了します。"
+          }
+        }
+      }
+    },
+    "Open publish memory-release test": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信画面のメモリ解放テストを開く"
+          }
+        }
+      }
+    },
+    "Open scene file…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンファイルを開く…"
+          }
+        }
+      }
+    },
+    "Operating system": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OS"
+          }
+        }
+      }
+    },
+    "Original": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オリジナル"
+          }
+        }
+      }
+    },
+    "Output FPS": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出力FPS"
+          }
+        }
+      }
+    },
+    "Overlay text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重ねるテキスト"
+          }
+        }
+      }
+    },
+    "Package exceeds the receiver's 512 MiB limit.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パッケージが受信側の上限512MiBを超えています。"
+          }
+        }
+      }
+    },
+    "Platform": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラットフォーム"
+          }
+        }
+      }
+    },
+    "Playback": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴"
+          }
+        }
+      }
+    },
+    "Playing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生中"
+          }
+        }
+      }
+    },
+    "Position and size in the %lld × %lld canvas": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %lld キャンバス内の位置とサイズ"
+          }
+        }
+      }
+    },
+    "Preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー"
+          }
+        }
+      }
+    },
+    "Preview Type": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー方式"
+          }
+        }
+      }
+    },
+    "Publish": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信"
+          }
+        }
+      }
+    },
+    "Publish lifecycle test": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信画面のライフサイクルテスト"
+          }
+        }
+      }
+    },
+    "Publishing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信"
+          }
+        }
+      }
+    },
+    "Ready to upload. The saved reference is re-encoded offline; audio and network effects are excluded.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信の準備ができました。保存した参照映像をオフラインで再エンコードします。音声やネットワークの影響は含みません。"
+          }
+        }
+      }
+    },
+    "Ready when you are": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴の準備ができました"
+          }
+        }
+      }
+    },
+    "Receive port": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信ポート"
+          }
+        }
+      }
+    },
+    "Receiver URL": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信側URL"
+          }
+        }
+      }
+    },
+    "Receiver announced on Bonjour": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonjourで受信先を公開中"
+          }
+        }
+      }
+    },
+    "Receiver returned HTTP %lld. Check reception and the connection code.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信側がHTTP %lld を返しました。受信状態と接続コードを確認してください。"
+          }
+        }
+      }
+    },
+    "Refresh services": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サービスを再検索"
+          }
+        }
+      }
+    },
+    "Request camera access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラへのアクセスを許可"
+          }
+        }
+      }
+    },
+    "Request microphone access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクへのアクセスを許可"
+          }
+        }
+      }
+    },
+    "Resize object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトのサイズを変更"
+          }
+        }
+      }
+    },
+    "Resolution": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出力解像度"
+          }
+        }
+      }
+    },
+    "Run MediaMTX separately. These presets configure a client endpoint; they do not start a server. Use Opus audio when publishing with WHIP.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MediaMTXを別途起動してください。ここではクライアントの接続先のみを設定します。WHIP配信にはOpus音声を使用してください。"
+          }
+        }
+      }
+    },
+    "SRT RX %.0f kbps · RTT %.1f ms · Lost packets %d": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRT受信 %.0f kbps · RTT %.1f ms · 損失パケット %d"
+          }
+        }
+      }
+    },
+    "SRT library": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRTライブラリ"
+          }
+        }
+      }
+    },
+    "SRT on your network": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク上のSRT"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
+    "Saved automatically on this Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この端末に自動保存します"
+          }
+        }
+      }
+    },
+    "Saved with the scene. Overlay positions stay unchanged. Encoder resolution is configured separately.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンと一緒に保存します。オーバーレイの位置は変わりません。エンコーダーの出力解像度は別に設定します。"
+          }
+        }
+      }
+    },
+    "Scene": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン"
+          }
+        }
+      }
+    },
+    "Scene %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン%lld"
+          }
+        }
+      }
+    },
+    "Scene 1": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン1"
+          }
+        }
+      }
+    },
+    "Scene actions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの操作"
+          }
+        }
+      }
+    },
+    "Scene editor": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンエディター"
+          }
+        }
+      }
+    },
+    "Scene media exceeds 128 MB.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの素材が128MBを超えています。"
+          }
+        }
+      }
+    },
+    "Scene name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン名"
+          }
+        }
+      }
+    },
+    "Scene name · Return to rename": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン名 · Returnで変更"
+          }
+        }
+      }
+    },
+    "Scene resources are invalid or exceed 128 MB.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンの素材が不正か、128MBを超えています。"
+          }
+        }
+      }
+    },
+    "Scene visible": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーンを表示"
+          }
+        }
+      }
+    },
+    "Scenes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーン"
+          }
+        }
+      }
+    },
+    "Select HEVC Main10 (HDR), or turn off Mixer HDR before publishing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信するにはHEVC Main10（HDR）を選択するか、ミキサーのHDRをオフにしてください。"
+          }
+        }
+      }
+    },
+    "Select an object in the list or preview.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一覧またはプレビューでオブジェクトを選択してください。"
+          }
+        }
+      }
+    },
+    "Send queue": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信キュー"
+          }
+        }
+      }
+    },
+    "Server URL": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーURL"
+          }
+        }
+      }
+    },
+    "Server host": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーホスト"
+          }
+        }
+      }
+    },
+    "Session status: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続状態：%@"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
+      }
+    },
+    "Settings for the next broadcast": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回の配信に適用する設定"
+          }
+        }
+      }
+    },
+    "Share screen or window…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面またはウィンドウを共有…"
+          }
+        }
+      }
+    },
+    "Sharing your selected content": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した画面を共有中"
+          }
+        }
+      }
+    },
+    "Show object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトを表示"
+          }
+        }
+      }
+    },
+    "Software encoder output count differs from the reference.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソフトウェアエンコーダーの出力フレーム数が参照映像と一致しません。"
+          }
+        }
+      }
+    },
+    "Software encoder output timing differs from the reference.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソフトウェアエンコーダーの出力タイミングが参照映像と一致しません。"
+          }
+        }
+      }
+    },
+    "Some scene files could not be opened. They were preserved.\n": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部のシーンファイルを開けませんでした。ファイルは保持しています。\n"
+          }
+        }
+      }
+    },
+    "Source": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続先"
+          }
+        }
+      }
+    },
+    "Standby": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
+    "Start Receive in VQMetrix, then enter its address and connection code. HTTP sends video and the code unencrypted; use a trusted network.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VQMetrixで受信を開始し、接続先アドレスと接続コードを入力してください。HTTPでは映像とコードを暗号化せずに送信するため、信頼できるネットワークを使用してください。"
+          }
+        }
+      }
+    },
+    "Start playback": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生開始"
+          }
+        }
+      }
+    },
+    "Stop playback": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生停止"
+          }
+        }
+      }
+    },
+    "Stop publishing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信停止"
+          }
+        }
+      }
+    },
+    "Stop sharing · Use camera": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有を停止してカメラに戻す"
+          }
+        }
+      }
+    },
+    "Stopping…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止中…"
+          }
+        }
+      }
+    },
+    "Stream": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーム"
+          }
+        }
+      }
+    },
+    "Stream monitor": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリームモニター"
+          }
+        }
+      }
+    },
+    "Stream name / key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーム名／キー"
+          }
+        }
+      }
+    },
+    "Stream name or key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーム名またはキー"
+          }
+        }
+      }
+    },
+    "Stream path": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリームパス"
+          }
+        }
+      }
+    },
+    "System": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定に従う"
+          }
+        }
+      }
+    },
+    "Target video": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像の目標レート"
+          }
+        }
+      }
+    },
+    "Test signal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト信号"
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト"
+          }
+        }
+      }
+    },
+    "The HTTP receiver must resolve only to local network addresses.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPの受信側はローカルネットワークのアドレスのみを指す必要があります。"
+          }
+        }
+      }
+    },
+    "The connection was interrupted. Check your destination and try again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続が中断されました。配信先を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "The connection was interrupted. Check your source and try again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続が中断されました。接続先を確認して、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "The snapshot contains unsupported nodes, duplicate identifiers, or invalid layout values.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スナップショットに未対応のノード、重複した識別子、または不正な配置が含まれています。"
+          }
+        }
+      }
+    },
+    "This object is not supported on this platform. Its data is preserved in the scene file, and it is not rendered.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このオブジェクトはこの環境では未対応です。映像には表示せず、データをシーンファイルに保持します。"
+          }
+        }
+      }
+    },
+    "This scene and its object layout will be removed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このシーンとオブジェクトの配置を削除します。"
+          }
+        }
+      }
+    },
+    "This scene was changed in another window. Reopen Publish before deleting it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このシーンは別のウィンドウで変更されました。配信画面を開き直してから削除してください。"
+          }
+        }
+      }
+    },
+    "This scene was changed or deleted in another window. Reopen Publish before editing it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このシーンは別のウィンドウで変更または削除されました。配信画面を開き直してから編集してください。"
+          }
+        }
+      }
+    },
+    "Tinted area is outside the video canvas.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "色付きの部分は映像の出力範囲外です。"
+          }
+        }
+      }
+    },
+    "Turn on Mixer HDR to publish with HEVC Main10 (HDR).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HEVC Main10（HDR）で配信するには、ミキサーのHDRをオンにしてください。"
+          }
+        }
+      }
+    },
+    "URL": {
+      "shouldTranslate": false
+    },
+    "Unsupported": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応"
+          }
+        }
+      }
+    },
+    "Unsupported (%@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応（%@）"
+          }
+        }
+      }
+    },
+    "Unsupported object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応オブジェクト"
+          }
+        }
+      }
+    },
+    "Unsupported screen object: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応のオブジェクトです：%@"
+          }
+        }
+      }
+    },
+    "Updating source…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースを更新中…"
+          }
+        }
+      }
+    },
+    "Upload cancelled. You can retry the same package.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信をキャンセルしました。同じパッケージで再試行できます。"
+          }
+        }
+      }
+    },
+    "Upload sample": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルを送信"
+          }
+        }
+      }
+    },
+    "Uploading…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信中…"
+          }
+        }
+      }
+    },
+    "Use Return or Apply to save changes. Drag objects to move; drag the bottom-right handle to resize.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returnまたは「適用」で保存します。オブジェクトをドラッグして移動し、右下のハンドルで拡大・縮小できます。"
+          }
+        }
+      }
+    },
+    "Use WHEP endpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WHEPの接続先を使用"
+          }
+        }
+      }
+    },
+    "Use WHIP endpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WHIPの接続先を使用"
+          }
+        }
+      }
+    },
+    "Use a screen or container with a canvas between 1 and 8192 pixels.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1〜8192ピクセルのキャンバスを持つscreenまたはcontainerを使用してください。"
+          }
+        }
+      }
+    },
+    "Use the endpoint provided by your streaming server.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信サーバーから指定された接続先を入力してください。"
+          }
+        }
+      }
+    },
+    "Uses the evaluation codec and Encoder video bitrate at 640 × 360, 15 fps. AV1/VP8/VP9 require an IVF-capable VQMetrix receiver.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価用コーデックとエンコーダーの映像ビットレートを使い、640 × 360・15fpsで取得します。AV1/VP8/VP9にはIVF対応のVQMetrix受信側が必要です。"
+          }
+        }
+      }
+    },
+    "Verbose logging": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細ログ"
+          }
+        }
+      }
+    },
+    "Video": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像"
+          }
+        }
+      }
+    },
+    "Video Codec Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像コーデック設定"
+          }
+        }
+      }
+    },
+    "Video and audio play through your Mac. Stop playback before changing the source.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像と音声をこの端末で再生します。接続先を変更する前に再生を停止してください。"
+          }
+        }
+      }
+    },
+    "Video capture timed out. Check that the preview is running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像のキャプチャがタイムアウトしました。プレビューが動作しているか確認してください。"
+          }
+        }
+      }
+    },
+    "Video codec": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像コーデック"
+          }
+        }
+      }
+    },
+    "Video file…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画ファイル…"
+          }
+        }
+      }
+    },
+    "Video source": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像ソース"
+          }
+        }
+      }
+    },
+    "Video: %lld kbps": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像：%lld kbps"
+          }
+        }
+      }
+    },
+    "WHIP / WHEP test server": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WHIP／WHEPのテストサーバー"
+          }
+        }
+      }
+    },
+    "Waiting for SRT sender…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRTの送信側を待機中…"
+          }
+        }
+      }
+    },
+    "Waiting for sender": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信側を待機中"
+          }
+        }
+      }
+    },
+    "Where your broadcast goes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信先の接続情報"
+          }
+        }
+      }
+    },
+    "Width": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "幅"
+          }
+        }
+      }
+    },
+    "Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース"
+          }
+        }
+      }
+    },
+    "Preview renderer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューの表示方式"
+          }
+        }
+      }
+    },
+    "Floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フローティングプレビュー"
+          }
+        }
+      }
+    },
+    "Open floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小窓で表示"
+          }
+        }
+      }
+    },
+    "Close floating preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小窓を閉じる"
+          }
+        }
+      }
+    },
+    "Show video in an always-on-top window.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像を最前面の小窓に表示します。"
+          }
+        }
+      }
+    },
+    "Check for Updates…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを確認…"
+          }
+        }
+      }
+    },
+    "App updates": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの更新"
+          }
+        }
+      }
+    },
+    "Updates from GitHub Releases": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub Releasesからのアップデート"
+          }
+        }
+      }
+    },
+    "Automatically check for updates": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動で確認"
+          }
+        }
+      }
+    },
+    "Download and install updates automatically": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動でダウンロード・インストール"
+          }
+        }
+      }
+    },
+    "Updates are verified before installation. Restart when you are ready to finish your current session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール前に更新ファイルを検証します。現在のセッションを終了できるタイミングで再起動してください。"
+          }
+        }
+      }
+    },
+    "Licenses": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス"
+          }
+        }
+      }
+    },
+    "This app includes the following open-source software. Original license and source-availability notices are included below.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアプリは以下のオープンソースソフトウェアを使用しています。ライセンス原文とソースコードの入手方法を確認できます。"
+          }
+        }
+      }
+    },
+    "License notices could not be loaded.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス情報を読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "Package version": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パッケージのバージョン"
+          }
+        }
+      }
+    },
+    "Source and project website": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースコード・プロジェクトのウェブサイト"
+          }
+        }
+      }
+    },
+    "Search licenses": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスを検索"
+          }
+        }
+      }
+    },
+    "AV1 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AV1（ソフトウェア）"
+          }
+        }
+      }
+    },
+    "VP8 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VP8（ソフトウェア）"
+          }
+        }
+      }
+    },
+    "VP9 (software)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VP9（ソフトウェア）"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

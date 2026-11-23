@@ -22,20 +22,20 @@ actor MacCaptureCoordinator {
             var issues: [String] = []
             let cameraAllowed = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
             let camera = cameraAllowed ? AVCaptureDevice.default(for: .video) : nil
-            if camera == nil { issues.append("Camera unavailable or access not granted. You can share a screen or window instead.") }
+            if camera == nil { issues.append(String(localized: "Camera unavailable or access not granted. You can share a screen or window instead.")) }
             do { try await mixer.attachVideo(camera, track: 0) }
-            catch { issues.append("Camera: \(error.localizedDescription)") }
+            catch { issues.append(String(localized: "Camera: \(error.localizedDescription)")) }
             let microphoneAllowed = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
             let microphone = microphoneEnabled && microphoneAllowed ? AVCaptureDevice.default(for: .audio) : nil
-            if microphone == nil { issues.append(microphoneEnabled ? "Microphone unavailable or access not granted." : "Microphone is off. Enable it in Settings → Capture.") }
+            if microphone == nil { issues.append(microphoneEnabled ? String(localized: "Microphone unavailable or access not granted.") : String(localized: "Microphone is off. Enable it in Settings → Capture.")) }
             do { try await mixer.attachAudio(useAudioEngine || !microphoneEnabled ? nil : microphone, track: 0) }
-            catch { issues.append("Microphone: \(error.localizedDescription)") }
+            catch { issues.append(String(localized: "Microphone: \(error.localizedDescription)")) }
             try? await mixer.setFrameRate(frameRate)
             await mixer.startRunning()
             if useAudioEngine, microphone != nil {
                 let capture = MacMicrophoneCapture(mixer: mixer)
                 do { try capture.start(); microphoneCapture = capture }
-                catch { issues.append("Microphone: \(error.localizedDescription)") }
+                catch { issues.append(String(localized: "Microphone: \(error.localizedDescription)")) }
             }
             return issues.isEmpty ? nil : issues.joined(separator: "\n")
         }

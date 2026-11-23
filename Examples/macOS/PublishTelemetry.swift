@@ -57,7 +57,7 @@ struct PublishMetricsPanel: View {
                 HStack(spacing: 24) { metrics }
                 VStack(alignment: .leading, spacing: 12) { metrics }
             }
-            Text(model.activeEncodingDescription ?? "Encoder settings below apply when you start publishing.")
+            Text(model.activeEncodingDescription ?? String(localized: "Encoder settings below apply when you start publishing."))
                 .font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
         }
         .padding(16)
@@ -66,10 +66,10 @@ struct PublishMetricsPanel: View {
     }
 
     @ViewBuilder private var metrics: some View {
-        metric("Measured TX", model.networkReport.map { "\($0.currentBytesOutPerSecond * 8 / 1000) kbps" } ?? "—")
-        metric("Target video", "\(model.videoBitRate / 1000) kbps")
-        metric("Output FPS", model.measuredFPS.map { String($0) } ?? "—")
-        metric("Send queue", model.networkReport.map { "\($0.currentQueueBytesOut / 1024) KB" } ?? "—")
+        metric(String(localized: "Measured TX"), model.networkReport.map { "\($0.currentBytesOutPerSecond * 8 / 1000) kbps" } ?? "—")
+        metric(String(localized: "Target video"), "\(model.videoBitRate / 1000) kbps")
+        metric(String(localized: "Output FPS"), model.measuredFPS.map { String($0) } ?? "—")
+        metric(String(localized: "Send queue"), model.networkReport.map { "\($0.currentQueueBytesOut / 1024) KB" } ?? "—")
     }
 
     private func metric(_ title: String, _ value: String) -> some View {

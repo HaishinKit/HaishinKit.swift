@@ -9,9 +9,9 @@ enum VQMetrixCodec: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .h264: return "H.264"
         case .hevc: return "HEVC"
-        case .av1: return "AV1 (software)"
-        case .vp8: return "VP8 (software)"
-        case .vp9: return "VP9 (software)"
+        case .av1: return String(localized: "AV1 (software)")
+        case .vp8: return String(localized: "VP8 (software)")
+        case .vp9: return String(localized: "VP9 (software)")
         }
     }
     var isSoftware: Bool { self == .av1 || self == .vp8 || self == .vp9 }
@@ -42,7 +42,7 @@ enum VQMetrixSoftwareEncoder {
         }
         if let aom { packets += try aom.finish() }
         if let vpx { packets += try vpx.finish() }
-        guard packets.count == frames.count else { throw VQMetrixError(message: "Software encoder output count differs from the reference.") }
+        guard packets.count == frames.count else { throw VQMetrixError(message: String(localized: "Software encoder output count differs from the reference.")) }
         // IVF uses a microsecond timebase, matching the manifest's integer CFR timestamps.
         var data = Data("DKIF".utf8)
         data.ivfInteger(UInt16(0)); data.ivfInteger(UInt16(32))
@@ -54,14 +54,14 @@ enum VQMetrixSoftwareEncoder {
             try Task.checkCancellation()
             let pts = Int64(index) * 1_000_000 / 15
             guard packet.presentationTimeStamp == CMTime(value: pts, timescale: 1_000_000),
-                  let block = packet.dataBuffer else { throw VQMetrixError(message: "Software encoder output timing differs from the reference.") }
+                  let block = packet.dataBuffer else { throw VQMetrixError(message: String(localized: "Software encoder output timing differs from the reference.")) }
             let length = CMBlockBufferGetDataLength(block)
-            guard length > 0, length <= Int(UInt32.max) else { throw VQMetrixError(message: "Invalid encoded packet size.") }
+            guard length > 0, length <= Int(UInt32.max) else { throw VQMetrixError(message: String(localized: "Invalid encoded packet size.")) }
             var bytes = Data(count: length)
             let status = bytes.withUnsafeMutableBytes {
                 CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: length, destination: $0.baseAddress!)
             }
-            guard status == noErr else { throw VQMetrixError(message: "Cannot copy compressed packet.") }
+            guard status == noErr else { throw VQMetrixError(message: String(localized: "Cannot copy compressed packet.")) }
             data.ivfInteger(UInt32(length)); data.ivfInteger(UInt64(pts)); data.append(bytes)
         }
         try data.write(to: url, options: .atomic)
@@ -72,7 +72,7 @@ enum VQMetrixSoftwareEncoder {
         let width = VQMetrixCapture.width, height = VQMetrixCapture.height
         var image: CVPixelBuffer?
         guard CVPixelBufferCreate(nil, width, height, kCVPixelFormatType_420YpCbCr8Planar, nil, &image) == kCVReturnSuccess,
-              let image else { throw VQMetrixError(message: "Cannot allocate I420 pixels.") }
+              let image else { throw VQMetrixError(message: String(localized: "Cannot allocate I420 pixels.")) }
         CVPixelBufferLockBaseAddress(source, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(source, .readOnly) }
         CVPixelBufferLockBaseAddress(image, [])
@@ -96,14 +96,14 @@ enum VQMetrixSoftwareEncoder {
         CVBufferPropagateAttachments(source, image)
         var description: CMVideoFormatDescription?
         guard CMVideoFormatDescriptionCreateForImageBuffer(allocator: nil, imageBuffer: image, formatDescriptionOut: &description) == noErr,
-              let description else { throw VQMetrixError(message: "Cannot describe I420 pixels.") }
+              let description else { throw VQMetrixError(message: String(localized: "Cannot describe I420 pixels.")) }
         var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 15),
                                        presentationTimeStamp: CMTime(value: Int64(index) * 1_000_000 / 15, timescale: 1_000_000),
                                        decodeTimeStamp: .invalid)
         var sample: CMSampleBuffer?
         guard CMSampleBufferCreateReadyWithImageBuffer(allocator: nil, imageBuffer: image, formatDescription: description,
                                                       sampleTiming: &timing, sampleBufferOut: &sample) == noErr,
-              let sample else { throw VQMetrixError(message: "Cannot create I420 sample.") }
+              let sample else { throw VQMetrixError(message: String(localized: "Cannot create I420 sample.")) }
         return sample
     }
 }
