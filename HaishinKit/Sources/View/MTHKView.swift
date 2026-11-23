@@ -13,6 +13,7 @@ public class MTHKView: MTKView {
     private var isHDR = false
     private var isHLG = false
     private var outputColorSpace: CGColorSpace?
+    private var restoreSDRConfiguration: (@MainActor () -> Void)?
     private lazy var commandQueue: (any MTLCommandQueue)? = {
         return device?.makeCommandQueue()
     }()
@@ -144,11 +145,30 @@ public class MTHKView: MTKView {
         #if !os(tvOS)
         if #available(iOS 16.0, macOS 12.0, *) {
             let metalLayer = layer as? CAMetalLayer
-            colorPixelFormat = isHDR ? .rgba16Float : .bgra8Unorm
-            outputColorSpace = CGColorSpace(name: isHDR ? CGColorSpace.extendedLinearITUR_2020 : CGColorSpace.sRGB)
-            metalLayer?.colorspace = outputColorSpace
-            metalLayer?.wantsExtendedDynamicRangeContent = isHDR
-            metalLayer?.edrMetadata = isHLG ? .hlg : nil
+            if isHDR {
+                if restoreSDRConfiguration == nil {
+                    let pixelFormat = colorPixelFormat
+                    let colorSpace = metalLayer?.colorspace
+                    let wantsEDR = metalLayer?.wantsExtendedDynamicRangeContent ?? false
+                    let metadata = metalLayer?.edrMetadata
+                    restoreSDRConfiguration = { [weak self, weak metalLayer] in
+                        self?.colorPixelFormat = pixelFormat
+                        metalLayer?.colorspace = colorSpace
+                        metalLayer?.wantsExtendedDynamicRangeContent = wantsEDR
+                        metalLayer?.edrMetadata = metadata
+                    }
+                }
+                colorPixelFormat = .rgba16Float
+                // Keep HLG code values intact; Core Animation applies the HLG transfer function.
+                outputColorSpace = CGColorSpace(name: isHLG ? CGColorSpace.itur_2100_HLG : CGColorSpace.extendedLinearITUR_2020)
+                metalLayer?.colorspace = outputColorSpace
+                metalLayer?.wantsExtendedDynamicRangeContent = true
+                metalLayer?.edrMetadata = nil
+            } else {
+                restoreSDRConfiguration?()
+                restoreSDRConfiguration = nil
+                outputColorSpace = nil
+            }
         }
         #endif
     }

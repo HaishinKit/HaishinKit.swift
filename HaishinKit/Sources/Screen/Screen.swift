@@ -148,6 +148,7 @@ public final class Screen: ScreenObjectContainerConvertible {
         guard let pixelBuffer else {
             return nil
         }
+        dynamicRangeMode.attach(pixelBuffer)
         if outputFormat == nil {
             CMVideoFormatDescriptionCreateForImageBuffer(
                 allocator: kCFAllocatorDefault,

@@ -6,23 +6,74 @@ import Testing
 
 #if os(iOS) || os(macOS)
 @Suite @MainActor struct HDRPlaybackTests {
-    @Test func metalViewSwitchesFromHLGToSDR() throws {
+    @Test(arguments: [false, true])
+    func metalViewSwitchesFromHLGToSDR(customSDRConfiguration: Bool) throws {
         guard #available(iOS 16.0, macOS 12.0, *) else {
             return
         }
         let view = MTHKView(frame: .init(x: 0, y: 0, width: 192, height: 108))
         let metalLayer = try #require(view.layer as? CAMetalLayer)
+        if customSDRConfiguration {
+            view.colorPixelFormat = .bgra8Unorm_srgb
+            metalLayer.colorspace = CGColorSpace(name: CGColorSpace.displayP3)
+            metalLayer.wantsExtendedDynamicRangeContent = true
+            metalLayer.edrMetadata = .hlg
+        }
+        let originalPixelFormat = view.colorPixelFormat
+        let originalColorSpace = metalLayer.colorspace
+        let originalWantsEDR = metalLayer.wantsExtendedDynamicRangeContent
+        let originalMetadata = metalLayer.edrMetadata
         view.updateDynamicRange(try makeSample(.hdr))
         #expect(view.colorPixelFormat == .rgba16Float)
         #expect(metalLayer.wantsExtendedDynamicRangeContent)
-        #expect(metalLayer.colorspace?.name == CGColorSpace.extendedLinearITUR_2020)
-        #expect(metalLayer.edrMetadata != nil)
+        #expect(metalLayer.colorspace?.name == CGColorSpace.itur_2100_HLG)
+        #expect(metalLayer.edrMetadata == nil)
 
         view.updateDynamicRange(try makeSample(.sdr))
-        #expect(view.colorPixelFormat == .bgra8Unorm)
-        #expect(!metalLayer.wantsExtendedDynamicRangeContent)
-        #expect(metalLayer.colorspace?.name == CGColorSpace.sRGB)
-        #expect(metalLayer.edrMetadata == nil)
+        #expect(view.colorPixelFormat == originalPixelFormat)
+        #expect(metalLayer.wantsExtendedDynamicRangeContent == originalWantsEDR)
+        #expect(metalLayer.colorspace?.name == originalColorSpace?.name)
+        #expect(metalLayer.edrMetadata === originalMetadata)
+    }
+
+    @Test(arguments: [UInt16(502), 721, 940])
+    func metalDestinationPreservesHLGSignal(luma: UInt16) throws {
+        guard #available(iOS 16.0, macOS 12.0, *) else {
+            return
+        }
+        let sample = try makeSample(.hdr)
+        let image = try #require(sample.imageBuffer)
+        #expect(CVPixelBufferLockBaseAddress(image, []) == kCVReturnSuccess)
+        for plane in 0..<CVPixelBufferGetPlaneCount(image) {
+            let address = try #require(CVPixelBufferGetBaseAddressOfPlane(image, plane))
+            let count = CVPixelBufferGetBytesPerRowOfPlane(image, plane) * CVPixelBufferGetHeightOfPlane(image, plane) / 2
+            address.assumingMemoryBound(to: UInt16.self).initialize(repeating: (plane == 0 ? luma : 512) << 6, count: count)
+        }
+        #expect(CVPixelBufferUnlockBaseAddress(image, []) == kCVReturnSuccess)
+        let view = MTHKView(frame: .init(x: 0, y: 0, width: 192, height: 108))
+        view.updateDynamicRange(sample)
+        let layer = try #require(view.layer as? CAMetalLayer)
+        let device = try #require(view.device)
+        let queue = try #require(device.makeCommandQueue())
+        let command = try #require(queue.makeCommandBuffer())
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.colorPixelFormat, width: 192, height: 108, mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+        descriptor.storageMode = .shared
+        let texture = try #require(device.makeTexture(descriptor: descriptor))
+        let destination = CIRenderDestination(width: 192, height: 108, pixelFormat: view.colorPixelFormat, commandBuffer: command, mtlTextureProvider: { texture })
+        destination.colorSpace = try #require(layer.colorspace)
+        let context = CIContext(mtlDevice: device, options: [.workingFormat: CIFormat.RGBAh.rawValue])
+        let task = try context.startTask(toRender: CIImage(cvPixelBuffer: image), to: destination)
+        command.commit()
+        command.waitUntilCompleted()
+        _ = try task.waitUntilCompleted()
+        var pixel = [UInt16](repeating: 0, count: 4)
+        texture.getBytes(&pixel, bytesPerRow: 8, from: MTLRegionMake2D(96, 54, 1, 1), mipmapLevel: 0)
+        let expected = (Float(luma) - 64) / 876
+        for channel in pixel.prefix(3) {
+            #expect(abs(Float(Float16(bitPattern: channel)) - expected) < 0.005)
+        }
+        #expect(layer.edrMetadata == nil)
     }
 
     private func makeSample(_ mode: DynamicRangeMode) throws -> CMSampleBuffer {
@@ -39,3 +90,28 @@ import Testing
     }
 }
 #endif
+
+@Suite @ScreenActor struct ScreenHDRTests {
+    @Test func offscreenSamplesCarryHLGFormatDescription() throws {
+        let screen = Screen()
+        screen.size = .init(width: 192, height: 108)
+        screen.dynamicRangeMode = .hdr
+        var retainedSamples: [CMSampleBuffer] = []
+        for index in 1...6 {
+            let sample = try #require(screen.makeSampleBuffer(.init(timestamp: Double(index), targetTimestamp: Double(index) + 1.0 / 30)))
+            let format = try #require(sample.formatDescription)
+            let image = try #require(sample.imageBuffer)
+            #expect(format.isHDR)
+            #expect(CMVideoFormatDescriptionMatchesImageBuffer(format, imageBuffer: image))
+            #expect(CMFormatDescriptionGetExtension(format, extensionKey: kCMFormatDescriptionExtension_ColorPrimaries) as? String == kCMFormatDescriptionColorPrimaries_ITU_R_2020 as String)
+            #expect(CMFormatDescriptionGetExtension(format, extensionKey: kCMFormatDescriptionExtension_YCbCrMatrix) as? String == kCMFormatDescriptionYCbCrMatrix_ITU_R_2020 as String)
+            retainedSamples.append(sample)
+            if index == 3 {
+                retainedSamples.removeAll()
+            }
+        }
+        screen.dynamicRangeMode = .sdr
+        let sdr = try #require(screen.makeSampleBuffer(.init(timestamp: 7, targetTimestamp: 7 + 1.0 / 30)))
+        #expect(sdr.formatDescription?.isHDR == false)
+    }
+}
