@@ -124,7 +124,14 @@ final class VQMetrixTransfer: NSObject, URLSessionDataDelegate, @unchecked Senda
         let addresses: [String]
         if host == "localhost" { addresses = ["127.0.0.1"] }
         else if isLocalAddress(host) { return url }
-        else { addresses = try resolver(host) }
+        else {
+            do { addresses = try resolver(host) }
+            catch {
+                try Task.checkCancellation()
+                throw error
+            }
+        }
+        try Task.checkCancellation()
         guard !addresses.isEmpty, addresses.allSatisfy(isLocalAddress),
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw VQMetrixError(message: "The HTTP receiver must resolve only to local network addresses.")

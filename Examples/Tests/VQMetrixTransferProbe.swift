@@ -2,7 +2,7 @@ import Foundation
 
 @main struct VQMetrixTransferProbe {
     static func main() async throws {
-        guard CommandLine.arguments.count == 6 else { fatalError("Pass five local test server ports.") }
+        guard CommandLine.arguments.count == 7 else { fatalError("Pass six local test server ports.") }
         let ports = CommandLine.arguments.dropFirst().map { Int($0)! }
         func url(_ index: Int) -> URL { URL(string: "http://127.0.0.1:\(ports[index])")! }
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("vqmetrix-transfer-\(UUID().uuidString).zip")
@@ -14,11 +14,17 @@ import Foundation
             precondition(job == id)
         }
         print("PASS valid receipt and same-ID retry")
-        for index in 1...3 {
+        for index in [1, 3] {
             do {
                 _ = try await VQMetrixTransfer().send(file: file, endpoint: url(index), code: "1234", id: id)
                 fatalError("Accepted an invalid, redirect, or oversized response")
             } catch { }
+        }
+        do {
+            _ = try await VQMetrixTransfer().send(file: file, endpoint: url(2), code: "1234", id: id)
+            fatalError("Followed a redirect")
+        } catch let error as VQMetrixError {
+            precondition(error.message.contains("HTTP 302"), error.message)
         }
         print("PASS invalid receipt, redirect, and oversized-response rejection")
         let cancelled = Task {
@@ -50,6 +56,15 @@ import Foundation
             catch { }
         }
         let name = URL(string: "http://receiver.local:8787")!
+        let cancelledLookup = Task {
+            try VQMetrixTransfer.resolvedEndpoint(name) { _ in
+                withUnsafeCurrentTask { $0?.cancel() }
+                throw VQMetrixError(message: "Cannot resolve the local receiver.")
+            }
+        }
+        do { _ = try await cancelledLookup.value; fatalError("Ignored lookup cancellation") }
+        catch is CancellationError { }
+        print("PASS lookup cancellation takes precedence over DNS errors")
         let local = try VQMetrixTransfer.resolvedEndpoint(name) { _ in ["192.168.1.2", "fd00::1"] }
         precondition(local.host == "192.168.1.2" && local.port == 8787)
         let scoped = try VQMetrixTransfer.resolvedEndpoint(name) { _ in ["fe80::1%en0"] }

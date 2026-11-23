@@ -83,11 +83,17 @@ final class VQMetrixModel: ObservableObject {
                 let job = try await VQMetrixTransfer().send(file: archive, endpoint: endpoint, code: code, id: id)
                 message = "Accepted by VQMetrix: \(job.uuidString). Check the receiver for evaluation results."
             } catch {
-                message = "\(error.localizedDescription) You can retry the same package."
+                message = Task.isCancelled || error is CancellationError ?
+                    "Upload cancelled. You can retry the same package." :
+                    "\(error.localizedDescription) You can retry the same package."
             }
         }
     }
-    func cancel() { task?.cancel() }
+    func cancel() {
+        guard busy else { return }
+        message = "Cancelling…"
+        task?.cancel()
+    }
     func clearPackage() {
         if let directory { try? FileManager.default.removeItem(at: directory) }
         directory = nil

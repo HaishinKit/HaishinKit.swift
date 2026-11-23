@@ -13,8 +13,23 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
   abort 'Swift compilation failed' unless system('xcrun', 'swiftc', '-target', 'arm64-apple-macos15.5',
     '-module-cache-path', File.join(directory, 'cache'), transfer,
     File.join(__dir__, 'VQMetrixTransferProbe.swift'), '-o', executable)
-  servers = Array.new(5) { TCPServer.new('127.0.0.1', 0) }
-  threads = servers.each_with_index.map do |server, index|
+  servers = Array.new(6) { TCPServer.new('127.0.0.1', 0) }
+  redirected = Queue.new
+  redirect_thread = Thread.new do
+    socket = servers[5].accept
+    redirected << true
+    begin
+      headers = +''
+      headers << socket.read(1) until headers.end_with?("\r\n\r\n")
+      length = headers[/Content-Length: (\d+)/i, 1].to_i
+      socket.read(length) if length > 0
+      body = '{"jobId":"12345678-1234-1234-1234-123456789abc"}'
+      socket.write("HTTP/1.1 202 Accepted\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+    ensure
+      socket.close
+    end
+  end
+  threads = servers.first(5).each_with_index.map do |server, index|
     Thread.new do
       (index == 0 ? 2 : 1).times do
         socket = server.accept
@@ -30,11 +45,12 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
           sleep 1 if index == 4
           body = case index
                  when 1 then '{}'
-                 when 3 then 'x' * 100_000
+                 when 3 then '{"jobId":"12345678-1234-1234-1234-123456789abc","padding":"' + ('x' * 100_000) + '"}'
                  else '{"jobId":"12345678-1234-1234-1234-123456789abc"}'
                  end
           status = index == 2 ? '302 Found' : '202 Accepted'
-          socket.write("HTTP/1.1 #{status}\r\nLocation: http://127.0.0.1:1/\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+          location = "http://127.0.0.1:#{servers[5].addr[1]}/api/v1/runs"
+          socket.write("HTTP/1.1 #{status}\r\nLocation: #{location}\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
         rescue Errno::EPIPE, Errno::ECONNRESET
           raise unless index == 3 || index == 4
         ensure
@@ -48,11 +64,13 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
     _, status = Timeout.timeout(60) { Process.wait2(pid) }
     abort 'Transfer probe failed' unless status.success?
     Timeout.timeout(5) { threads.each(&:value) }
+    abort 'Contacted the redirect target' unless redirected.empty?
   rescue Timeout::Error
     Process.kill('KILL', pid) rescue nil
     Process.wait(pid) rescue nil
     abort 'Transfer probe timed out'
   ensure
+    redirect_thread.kill if redirect_thread.alive?
     servers.each(&:close)
     threads.each { |thread| thread.kill if thread.alive? }
   end
