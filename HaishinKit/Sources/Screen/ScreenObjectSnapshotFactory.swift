@@ -4,6 +4,7 @@ public struct ScreenObjectSnapshotFactory {
     }
 
     public func make(_ screenObject: ScreenObject) -> ScreenObjectSnapshot {
+        if let unsupported = screenObject as? UnsupportedScreenObject { return unsupported.snapshot }
         switch screenObject {
         case let screenObjectContainer as ScreenObjectContainer:
             return ScreenObjectSnapshot(
@@ -20,7 +21,8 @@ public struct ScreenObjectSnapshotFactory {
                 horizontalAlignment: screenObjectContainer.horizontalAlignment.rawValue,
                 verticalAlignment: screenObjectContainer.verticalAlignment.rawValue,
                 elements: screenObjectContainer.elements,
-                children: screenObjectContainer.children.map { make($0) }
+                children: screenObjectContainer.children.map { make($0) },
+                cornerRadius: screenObject.cornerRadius == 0 ? nil : Double(screenObject.cornerRadius)
             )
         default:
             return ScreenObjectSnapshot(
@@ -37,7 +39,8 @@ public struct ScreenObjectSnapshotFactory {
                 horizontalAlignment: screenObject.horizontalAlignment.rawValue,
                 verticalAlignment: screenObject.verticalAlignment.rawValue,
                 elements: screenObject.elements,
-                children: []
+                children: [],
+                cornerRadius: screenObject.cornerRadius == 0 ? nil : Double(screenObject.cornerRadius)
             )
         }
     }

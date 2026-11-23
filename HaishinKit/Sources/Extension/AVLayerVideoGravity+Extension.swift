@@ -2,10 +2,28 @@ import AVFoundation
 import Foundation
 
 extension AVLayerVideoGravity {
+    var snapshotValue: String {
+        switch self {
+        case .resize: return "resize"
+        case .resizeAspect: return "resizeAspect"
+        case .resizeAspectFill: return "resizeAspectFill"
+        default: return rawValue
+        }
+    }
+
+    init(snapshotValue: String) {
+        switch snapshotValue {
+        case "resize": self = .resize
+        case "resizeAspect": self = .resizeAspect
+        case "resizeAspectFill": self = .resizeAspectFill
+        default: self.init(rawValue: snapshotValue)
+        }
+    }
+
     func scale(_ display: CGSize, image: CGSize) -> CGAffineTransform {
         switch self {
         case .resize:
-            return .init(scaleX: display.width / image.width, y: display.width / image.height)
+            return .init(scaleX: display.width / image.width, y: display.height / image.height)
         case .resizeAspect:
             let scale = min(display.width / image.width, display.height / image.height)
             return .init(scaleX: scale, y: scale)

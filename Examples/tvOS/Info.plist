@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSLocalNetworkUsageDescription</key><string>Find nearby SRT peers and VQMetrix receivers, and test streaming on your local network.</string>
+<key>NSBonjourServices</key><array><string>_srt._udp</string><string>_vqmetrix._tcp</string></array>
+<key>NSCameraUsageDescription</key><string>Send video from your selected Continuity Camera.</string>
+<key>NSMicrophoneUsageDescription</key><string>Send audio from your selected Continuity Camera microphone.</string>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict></plist>

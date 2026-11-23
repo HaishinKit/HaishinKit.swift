@@ -9,11 +9,12 @@ let logger = LBLogger.with("com.haishinkit.HaishinKit.HaishinApp")
 
 @main
 struct HaishinApp: App {
-    @State private var preference = PreferenceViewModel()
+    @StateObject private var preference = PreferenceViewModel()
+    @StateObject private var studio = TVStudioModel()
 
     var body: some Scene {
         WindowGroup {
-            ContentView().environmentObject(preference)
+            ContentView().environmentObject(preference).environmentObject(studio)
         }
     }
 

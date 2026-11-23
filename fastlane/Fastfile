@@ -1,4 +1,5 @@
 require 'shellwords'
+require 'tmpdir'
 
 desc 'Builds the Apple Silicon macOS example ZIP.'
 lane :macos_example do |options|
@@ -9,7 +10,7 @@ lane :macos_example do |options|
   output = File.join(root, 'build', 'macos-example', version)
   derived_data = File.join(output, 'DerivedData')
   app = File.join(derived_data, 'Build', 'Products', 'Release', 'HaishinKit.app')
-  zip = File.join(output, "HaishinKit-macOS-#{version}-arm64-unsigned.zip")
+  zip = File.join(output, "HaishinKit-macOS-#{version}-arm64-adhoc.zip")
   FileUtils.rm_rf(output)
   FileUtils.mkdir_p(output)
 
@@ -22,7 +23,15 @@ lane :macos_example do |options|
   ])
   UI.user_error!("Missing app: #{app}") unless File.directory?(app)
   sh Shellwords.join(['lipo', File.join(app, 'Contents', 'MacOS', 'HaishinKit'), '-verify_arch', 'arm64'])
+  # Replace linker-only signatures with an ad-hoc signature covering the whole bundle.
+  sh Shellwords.join(['codesign', '--force', '--deep', '--sign', '-', app])
+  sh Shellwords.join(['codesign', '--verify', '--deep', '--strict', '--verbose=2', app])
   sh Shellwords.join(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
+  # Verify the distributed bundle too, after an actual ZIP round trip.
+  Dir.mktmpdir('haishinkit-macos-release-') do |unpacked|
+    sh Shellwords.join(['ditto', '-x', '-k', zip, unpacked])
+    sh Shellwords.join(['codesign', '--verify', '--deep', '--strict', '--verbose=2', File.join(unpacked, File.basename(app))])
+  end
   UI.success("Created #{zip}")
 end
 

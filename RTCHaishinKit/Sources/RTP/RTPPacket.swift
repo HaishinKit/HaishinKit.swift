@@ -20,6 +20,7 @@ struct RTPPacket: Sendable {
     let timestamp: UInt32
     let ssrc: UInt32
     let payload: Data
+    var wireData: Data? = nil
 
     func copyBytes(to buffer: AVAudioCompressedBuffer) {
         let byteLength = UInt32(payload.count)
@@ -41,6 +42,7 @@ struct RTPPacket: Sendable {
 
 extension RTPPacket {
     var data: Data {
+        if let wireData { return wireData }
         var data = Data()
         var first: UInt8 = (version & 0x03) << 6
         first |= (padding ? 1 : 0) << 5
@@ -85,6 +87,22 @@ extension RTPPacket {
         sequenceNumber = UInt16(data[2]) << 8 | UInt16(data[3])
         timestamp = UInt32(data: data[4...7]).bigEndian
         ssrc = UInt32(data: data[8...11]).bigEndian
-        payload = Data(data[12...])
+        guard version == Self.version else { throw Error.bufferUnderrun }
+        var offset = Self.headerSize + Int(cc) * 4
+        guard offset <= data.count else { throw Error.bufferUnderrun }
+        if `extension` {
+            guard offset + 4 <= data.count else { throw Error.bufferUnderrun }
+            let words = Int(data[offset + 2]) << 8 | Int(data[offset + 3])
+            offset += 4 + words * 4
+        }
+        var end = data.count
+        if padding {
+            guard let count = data.last, count > 0, Int(count) <= end - offset else { throw Error.bufferUnderrun }
+            end -= Int(count)
+        }
+        guard offset < end else { throw Error.bufferUnderrun }
+        payload = Data(data[offset..<end])
+        wireData = data
+
     }
 }

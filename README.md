@@ -57,17 +57,17 @@ The package declares Swift tools version 6.0. CI uses Xcode 26.6 for testing and
 ### 🔧 Examples
 - Reference implementation app for live streaming `publish` and `playback`.
 - If an issue occurs, please check whether it also happens in the examples app.
+- [Apple TV studio](Examples/tvOS/README.md): Bonjour SRT send/receive, test signals, and Continuity Camera (tvOS 17+).
 
-#### Usage
+#### 🧭 Run
 
-You can verify by changing the URL of the following file.
-https://github.com/HaishinKit/HaishinKit.swift/blob/abf1883d25d0ba29e1d1d67ea9e3a3b5be61a196/Examples/Preference.swift#L1-L7
+Open the workspace and select an Example target. Use its connection settings where available; shared development defaults are in [Examples/Preference.swift](Examples/Preference.swift).
 
-#### Download
+#### 📥 Download
 ```sh
 git clone https://github.com/HaishinKit/HaishinKit.swift.git
 cd HaishinKit.swift
-open Examples/Examples.xcodeproj
+open Examples/Examples.xcworkspace
 ```
 
 ### 🔧 Installation
