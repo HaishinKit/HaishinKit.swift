@@ -9,9 +9,9 @@ public class MTHKView: MTKView {
     public var videoGravity: AVLayerVideoGravity = .resizeAspect
     public var videoTrackId: UInt8? = UInt8.max
     public var audioTrackId: UInt8?
+    private(set) var dynamicRangeMode: DynamicRangeMode = .sdr
     private var displayImage: CIImage?
-    private var isHDR = false
-    private var isHLG = false
+    private var transferFunction: String?
     private var outputColorSpace: CGColorSpace?
     private var restoreSDRConfiguration: (@MainActor () -> Void)?
     private lazy var commandQueue: (any MTLCommandQueue)? = {
@@ -133,19 +133,21 @@ public class MTHKView: MTKView {
     }
 
     func updateDynamicRange(_ sampleBuffer: CMSampleBuffer) {
-        let isHDR = sampleBuffer.formatDescription?.isHDR == true
-        let isHLG = sampleBuffer.formatDescription.map {
-            CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String == kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String
-        } ?? false
-        guard self.isHDR != isHDR || self.isHLG != isHLG else {
+        let dynamicRangeMode: DynamicRangeMode = sampleBuffer.formatDescription?.isHDR == true ? .hdr : .sdr
+        let transferFunction = sampleBuffer.formatDescription.flatMap {
+            CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String
+        }
+        guard self.dynamicRangeMode != dynamicRangeMode ||
+                (dynamicRangeMode == .hdr && self.transferFunction != transferFunction) else {
             return
         }
-        self.isHDR = isHDR
-        self.isHLG = isHLG
+        self.dynamicRangeMode = dynamicRangeMode
+        self.transferFunction = transferFunction
         #if !os(tvOS)
         if #available(iOS 16.0, macOS 12.0, *) {
             let metalLayer = layer as? CAMetalLayer
-            if isHDR {
+            switch dynamicRangeMode {
+            case .hdr:
                 if restoreSDRConfiguration == nil {
                     let pixelFormat = colorPixelFormat
                     let colorSpace = metalLayer?.colorspace
@@ -160,11 +162,12 @@ public class MTHKView: MTKView {
                 }
                 colorPixelFormat = .rgba16Float
                 // Keep HLG code values intact; Core Animation applies the HLG transfer function.
-                outputColorSpace = CGColorSpace(name: isHLG ? CGColorSpace.itur_2100_HLG : CGColorSpace.extendedLinearITUR_2020)
+                let colorSpaceName = transferFunction == kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String ? CGColorSpace.itur_2100_HLG : CGColorSpace.extendedLinearITUR_2020
+                outputColorSpace = CGColorSpace(name: colorSpaceName)
                 metalLayer?.colorspace = outputColorSpace
                 metalLayer?.wantsExtendedDynamicRangeContent = true
                 metalLayer?.edrMetadata = nil
-            } else {
+            case .sdr:
                 restoreSDRConfiguration?()
                 restoreSDRConfiguration = nil
                 outputColorSpace = nil

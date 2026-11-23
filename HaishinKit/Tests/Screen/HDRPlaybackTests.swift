@@ -23,13 +23,16 @@ import Testing
         let originalColorSpace = metalLayer.colorspace
         let originalWantsEDR = metalLayer.wantsExtendedDynamicRangeContent
         let originalMetadata = metalLayer.edrMetadata
+        #expect(view.dynamicRangeMode == .sdr)
         view.updateDynamicRange(try makeSample(.hdr))
+        #expect(view.dynamicRangeMode == .hdr)
         #expect(view.colorPixelFormat == .rgba16Float)
         #expect(metalLayer.wantsExtendedDynamicRangeContent)
         #expect(metalLayer.colorspace?.name == CGColorSpace.itur_2100_HLG)
         #expect(metalLayer.edrMetadata == nil)
 
         view.updateDynamicRange(try makeSample(.sdr))
+        #expect(view.dynamicRangeMode == .sdr)
         #expect(view.colorPixelFormat == originalPixelFormat)
         #expect(metalLayer.wantsExtendedDynamicRangeContent == originalWantsEDR)
         #expect(metalLayer.colorspace?.name == originalColorSpace?.name)
