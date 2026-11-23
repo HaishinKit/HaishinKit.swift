@@ -24,14 +24,15 @@ import Testing
         let originalWantsEDR = metalLayer.wantsExtendedDynamicRangeContent
         let originalMetadata = metalLayer.edrMetadata
         #expect(view.dynamicRangeMode == .sdr)
-        view.updateDynamicRange(try makeSample(.hdr))
+        view.setDynamicRangeMode(.hdr)
+        view.setDynamicRangeMode(.hdr)
         #expect(view.dynamicRangeMode == .hdr)
         #expect(view.colorPixelFormat == .rgba16Float)
         #expect(metalLayer.wantsExtendedDynamicRangeContent)
         #expect(metalLayer.colorspace?.name == CGColorSpace.itur_2100_HLG)
         #expect(metalLayer.edrMetadata == nil)
 
-        view.updateDynamicRange(try makeSample(.sdr))
+        view.setDynamicRangeMode(.sdr)
         #expect(view.dynamicRangeMode == .sdr)
         #expect(view.colorPixelFormat == originalPixelFormat)
         #expect(metalLayer.wantsExtendedDynamicRangeContent == originalWantsEDR)
@@ -54,7 +55,7 @@ import Testing
         }
         #expect(CVPixelBufferUnlockBaseAddress(image, []) == kCVReturnSuccess)
         let view = MTHKView(frame: .init(x: 0, y: 0, width: 192, height: 108))
-        view.updateDynamicRange(sample)
+        view.setDynamicRangeMode(.hdr)
         let layer = try #require(view.layer as? CAMetalLayer)
         let device = try #require(view.device)
         let queue = try #require(device.makeCommandQueue())

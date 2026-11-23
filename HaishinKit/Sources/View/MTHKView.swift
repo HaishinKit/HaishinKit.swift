@@ -9,9 +9,9 @@ public class MTHKView: MTKView {
     public var videoGravity: AVLayerVideoGravity = .resizeAspect
     public var videoTrackId: UInt8? = UInt8.max
     public var audioTrackId: UInt8?
-    private(set) var dynamicRangeMode: DynamicRangeMode = .sdr
+    /// The explicitly selected display range. HDR uses BT.2100 HLG.
+    public private(set) var dynamicRangeMode: DynamicRangeMode = .sdr
     private var displayImage: CIImage?
-    private var transferFunction: String?
     private var outputColorSpace: CGColorSpace?
     private var restoreSDRConfiguration: (@MainActor () -> Void)?
     private lazy var commandQueue: (any MTLCommandQueue)? = {
@@ -132,17 +132,15 @@ public class MTHKView: MTKView {
         return false
     }
 
-    func updateDynamicRange(_ sampleBuffer: CMSampleBuffer) {
-        let dynamicRangeMode: DynamicRangeMode = sampleBuffer.formatDescription?.isHDR == true ? .hdr : .sdr
-        let transferFunction = sampleBuffer.formatDescription.flatMap {
-            CMFormatDescriptionGetExtension($0, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String
-        }
-        guard self.dynamicRangeMode != dynamicRangeMode ||
-                (dynamicRangeMode == .hdr && self.transferFunction != transferFunction) else {
+    /// Sets the display range to match the mixer or the expected incoming video.
+    ///
+    /// Call this explicitly; incoming sample buffers do not change the selected mode.
+    /// HDR display requires iOS 16 or later or macOS. On tvOS, use `PiPHKView`.
+    public func setDynamicRangeMode(_ dynamicRangeMode: DynamicRangeMode) {
+        guard self.dynamicRangeMode != dynamicRangeMode else {
             return
         }
         self.dynamicRangeMode = dynamicRangeMode
-        self.transferFunction = transferFunction
         #if !os(tvOS)
         if #available(iOS 16.0, macOS 12.0, *) {
             let metalLayer = layer as? CAMetalLayer
@@ -162,8 +160,7 @@ public class MTHKView: MTKView {
                 }
                 colorPixelFormat = .rgba16Float
                 // Keep HLG code values intact; Core Animation applies the HLG transfer function.
-                let colorSpaceName = transferFunction == kCMFormatDescriptionTransferFunction_ITU_R_2100_HLG as String ? CGColorSpace.itur_2100_HLG : CGColorSpace.extendedLinearITUR_2020
-                outputColorSpace = CGColorSpace(name: colorSpaceName)
+                outputColorSpace = dynamicRangeMode.colorSpace
                 metalLayer?.colorspace = outputColorSpace
                 metalLayer?.wantsExtendedDynamicRangeContent = true
                 metalLayer?.edrMetadata = nil
@@ -195,7 +192,6 @@ extension MTHKView: MediaMixerOutput {
 
     nonisolated public func mixer(_ mixer: MediaMixer, didOutput sampleBuffer: CMSampleBuffer) {
         Task { @MainActor in
-            updateDynamicRange(sampleBuffer)
             displayImage = try? sampleBuffer.imageBuffer?.makeCIImage()
             #if os(macOS)
             self.needsDisplay = true
@@ -213,7 +209,6 @@ extension MTHKView: StreamOutput {
 
     nonisolated public func stream(_ stream: some StreamConvertible, didOutput video: CMSampleBuffer) {
         Task { @MainActor in
-            updateDynamicRange(video)
             displayImage = try? video.imageBuffer?.makeCIImage()
             #if os(macOS)
             self.needsDisplay = true

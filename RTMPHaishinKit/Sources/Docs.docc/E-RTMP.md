@@ -27,7 +27,13 @@ The capture device must support the requested HDR format. The server must accept
 
 HLG color information is carried in the HEVC bitstream. Publishing preserves the source color primaries, transfer function, and YCbCr matrix. Playback reads this information from the HEVC sequence header and decodes HDR video to 10-bit pixel buffers; no receiver-side encoder settings are needed.
 
-Use `PiPHKView` for system-managed video display. `MTHKView` automatically enables floating-point EDR output for HDR video on iOS 16 or later and macOS; HDR brightness requires a compatible display. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
+Use `PiPHKView` for system-managed video display. When using `MTHKView`, explicitly match its display mode to the mixer or expected incoming stream:
+
+```swift
+hkView.setDynamicRangeMode(.hdr)
+```
+
+Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not change this selection. HDR mode enables floating-point HLG output on iOS 16 or later and macOS; HDR brightness requires a compatible display. On tvOS, use `PiPHKView` for HDR display. Verify appearance on a physical HDR-capable device.
 
 This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
 

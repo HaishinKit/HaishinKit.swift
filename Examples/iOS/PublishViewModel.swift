@@ -365,6 +365,7 @@ final class PublishViewModel: ObservableObject {
                 } else {
                     try await mixer.setDynamicRangeMode(.sdr)
                 }
+                (mtView as? MTHKView)?.setDynamicRangeMode(await mixer.dynamicRangeMode)
             } catch {
                 logger.info(error)
             }
@@ -628,6 +629,7 @@ extension PublishViewModel: MTHKViewRepresentable.PreviewSource {
         Task { @MainActor in
             self.mtView = view
             if isMixerReady {
+                view.setDynamicRangeMode(await mixer.dynamicRangeMode)
                 await mixer.addOutput(view)
             }
         }
