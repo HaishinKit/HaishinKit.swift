@@ -14,6 +14,20 @@ import Testing
         }
     }
 
+    @Test func dictionaryKeysTakePrecedenceOverNumericIndices() {
+        var array = AMFArray(["0": "field", "2026": "season", "-1": "negative", "1": nil])
+        array[0] = "index"
+        array[1] = "another index"
+        #expect(array["0"] as? String == "field")
+        #expect(array[0] as? String == "index")
+        #expect(array["2026"] as? String == "season")
+        #expect(array["-1"] as? String == "negative")
+        #expect(array["1"] == nil)
+        #expect(array[1] as? String == "another index")
+        array[2] = "fallback"
+        #expect(array["2"] as? String == "fallback")
+    }
+
     @Test func xmlDocument() {
         let xml = AMFXMLDocument(data: AMFFoundationTests.hello)
         #expect(xml.description == AMFFoundationTests.hello)

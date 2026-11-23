@@ -7,7 +7,8 @@ import Testing
     @Test func publishingMergesAndReplacesMetadata() async throws {
         let connection = RTMPConnection()
         let stream = RTMPStream(connection: connection)
-        try await stream.setMetadata(["encoder": "Example", "duration": 123, "videodatarate": 4500])
+        try await stream.setMetadata(["encoder": "Example", "duration": 123, "videodatarate": 4500, "2026": "season"])
+        #expect(await stream.metadata["2026"] as? String == "season")
         await stream.dispatch(RTMPDataMessage(
             streamId: 0,
             objectEncoding: .amf0,
@@ -36,6 +37,7 @@ import Testing
         let metadata = await stream.metadata
         #expect(metadata["encoder"] as? String == "Example")
         #expect(metadata["duration"] as? Int == 0)
+        #expect(metadata["2026"] as? String == "season")
         #expect(metadata["videodatarate"] as? Int == 4500)
         #expect(metadata["title"] as? String == nil)
         try await close(stream, code: "NetStream.Unpublish.Success")

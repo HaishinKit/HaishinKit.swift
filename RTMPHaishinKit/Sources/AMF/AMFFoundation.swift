@@ -61,6 +61,9 @@ extension AMFArray: ExpressibleByArrayLiteral {
                 return i < data.count ? data[i] : kAMFUndefined
             }
             if let i: String = i as? String {
+                if let value = dict[i] {
+                    return value
+                }
                 if let i = Int(i) {
                     return i < data.count ? data[i] : kAMFUndefined
                 }
