@@ -8,6 +8,13 @@ import Testing
         let connection = RTMPConnection()
         let stream = RTMPStream(connection: connection)
         try await stream.setMetadata(["encoder": "Example", "duration": 123, "videodatarate": 4500])
+        await stream.dispatch(RTMPDataMessage(
+            streamId: 0,
+            objectEncoding: .amf0,
+            timestamp: 0,
+            handlerName: "onMetaData",
+            arguments: [AMFArray(["encoder": "Delayed playback"])]
+        ), type: .zero)
         let publishing = Task { try await stream.publish("test") }
         try await wait(for: .publish, on: stream)
         await stream.dispatch(RTMPDataMessage(
@@ -79,6 +86,29 @@ import Testing
         #expect(await stream.metadata["title"] as? String == "Playback title")
         try await publish(stream)
         #expect(await stream.metadata["title"] as? String == nil)
+        try await close(stream, code: "NetStream.Unpublish.Success")
+    }
+
+    @Test func metadataSetDuringPublishWaitIsPreservedForNextPublish() async throws {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        try await stream.setMetadata(["encoder": "First"])
+        let publishing = Task { try await stream.publish("test") }
+        try await wait(for: .publish, on: stream)
+        try await stream.setMetadata(["encoder": "Next"])
+        await stream.dispatch(RTMPCommandMessage(
+            streamId: 0,
+            transactionId: 0,
+            objectEncoding: .amf0,
+            commandName: "onStatus",
+            commandObject: nil,
+            arguments: [["level": "status", "code": "NetStream.Publish.Start"] as AMFObject]
+        ), type: .zero)
+        _ = try await publishing.value
+        #expect(await stream.metadata["encoder"] as? String == "Next")
+        try await close(stream, code: "NetStream.Unpublish.Success")
+        try await publish(stream)
+        #expect(await stream.metadata["encoder"] as? String == "Next")
         try await close(stream, code: "NetStream.Unpublish.Success")
     }
 

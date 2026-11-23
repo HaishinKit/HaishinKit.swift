@@ -393,7 +393,10 @@ public actor RTMPStream {
             info.resourceName = name
             howToPublish = type
             startedAt = .init()
-            metadata = makeMetadata(metadataFields)
+            let metadata = makeMetadata(metadataFields)
+            if !hasPendingMetadata {
+                self.metadata = metadata
+            }
             readyState = .publishing
             try? send("@setDataFrame", arguments: "onMetaData", metadata)
             outgoing.startRunning()
@@ -610,7 +613,9 @@ public actor RTMPStream {
         case let message as RTMPDataMessage:
             switch message.handlerName {
             case "onMetaData":
-                metadata = message.arguments[0] as? AMFArray ?? .init(count: 0)
+                if !hasPendingMetadata {
+                    metadata = message.arguments[0] as? AMFArray ?? .init(count: 0)
+                }
             case "|RtmpSampleAccess":
                 audioSampleAccess = message.arguments[0] as? Bool ?? true
                 videoSampleAccess = message.arguments[1] as? Bool ?? true
