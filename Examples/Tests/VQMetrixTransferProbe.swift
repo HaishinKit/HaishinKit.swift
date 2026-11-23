@@ -2,8 +2,9 @@ import Foundation
 
 @main struct VQMetrixTransferProbe {
     static func main() async throws {
-        guard CommandLine.arguments.count == 7 else { fatalError("Pass six local test server ports.") }
-        let ports = CommandLine.arguments.dropFirst().map { Int($0)! }
+        guard CommandLine.arguments.count == 8 else { fatalError("Pass six local test server ports and a request-ready marker path.") }
+        let ports = CommandLine.arguments.dropFirst().prefix(6).map { Int($0)! }
+        let marker = URL(fileURLWithPath: CommandLine.arguments[7])
         func url(_ index: Int) -> URL { URL(string: "http://127.0.0.1:\(ports[index])")! }
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("vqmetrix-transfer-\(UUID().uuidString).zip")
         try Data(repeating: 42, count: 131_072).write(to: file)
@@ -34,8 +35,13 @@ import Foundation
         do { _ = try await cancelled.value; fatalError("Ignored cancellation") }
         catch is CancellationError { }
         let active = Task { try await VQMetrixTransfer().send(file: file, endpoint: url(4), code: "1234", id: id) }
-        try await Task.sleep(for: .milliseconds(100))
+        let deadline = ContinuousClock.now + .seconds(30)
+        while !FileManager.default.fileExists(atPath: marker.path) {
+            precondition(ContinuousClock.now < deadline, "The active upload never reached the fixture server")
+            try await Task.sleep(for: .milliseconds(10))
+        }
         active.cancel()
+        try Data().write(to: marker.appendingPathExtension("cancelled"))
         do { _ = try await active.value; fatalError("Ignored active cancellation") }
         catch { }
         for index in 0..<100 {

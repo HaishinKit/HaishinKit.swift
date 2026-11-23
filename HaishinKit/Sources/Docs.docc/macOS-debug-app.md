@@ -78,7 +78,8 @@ transport and authentication separately for production applications.
 
 In **Publish → VQMetrix**, choose **Capture preview sample** while the preview is
 running. The app captures 45 composed frames, normalized to a 640 × 360,
-15 fps, limited-range BT.709 reference. It replays those exact pixels through
+15 fps, limited-range BT.709 reference. Capture spacing uses a monotonic arrival
+clock; source timestamps do not control the sampling interval. It replays those exact pixels through
 an offline encoder using **Evaluation codec** and the **Encoder** video bitrate. Resolution,
 frame rate, codec, and hardware selection in the live encoder controls do not apply to
 this offline encoder. Audio is excluded, and this comparison does not measure
@@ -106,7 +107,8 @@ code is not persisted.
 On Apple silicon, run `ruby Examples/Tests/vqmetrix_capture.rb /tmp/vqmetrix-fixtures`
 with a new output directory. This feeds deterministic frames through the actual
 capture/package implementation for all five codecs without opening a camera,
-checks payload hashes and ZIP integrity, and retains the packages. In the updated
+checks 15 fps sampling of 60 Hz arrivals with mismatched source timestamps,
+payload hashes and ZIP integrity, and retains the packages. In the updated
 VQMetrix checkout, run
 `VQMETRIX_MACOS_FIXTURES=/tmp/vqmetrix-fixtures swift test --filter actualMacOSProducerArchives`
 to validate, decode, and VMAF-evaluate those exact packages.

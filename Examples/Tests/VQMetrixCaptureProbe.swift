@@ -9,8 +9,8 @@ import CryptoKit
         let destination = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
         for codec in VQMetrixCodec.allCases {
             let capture = VQMetrixCapture()
-            let mixer = MediaMixer(captureSessionMode: .manual)
-            for index in 0..<45 {
+            let origin = ContinuousClock.now
+            for index in 0..<180 {
                 var pixel: CVPixelBuffer?
                 CVPixelBufferCreate(nil, 640, 360, kCVPixelFormatType_32BGRA,
                                     [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &pixel)
@@ -21,17 +21,21 @@ import CryptoKit
                         let offset = row * CVPixelBufferGetBytesPerRow(pixel!) + column * 4
                         bytes[offset] = UInt8(column % 256)
                         bytes[offset + 1] = UInt8(row % 256)
-                        bytes[offset + 2] = UInt8(index * 5)
+                        bytes[offset + 2] = UInt8((index * 5) % 256)
                         bytes[offset + 3] = 255
                     }
                 }
                 CVPixelBufferUnlockBaseAddress(pixel!, [])
                 var format: CMVideoFormatDescription?
                 CMVideoFormatDescriptionCreateForImageBuffer(allocator: nil, imageBuffer: pixel!, formatDescriptionOut: &format)
-                var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 15), presentationTimeStamp: CMTime(value: Int64(index), timescale: 15), decodeTimeStamp: .invalid)
+                // Simulate a display's clock-unit mismatch: source PTS advances 400x too fast.
+                var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 60), presentationTimeStamp: CMTime(value: Int64(index) * 400, timescale: 60), decodeTimeStamp: .invalid)
                 var sample: CMSampleBuffer?
                 CMSampleBufferCreateReadyWithImageBuffer(allocator: nil, imageBuffer: pixel!, formatDescription: format!, sampleTiming: &timing, sampleBufferOut: &sample)
-                capture.mixer(mixer, didOutput: sample!)
+                let arrival = origin.advanced(by: .nanoseconds(Int64(index) * 1_000_000_000 / 60))
+                capture.append(sample!, at: arrival)
+                let captured = try capture.progress()
+                precondition(captured == min(45, index / 4 + 1), "Capture cadence followed source PTS instead of 60 Hz arrivals")
                 // A mixer may immediately reuse the source storage after its callback.
                 CVPixelBufferLockBaseAddress(pixel!, [])
                 memset(CVPixelBufferGetBaseAddress(pixel!), 0, CVPixelBufferGetBytesPerRow(pixel!) * 360)

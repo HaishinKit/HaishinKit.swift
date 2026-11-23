@@ -14,6 +14,7 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
     '-module-cache-path', File.join(directory, 'cache'), transfer,
     File.join(__dir__, 'VQMetrixTransferProbe.swift'), '-o', executable)
   servers = Array.new(6) { TCPServer.new('127.0.0.1', 0) }
+  marker = File.join(directory, 'active-request-ready')
   redirected = Queue.new
   redirect_thread = Thread.new do
     socket = servers[5].accept
@@ -42,7 +43,10 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
           raise 'Run ID changed' unless headers.downcase.include?('idempotency-key: 12345678-1234-1234-1234-123456789abc')
           length = headers[/Content-Length: (\d+)/i, 1].to_i
           raise 'Wrong body length' unless length == 131_072 && socket.read(length)&.bytesize == length
-          sleep 1 if index == 4
+          if index == 4
+            File.write(marker, 'ready')
+            Timeout.timeout(10) { sleep 0.01 until File.exist?(marker + '.cancelled') }
+          end
           body = case index
                  when 1 then '{}'
                  when 3 then '{"jobId":"12345678-1234-1234-1234-123456789abc","padding":"' + ('x' * 100_000) + '"}'
@@ -59,7 +63,7 @@ Dir.mktmpdir('vqmetrix-transfer-') do |directory|
       end
     end
   end
-  pid = Process.spawn(executable, *servers.map { |server| server.addr[1].to_s })
+  pid = Process.spawn(executable, *servers.map { |server| server.addr[1].to_s }, marker)
   begin
     _, status = Timeout.timeout(60) { Process.wait2(pid) }
     abort 'Transfer probe failed' unless status.success?

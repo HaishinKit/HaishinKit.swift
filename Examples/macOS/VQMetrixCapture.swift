@@ -10,7 +10,7 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
     private let lock = NSLock()
     private let context = CIContext()
     private var frames: [CVPixelBuffer] = []
-    private var lastTime = -Double.infinity
+    private var lastArrival: ContinuousClock.Instant?
     private var stopped = false
     private var failure: String?
     static let width = 640
@@ -21,11 +21,15 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
     func selectTrack(_ id: UInt8?, mediaType: CMFormatDescription.MediaType) async { }
     func mixer(_ mixer: MediaMixer, didOutput buffer: AVAudioPCMBuffer, when: AVAudioTime) { }
     func mixer(_ mixer: MediaMixer, didOutput sampleBuffer: CMSampleBuffer) {
+        append(sampleBuffer, at: .now)
+    }
+
+    /// Capture cadence follows callback arrival, independently of the source's timestamp timebase.
+    func append(_ sampleBuffer: CMSampleBuffer, at arrival: ContinuousClock.Instant) {
         lock.lock()
         defer { lock.unlock() }
-        let time = sampleBuffer.presentationTimeStamp.seconds
-        guard !stopped, frames.count < Self.count, time.isFinite,
-              time - lastTime >= 1.0 / Double(Self.fps) - 0.002,
+        guard !stopped, frames.count < Self.count,
+              lastArrival.map({ $0.duration(to: arrival) >= .seconds(1.0 / Double(Self.fps) - 0.002) }) ?? true,
               let source = sampleBuffer.imageBuffer else { return }
         var pixel: CVPixelBuffer?
         let attributes: [String: Any] = [kCVPixelBufferIOSurfacePropertiesKey as String: [:]]
@@ -45,7 +49,7 @@ final class VQMetrixCapture: MediaMixerOutput, @unchecked Sendable {
         context.render(resized, to: pixel, bounds: CGRect(x: 0, y: 0, width: Self.width, height: Self.height),
                        colorSpace: CGColorSpace(name: CGColorSpace.itur_709)!)
         frames.append(pixel)
-        lastTime = time
+        lastArrival = arrival
     }
 
     func progress() throws -> Int {
