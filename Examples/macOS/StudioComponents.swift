@@ -8,7 +8,7 @@ struct SessionStatus: View {
     var publishing = false
     var waiting = false
 
-    private var title: String {
+    var title: String {
         if waiting { return String(localized: "Waiting for sender") }
         if busy { return state == .open ? String(localized: "Stopping…") : String(localized: "Connecting…") }
         switch state {

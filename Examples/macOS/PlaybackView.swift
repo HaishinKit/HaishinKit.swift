@@ -8,14 +8,6 @@ struct PlaybackView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(localized: "A window into your stream.")).font(.title2.weight(.semibold))
-                        Text(String(localized: "Connect to a stream and watch it here.")).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    SessionStatus(state: model.readyState, busy: model.isBusy, waiting: model.isWaitingForSender)
-                }
                 ZStack {
                     PiPHKViewRepresentable(previewSource: model)
                     if model.readyState == .closed && !model.isBusy {
@@ -72,7 +64,7 @@ struct PlaybackView: View {
             .frame(minWidth: 280, idealWidth: 310, maxWidth: 360)
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .navigationTitle(String(localized: "Playback"))
+        .navigationTitle(String(localized: "Playback") + " · " + SessionStatus(state: model.readyState, busy: model.isBusy, waiting: model.isWaitingForSender).title)
         .onDisappear { model.stop(); model.discovery.stop() }
         .alert(String(localized: "Couldn't play stream"), isPresented: $model.isShowError) {
             Button(String(localized: "OK"), role: .cancel) { }

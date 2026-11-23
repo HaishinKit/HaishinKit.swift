@@ -103,7 +103,7 @@ struct SceneFileDocument: FileDocument, Sendable {
                     }
                 }
             }
-            if ["video", "text", "image", "asset"].contains(node.type), !node.children.isEmpty {
+            if ["video", "text", "image", "asset", "testSignal"].contains(node.type), !node.children.isEmpty {
                 throw SceneFileError(message: String(localized: "Only containers can contain child objects."))
             }
             for child in node.children { try visit(child, depth: depth + 1) }
@@ -128,6 +128,7 @@ enum SceneSnapshotCodec {
         case .text: type = "text"
         case .image: type = "image"
         case .video: type = "asset"
+        case .testSignal: type = TestSignalScreenObject.typeIdentifier
         case .group: type = "container"
         case .unsupported: type = basis?.type ?? "unsupported"
         }
@@ -150,7 +151,7 @@ enum SceneSnapshotCodec {
                 elements["looping"] = "true"
                 elements["videoGravity"] = "resizeAspectFill"
             }
-        case .group, .unsupported: break
+        case .testSignal, .group, .unsupported: break
         }
         return ScreenObjectSnapshot(
             type: type, id: layer.id, size: .init(width: Int(layer.width), height: Int(layer.height)), isVisible: layer.visible,
@@ -180,6 +181,7 @@ enum SceneSnapshotCodec {
             case "text": kind = .text
             case "image": kind = .image
             case "asset": kind = .video
+            case TestSignalScreenObject.typeIdentifier: kind = .testSignal
             case "screen", "container": kind = .group
             default: kind = .unsupported
             }
@@ -219,7 +221,7 @@ enum SceneSnapshotCodec {
     }
 
     static func containsUnsupported(_ node: ScreenObjectSnapshot) -> Bool {
-        !["screen", "container", "video", "text", "image", "asset"].contains(node.type)
+        !["screen", "container", "video", "text", "image", "asset", "testSignal"].contains(node.type)
             || node.children.contains(where: containsUnsupported)
     }
 

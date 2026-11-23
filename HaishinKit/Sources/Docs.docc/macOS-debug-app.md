@@ -59,7 +59,10 @@ Scenes and their layouts are restored the next time the app opens. Edits in anot
 window are detected before saving; reopen Publish to load the current version if a
 conflict is reported. Editing the current scene keeps existing video playback running.
 
-Use **Objects → Add** for capture input, text, an image, or a video file. Capture
+Use **Objects → Add** for capture input, a video-only test signal, text, an image,
+or a video file. The test signal is a shared example ScreenObject with color bars,
+a moving marker, and a frame counter. Its `testSignal` snapshot node is saved
+with the scene; readers without this example type retain it invisibly. Capture
 input uses the current camera or ScreenCaptureKit source on mixer track 0.
 Imported files are copied into scene-specific Application Support `HaishinKit/SceneWorkspaceMedia`
 directories so moving the original file does not break the scene. Video objects
@@ -70,7 +73,7 @@ objects. Editing either image dimension adjusts the other proportionally. Turn o
 **Keep image aspect ratio** in the inspector to test stretched image layouts.
 
 Select an object in the list or preview. Drag it to move, scroll or use the
-preview's plus/minus controls to resize, and use **Object inspector** for its
+selection's bottom-right handle to resize, and use **Object inspector** for its
 name, position, dimensions, text, font size, and color. Press Return or Apply
 to commit inspector edits. The top object in the list is drawn in front; use
 the arrows to change its order, the eye to hide it, and the duplicate or trash

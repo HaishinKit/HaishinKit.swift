@@ -89,7 +89,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        errorMessage = String(localized: "Bonjour search failed: \(errorDict). Check local network access in System Settings.")
+        errorMessage = String(localized: "Bonjour search failed: \(String(describing: errorDict)). Check local network access in System Settings.")
         self.browser = nil
         isBrowsing = false
     }
@@ -105,7 +105,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
-        errorMessage = String(localized: "Could not resolve \(sender.name): \(errorDict)")
+        errorMessage = String(localized: "Could not resolve \(sender.name): \(String(describing: errorDict))")
     }
 
     func netServiceDidPublish(_ sender: NetService) {
@@ -113,7 +113,7 @@ extension SRTBonjourDiscovery: @preconcurrency NetServiceBrowserDelegate, @preco
     }
 
     func netService(_ sender: NetService, didNotPublish errorDict: [String: NSNumber]) {
-        errorMessage = String(localized: "Bonjour announcement failed: \(errorDict)")
+        errorMessage = String(localized: "Bonjour announcement failed: \(String(describing: errorDict))")
         stopAdvertising()
     }
 }

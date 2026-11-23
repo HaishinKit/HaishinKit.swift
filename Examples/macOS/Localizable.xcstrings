@@ -81,16 +81,6 @@
         }
       }
     },
-    "A window into your stream.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ストリームをモニター"
-          }
-        }
-      }
-    },
     "AAC is widely supported. Opus offers better quality at low bitrates.": {
       "localizations": {
         "ja": {
@@ -634,16 +624,6 @@
         }
       }
     },
-    "Compose your scene, then go live.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シーンを整えて、配信を開始します。"
-          }
-        }
-      }
-    },
     "Composition size and output timing": {
       "localizations": {
         "ja": {
@@ -660,16 +640,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "構成"
-          }
-        }
-      }
-    },
-    "Connect to a stream and watch it here.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ストリームに接続して、映像と音声を確認します。"
           }
         }
       }
@@ -860,6 +830,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "送信元を検索するか、直接受信します"
+          }
+        }
+      }
+    },
+    "Drag the bottom-right handle to resize.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右下のハンドルをドラッグして拡大・縮小します。"
           }
         }
       }
@@ -1907,6 +1887,16 @@
         }
       }
     },
+    "Resize object": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オブジェクトのサイズを変更"
+          }
+        }
+      }
+    },
     "Resolution": {
       "localizations": {
         "ja": {
@@ -2388,6 +2378,16 @@
         }
       }
     },
+    "Test signal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト信号"
+          }
+        }
+      }
+    },
     "Text": {
       "localizations": {
         "ja": {
@@ -2581,12 +2581,12 @@
         }
       }
     },
-    "Use Return or Apply to save changes. Drag objects in the preview; scroll to resize.": {
+    "Use Return or Apply to save changes. Drag objects to move; drag the bottom-right handle to resize.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Returnまたは「適用」で保存します。プレビューでドラッグして移動し、スクロールで拡大・縮小できます。"
+            "value": "Returnまたは「適用」で保存します。オブジェクトをドラッグして移動し、右下のハンドルで拡大・縮小できます。"
           }
         }
       }
@@ -2787,16 +2787,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペース"
-          }
-        }
-      }
-    },
-    "Your broadcast, ready to go.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "配信の準備をしましょう"
           }
         }
       }

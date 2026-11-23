@@ -51,14 +51,6 @@ struct PublishView: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(localized: "Your broadcast, ready to go.")).font(.title2.weight(.semibold))
-                        Text(String(localized: "Compose your scene, then go live.")).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    SessionStatus(state: model.readyState, busy: model.isBusy, publishing: true)
-                }
                 StudioEditingPreview(source: model, editor: model.sceneEditor)
                 .frame(minHeight: 160)
                 .background(.black)
@@ -150,7 +142,7 @@ struct PublishView: View {
             .frame(minWidth: 280, idealWidth: 310, maxWidth: 360)
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .navigationTitle(String(localized: "Publish"))
+        .navigationTitle(String(localized: "Publish") + " · " + SessionStatus(state: model.readyState, busy: model.isBusy, publishing: true).title)
         .onAppear { model.startRunning(preference) }
         .onDisappear { model.stopRunning() }
         .task(id: sceneOpenRequest?.id) {

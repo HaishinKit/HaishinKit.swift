@@ -5,13 +5,14 @@ import SwiftUI
 
 struct StudioLayer: Codable, Identifiable, Equatable, Sendable {
     enum Kind: String, Codable, CaseIterable, Sendable {
-        case input, text, image, video, group, unsupported
+        case input, text, image, video, testSignal, group, unsupported
         var title: String {
             switch self {
             case .input: String(localized: "Capture input")
             case .text: String(localized: "Text")
             case .image: String(localized: "Image")
             case .video: String(localized: "Video")
+            case .testSignal: String(localized: "Test signal")
             case .group: String(localized: "Group")
             case .unsupported: String(localized: "Unsupported object")
             }
@@ -22,6 +23,7 @@ struct StudioLayer: Codable, Identifiable, Equatable, Sendable {
             case .text: "textformat"
             case .image: "photo"
             case .video: "film"
+            case .testSignal: "tv"
             case .group: "square.stack.3d.up"
             case .unsupported: "eye.slash"
             }
@@ -67,6 +69,7 @@ struct StudioScene: Codable, Identifiable, Equatable, Sendable {
 private final class StudioSceneRenderer {
     nonisolated init(mixer: MediaMixer) { self.mixer = mixer }
     private let mixer: MediaMixer
+    private let signalDelegate = TestSignalSceneDelegate()
     private var objects: [String: ScreenObject] = [:]
     private var effect: VideoEffectItem = .none
     private var effects: [String: VideoEffect] = [:]
@@ -96,11 +99,11 @@ private final class StudioSceneRenderer {
                     for node in Self.nodes(resolved) { replacementEffects[node.id] = effects[node.id] }
                     continue
                 }
-                guard let object = ScreenObjectFactory().make(resolved) else {
+                guard let object = ExampleScreenObjectFactory.make(resolved) else {
                     throw SceneFileError(message: String(localized: "Unsupported screen object: \(raw.type)"))
                 }
                 func validate(_ node: ScreenObjectSnapshot) throws {
-                    guard ["screen", "container", "video", "text", "image", "asset"].contains(node.type) else { return }
+                    guard ["screen", "container", "video", "text", "image", "asset", "testSignal"].contains(node.type) else { return }
                     if node.type == "image", (object.findById(node.id) as? ImageScreenObject)?.ciImage == nil {
                         throw CocoaError(.fileReadCorruptFile)
                     }
@@ -149,6 +152,7 @@ private final class StudioSceneRenderer {
             if let object = objects[layer.id] { apply(layer, to: object) }
             try screen.addChild(objects[layer.id])
         }
+        signalDelegate.attach(to: screen)
     }
 
     func imageAspectRatio(id: String) -> Double? {
@@ -257,6 +261,7 @@ private final class StudioSceneRenderer {
     }
 
     func suspend() {
+        signalDelegate.detach(from: mixer.screen)
         installedSceneID = nil
         objects.values.forEach { Self.stopAssets($0, snapshot: ScreenObjectSnapshotFactory().make($0)) }
     }
@@ -540,7 +545,7 @@ final class SceneEditorModel: ObservableObject {
             var committed = false
             defer { if !committed, let importedFile { try? FileManager.default.removeItem(at: importedFile) } }
             switch kind {
-            case .input:
+            case .input, .testSignal:
                 layer.width = 640
                 layer.height = 360
             case .text:

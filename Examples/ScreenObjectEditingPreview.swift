@@ -46,6 +46,19 @@ private final class PreviewSceneEditor {
     private var editingBounds: CGRect?
     private var previous: CGPoint?
     private var gestureStart: CGPoint?
+    #if os(macOS)
+    private struct CornerStart {
+        let id: String
+        let bounds: CGRect
+        let size: CGSize
+        let margin: NSEdgeInsets
+        let horizontal: ScreenObject.HorizontalAlignment
+        let vertical: ScreenObject.VerticalAlignment
+        let text: [String: String]?
+        var hasChanged = false
+    }
+    private var cornerStart: CornerStart?
+    #endif
     private var resizeEdit: (id: String, rendered: CGRect, requested: CGRect)?
 
     nonisolated init(mixer: MediaMixer, editAllObjects: Bool = false) {
@@ -122,10 +135,61 @@ private final class PreviewSceneEditor {
     }
 
     #if os(macOS)
-    func resize(id: String, scale: CGFloat) async {
-        let screen = await mixer.screen
-        guard let object = screen.findById(id), object.isVisible else { return }
-        resize(object, with: ScreenObjectEditor(screen: screen), scale: scale)
+    func resizeCorner(id: String, translation: CGSize, previewSize: CGSize, gravity: AVLayerVideoGravity, locksImageAspectRatio: Bool) async {
+        let screen = mixer.screen
+        guard let object = screen.findById(id), object.isVisible, object.parent != nil, object.parent?.parent == nil,
+            let coordinates = ScreenCoordinateTransform(screenSize: screen.size, previewSize: previewSize, videoGravity: gravity),
+            translation.width.isFinite, translation.height.isFinite else { return }
+        if cornerStart?.id != id {
+            let bounds = object.bounds.isEmpty ? object.makeBounds(object.size) : object.bounds
+            guard !bounds.isEmpty, !bounds.isInfinite else { return }
+            cornerStart = CornerStart(id: id, bounds: bounds, size: object.size, margin: object.layoutMargin,
+                horizontal: object.horizontalAlignment, vertical: object.verticalAlignment,
+                text: (object as? TextScreenObject)?.elements)
+        }
+        guard let start = cornerStart else { return }
+        let isAtStart = translation == .zero
+        guard !isAtStart || start.hasChanged else { return }
+        // Reapply a gesture's original geometry, so absolute drag translations never compound.
+        object.size = start.size
+        object.layoutMargin = start.margin
+        object.horizontalAlignment = start.horizontal
+        object.verticalAlignment = start.vertical
+        if let text = object as? TextScreenObject, let elements = start.text { text.elements = elements }
+        if isAtStart {
+            editingBounds = start.bounds
+            target = object
+            object.invalidateLayout()
+            return
+        }
+        cornerStart?.hasChanged = true
+        let zero = coordinates.toScreen(.zero)
+        let point = coordinates.toScreen(CGPoint(x: translation.width, y: translation.height))
+        let width = max(1, start.bounds.width + point.x - zero.x)
+        let height = max(1, start.bounds.height + point.y - zero.y)
+        let editor = ScreenObjectEditor(screen: screen)
+        if object is ImageScreenObject, !locksImageAspectRatio {
+            object.size = CGSize(width: min(8192, width), height: min(8192, height))
+            editor.move(object, to: start.bounds.origin, size: object.size)
+            editingBounds = object.makeBounds(object.size)
+        } else {
+            let denominator = start.bounds.width * start.bounds.width + start.bounds.height * start.bounds.height
+            var scale = (width * start.bounds.width + height * start.bounds.height) / denominator
+            if editAllObjects {
+                scale = min(scale, min(8192 / max(1, start.size.width), 8192 / max(1, start.size.height)))
+                if let font = (start.text?["fontSize"]).flatMap(Double.init), font > 0 { scale = min(scale, 1024 / CGFloat(font)) }
+            }
+            editingBounds = editor.transform(object, bounds: start.bounds, anchor: start.bounds.origin,
+                destination: start.bounds.origin, scale: max(0.01, scale))
+        }
+        object.invalidateLayout()
+        target = object
+    }
+
+    func finishCornerResize() {
+        cornerStart = nil
+        target = nil
+        editingBounds = nil
     }
     #endif
 
@@ -221,6 +285,7 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
 
     private let externalSelection: Binding<String?>?
     private let usesInspector: Bool
+    private let locksImageAspectRatio: Bool
     @State private var localFocus: String?
     private var focus: String? {
         get { if let externalSelection { return externalSelection.wrappedValue }; return localFocus }
@@ -242,6 +307,7 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
         onSwipe: @escaping (CGFloat) -> Void = { _ in },
         selection: Binding<String?>? = nil,
         usesInspector: Bool = false,
+        locksImageAspectRatio: Bool = true,
         @ViewBuilder preview: () -> Preview
     ) {
         _editor = State(initialValue: PreviewSceneEditor(mixer: mixer, editAllObjects: usesInspector))
@@ -249,6 +315,7 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
         self.onSwipe = onSwipe
         self.externalSelection = selection
         self.usesInspector = usesInspector
+        self.locksImageAspectRatio = locksImageAspectRatio
         self.preview = preview()
     }
 
@@ -303,17 +370,15 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
                         y: min(max(22, selection.bounds.minY), max(22, geometry.size.height - 22))
                     )
                     #if os(macOS)
-                    HStack(spacing: 0) {
-                        resizeButton("minus", label: "Shrink object", id: selection.id, scale: 1 / 1.2)
-                        resizeButton("plus", label: "Enlarge object", id: selection.id, scale: 1.2)
-                    }
-                    .position(
-                        x: min(max(44, selection.bounds.midX), max(44, geometry.size.width - 44)),
-                        y: resizeControlsY(for: selection.bounds, height: geometry.size.height)
-                    )
+                    cornerResizeHandle(id: selection.id, size: geometry.size)
+                        .position(
+                            x: min(max(12, selection.bounds.maxX), max(12, geometry.size.width - 12)),
+                            y: min(max(12, selection.bounds.maxY), max(12, geometry.size.height - 12))
+                        )
                     #endif
                 }
             }
+            .coordinateSpace(name: "scenePreview")
             .clipped()
             .task(id: SelectionTask(id: focus, size: geometry.size)) {
                 guard let focus else {
@@ -371,33 +436,34 @@ struct ScreenObjectEditingPreview<Preview: View>: View {
         }
         .onDisappear {
             inputTask?.cancel()
+            #if os(macOS)
+            Task { await editor.finishCornerResize() }
+            #endif
         }
     }
 
     #if os(macOS)
-    private func resizeButton(_ symbol: String, label: String, id: String, scale: CGFloat) -> some View {
-        Button {
-            enqueue { await editor.resize(id: id, scale: scale) }
-        } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.black)
-                .frame(width: 22, height: 22)
-                .background(.white, in: Circle())
+    private func cornerResizeHandle(id: String, size: CGSize) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(.white)
+                .frame(width: 11, height: 11)
+                .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Color.accentColor, lineWidth: 2))
                 .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-
-    private func resizeControlsY(for bounds: CGRect, height: CGFloat) -> CGFloat {
-        let below = bounds.maxY + 22
-        if below <= height - 22 {
-            return below
-        }
-        return max(22, bounds.minY - 44)
+        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+        .help(String(localized: "Drag the bottom-right handle to resize."))
+        .accessibilityLabel(String(localized: "Resize object"))
+        .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("scenePreview"))
+            .onChanged { value in
+                let translation = value.translation
+                enqueue {
+                    await editor.resizeCorner(id: id, translation: translation, previewSize: size,
+                        gravity: gravity, locksImageAspectRatio: locksImageAspectRatio)
+                }
+            }
+            .onEnded { _ in enqueue { await editor.finishCornerResize() } })
     }
     #endif
 

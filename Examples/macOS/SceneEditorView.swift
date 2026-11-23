@@ -18,7 +18,7 @@ struct StudioEditingPreview: View {
     var body: some View {
         ScreenObjectEditingPreview(
             mixer: source.mixer, gravity: .resizeAspect, selection: $editor.selectedObjectID,
-            usesInspector: true
+            usesInspector: true, locksImageAspectRatio: editor.selectedLayer?.imageAspectRatioLocked ?? true
         ) {
             GeometryReader { geometry in
                 let ratio = CGFloat(editor.scene.canvasWidth ?? 1280) / CGFloat(editor.scene.canvasHeight ?? 720)
@@ -112,6 +112,7 @@ struct SceneEditorView: View {
                     if model.busy { ProgressView().controlSize(.small) }
                     Menu {
                         Button(String(localized: "Capture input"), systemImage: "video") { model.addLayer(.input) }
+                        Button(String(localized: "Test signal"), systemImage: "tv") { model.addLayer(.testSignal) }
                         Button(String(localized: "Text"), systemImage: "textformat") { model.addLayer(.text) }
                         Button(String(localized: "Image file…"), systemImage: "photo") {
                             importKind = .image
@@ -286,7 +287,7 @@ struct SceneObjectInspector: View {
                     }
                     Button(String(localized: "Apply text")) { apply() }.disabled(model.busy)
                 }
-                Text(String(localized: "Use Return or Apply to save changes. Drag objects in the preview; scroll to resize."))
+                Text(String(localized: "Use Return or Apply to save changes. Drag objects to move; drag the bottom-right handle to resize."))
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Text(String(localized: "Select an object in the list or preview.")).font(.callout).foregroundStyle(.secondary)

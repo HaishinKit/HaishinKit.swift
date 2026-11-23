@@ -70,22 +70,8 @@ final class TVTestSignal {
                 bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(image),
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
         else { return nil }
-        context.translateBy(x: 0, y: CGFloat(height))
-        context.scaleBy(x: 1, y: -1)
-        let colors: [UIColor] = [.white, .yellow, .cyan, .green, .magenta, .red, .blue, .black]
-        for (index, color) in colors.enumerated() {
-            context.setFillColor(color.cgColor)
-            context.fill(CGRect(x: index * width / 8, y: 0, width: width / 8, height: height))
-        }
-        context.setFillColor(UIColor.black.withAlphaComponent(0.85).cgColor)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: 140))
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(CGRect(x: Int(frame * 9 % Int64(width - 24)), y: 150, width: 24, height: height - 160))
-        UIGraphicsPushContext(context)
-        ("HaishinKit  •  720p30  •  frame \(frame)\nStereo test tone: L 440 Hz / R 880 Hz" as NSString).draw(
-            in: CGRect(x: 30, y: 20, width: width - 60, height: 110),
-            withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 30, weight: .medium), .foregroundColor: UIColor.white])
-        UIGraphicsPopContext()
+        TestSignalPattern.draw(in: context, width: width, height: height, frame: frame,
+            subtitle: "Stereo test tone: L 440 Hz / R 880 Hz")
         var description: CMVideoFormatDescription?
         guard CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: image, formatDescriptionOut: &description) == noErr,
             let description
