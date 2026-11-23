@@ -44,10 +44,12 @@ Support for AV1 is planned to be implemented once the hardware becomes compatibl
 - [ ] Defining Additional Video Codecs
   - [ ] Publish
     - [x] HEVC
+    - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
     - [ ] AV1
   - [ ] Playback
     - [x] HEVC
+    - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
     - [ ] AV1
 - [x] [Extending NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md#extending-netconnection-connect-command)
