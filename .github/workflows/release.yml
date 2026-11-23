@@ -42,8 +42,12 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
-      - name: Build and verify ad-hoc signed Apple Silicon macOS example
-        run: bundle exec fastlane macos_example "version:$RELEASE_VERSION"
+      - name: Validate update feed checks
+        run: /usr/bin/ruby fastlane/tests/macos_update_feed_test.rb
+      - name: Build, verify and sign Apple Silicon macOS updates
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: bundle exec fastlane macos_example "version:$RELEASE_VERSION" updates:true
       - name: Upload macOS example to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,11 +60,19 @@ jobs:
             exit 1
           fi
           if ! gh release view "$RELEASE_VERSION" > /dev/null 2>&1; then
-            gh release create "$RELEASE_VERSION" --verify-tag --draft \
+            release_flags=()
+            if [[ "$RELEASE_VERSION" == *-* ]]; then release_flags+=(--prerelease); fi
+            gh release create "$RELEASE_VERSION" --verify-tag --draft "${release_flags[@]}" \
               --title "$RELEASE_VERSION" \
               --notes 'The macOS example ZIP supports Apple Silicon Macs running macOS 15.5 or later. It is ad-hoc signed, without Developer ID signing or notarization; macOS may block it from opening. See .github/macos-release.md for details.'
           fi
-          gh release upload "$RELEASE_VERSION" "$archive" --clobber
+          assets=("$archive")
+          if [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            feed="build/macos-example/$RELEASE_VERSION/appcast.xml"
+            test -f "$feed"
+            assets+=("$feed")
+          fi
+          gh release upload "$RELEASE_VERSION" "${assets[@]}" --clobber
   build:
     runs-on: macos-26
     env:

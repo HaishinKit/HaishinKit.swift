@@ -146,6 +146,7 @@ struct MacSettingsView: View {
                 Text(String(localized: "Applied when the publisher opens. Audio Engine keeps microphone input separate from camera capture."))
                     .foregroundStyle(.secondary)
             }
+            Section { UpdateSettingsView() }
             Section(String(localized: "About")) {
 
                 LabeledContent(String(localized: "Library"), value: "HaishinKit.swift")

@@ -183,3 +183,14 @@ to validate, decode, and VMAF-evaluate those exact packages.
 Run `ruby Examples/Tests/vqmetrix_transfer.rb` to check cancellation before and
 during upload, task-registration races, retry IDs, bounded responses, redirects,
 and local-network URL validation against temporary local test servers.
+
+## Updates and licenses
+
+Choose **HaishinKit → Check for Updates…** to check GitHub Releases, or configure
+automatic checks and downloads under **Settings → App updates**. Installation
+uses signed update files; restart after finishing any active debug session.
+The first release containing this updater requires a manual installation.
+
+**Configuration → Licenses** contains searchable, selectable license text and
+source-availability notices for the components used by the app. These notices
+are available offline and follow the dependencies resolved for that build.

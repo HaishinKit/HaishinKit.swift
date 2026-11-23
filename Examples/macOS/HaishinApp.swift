@@ -11,11 +11,15 @@ let logger = LBLogger.with("com.haishinkit.HaishinKit.HaishinApp")
 struct HaishinApp: App {
     @State private var appearance = "system"
     @StateObject private var preference = PreferenceViewModel()
+    @StateObject private var updater = AppUpdater()
 
     var body: some Scene {
         WindowGroup("HaishinKit") {
-            ContentView(appearance: $appearance).environmentObject(preference)
+            ContentView(appearance: $appearance).environmentObject(preference).environmentObject(updater)
                 .preferredColorScheme(appearance == "light" ? .light : (appearance == "dark" ? .dark : nil))
+        }
+        .commands {
+            CommandGroup(after: .appInfo) { CheckForUpdatesButton(updater: updater) }
         }
         .defaultSize(width: 1180, height: 760)
         .windowResizability(.contentMinSize)

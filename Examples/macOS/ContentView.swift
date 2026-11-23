@@ -11,6 +11,7 @@ struct ContentView: View {
         case publish = "Publish"
         case settings = "Settings"
         case debug = "Debug"
+        case licenses = "Licenses"
 
         var id: Self { self }
         var icon: String {
@@ -19,6 +20,7 @@ struct ContentView: View {
             case .publish: return "dot.radiowaves.left.and.right"
             case .settings: return "slider.horizontal.3"
             case .debug: return "ladybug"
+            case .licenses: return "doc.text"
             }
         }
     }
@@ -49,6 +51,7 @@ struct ContentView: View {
                     Section(String(localized: "Configuration")) {
                         Label(LocalizedStringKey(Tab.settings.rawValue), systemImage: Tab.settings.icon).tag(Tab.settings)
                         Label(LocalizedStringKey(Tab.debug.rawValue), systemImage: Tab.debug.icon).tag(Tab.debug)
+                        Label(LocalizedStringKey(Tab.licenses.rawValue), systemImage: Tab.licenses.icon).tag(Tab.licenses)
                     }
                 }
                 .listStyle(.sidebar)
@@ -60,6 +63,7 @@ struct ContentView: View {
             case .publish: PublishView(sceneOpenRequest: $sceneOpenRequest)
             case .settings: MacSettingsView()
             case .debug: DebugView(appearance: $appearance)
+            case .licenses: LicensesView()
             }
         }
         .frame(minWidth: 900, minHeight: 620)

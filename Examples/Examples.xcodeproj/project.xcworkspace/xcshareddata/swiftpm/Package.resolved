@@ -1,6 +1,15 @@
 {
-  "originHash" : "31144980d2680fcd5c4aa5ba653549099144986fd50a6fe3496895b4d570837d",
+  "originHash" : "3fd4c13a205ee1f36be7796c7442aea93743f648ee133e21736cb218bfb4618d",
   "pins" : [
+    {
+      "identity" : "libaom-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/HaishinKit/libaom-xcframework.git",
+      "state" : {
+        "revision" : "b1a23d3ee24cd3ddbcb4627752c9efad87cca292",
+        "version" : "3.15.4"
+      }
+    },
     {
       "identity" : "libdatachannel-xcframework",
       "kind" : "remoteSourceControl",
@@ -20,6 +29,15 @@
       }
     },
     {
+      "identity" : "libvpx-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/HaishinKit/libvpx-xcframework.git",
+      "state" : {
+        "revision" : "538a0ca0dc96b637cfd579b10658c6bec5fba6a8",
+        "version" : "1.17.1"
+      }
+    },
+    {
       "identity" : "logboard",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/shogo4405/Logboard.git",
@@ -35,6 +53,15 @@
       "state" : {
         "revision" : "4ac3f9a68731cb3cf736a591814bad9a7a2008c8",
         "version" : "3.6.5000"
+      }
+    },
+    {
+      "identity" : "sparkle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sparkle-project/Sparkle",
+      "state" : {
+        "revision" : "ab7d71291238df6e0492143b120c9b696a35f603",
+        "version" : "2.10.1"
       }
     },
     {

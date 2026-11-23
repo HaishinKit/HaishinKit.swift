@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D08000012F00000000941209 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D08000022F00000000941209 /* Sparkle */; };
 		D07000022F00000000941209 /* TestSignalScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07000012F00000000941209 /* TestSignalScreenObject.swift */; };
 		D07000032F00000000941209 /* TestSignalScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07000012F00000000941209 /* TestSignalScreenObject.swift */; };
 		D07000042F00000000941209 /* TestSignalScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07000012F00000000941209 /* TestSignalScreenObject.swift */; };
@@ -225,6 +226,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D08000012F00000000941209 /* Sparkle in Frameworks */,
 				BCFE62912E7710D800941209 /* HaishinKit in Frameworks */,
 				BCFE62AC2E77179F00941209 /* SRTHaishinKit in Frameworks */,
 				CA0000022F00000000000002 /* VPXHaishinKit in Frameworks */,
@@ -400,6 +402,7 @@
 				BCFE627A2E770A9900941209 /* Sources */,
 				BCFE627B2E770A9900941209 /* Frameworks */,
 				BCFE627C2E770A9900941209 /* Resources */,
+				D08000062F00000000941209 /* Bundle License Notices */,
 			);
 			buildRules = (
 			);
@@ -410,6 +413,7 @@
 			);
 			name = "Example macOS";
 			packageProductDependencies = (
+				D08000022F00000000941209 /* Sparkle */,
 				BCFE62902E7710D800941209 /* HaishinKit */,
 				BCFE62A72E77179F00941209 /* RTCHaishinKit */,
 				BCFE62A92E77179F00941209 /* RTMPHaishinKit */,
@@ -461,6 +465,7 @@
 			);
 			mainGroup = 2945CBB31B4BE66000104112;
 			packageReferences = (
+				D08000052F00000000941209 /* Sparkle */,
 			);
 			productRefGroup = 2945CBBE1B4BE66000104112 /* Products */;
 			projectDirPath = "";
@@ -524,6 +529,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+        D08000062F00000000941209 /* Bundle License Notices */ = {
+            isa = PBXShellScriptBuildPhase;
+            buildActionMask = 2147483647;
+            inputPaths = ("$(SRCROOT)/scripts/generate-macos-licenses.rb", "$(SRCROOT)/../LICENSE.md", "$(HAISHINKIT_SOURCE_PACKAGES_DIR)/workspace-state.json", "$(HAISHINKIT_SOURCE_PACKAGES_DIR)/checkouts", "$(HAISHINKIT_SOURCE_PACKAGES_DIR)/artifacts",);
+            name = "Bundle License Notices";
+            outputPaths = ("$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ThirdPartyLicenses.json",);
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "/usr/bin/ruby \"${SRCROOT}/scripts/generate-macos-licenses.rb\" \"${SRCROOT}/..\" \"${HAISHINKIT_SOURCE_PACKAGES_DIR}\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ThirdPartyLicenses.json\"";
+        };
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		BC4B7DC82E86D06700973BD7 /* Sources */ = {
@@ -1096,6 +1114,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = macOS/HaishinApp.entitlements;
 				INFOPLIST_FILE = macOS/Info.plist;
+				HAISHINKIT_SOURCE_PACKAGES_DIR = "$(BUILD_DIR)/../../SourcePackages";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1145,6 +1164,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = macOS/HaishinApp.entitlements;
 				INFOPLIST_FILE = macOS/Info.plist;
+				HAISHINKIT_SOURCE_PACKAGES_DIR = "$(BUILD_DIR)/../../SourcePackages";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1236,7 +1256,12 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		D08000052F00000000941209 /* Sparkle */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/sparkle-project/Sparkle"; requirement = {kind = exactVersion; version = 2.10.1; }; };
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		D08000022F00000000941209 /* Sparkle */ = {isa = XCSwiftPackageProductDependency; package = D08000052F00000000941209 /* Sparkle */; productName = Sparkle; };
 		BC4B7DDF2E86D13C00973BD7 /* HaishinKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HaishinKit;

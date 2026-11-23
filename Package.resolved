@@ -1,5 +1,5 @@
 {
-  "originHash" : "5522712f730da50d270872d264eda666997d8a43f9e3db5340fc898ae174aa10",
+  "originHash" : "3fd4c13a205ee1f36be7796c7442aea93743f648ee133e21736cb218bfb4618d",
   "pins" : [
     {
       "identity" : "libaom-xcframework",
@@ -53,6 +53,15 @@
       "state" : {
         "revision" : "a3809db22a45e3ff658377a24da252982a306b9b",
         "version" : "3.6.3000"
+      }
+    },
+    {
+      "identity" : "sparkle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sparkle-project/Sparkle",
+      "state" : {
+        "revision" : "ab7d71291238df6e0492143b120c9b696a35f603",
+        "version" : "2.10.1"
       }
     },
     {

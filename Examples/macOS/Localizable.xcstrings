@@ -2840,6 +2840,126 @@
           }
         }
       }
+    },
+    "Check for Updates…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを確認…"
+          }
+        }
+      }
+    },
+    "App updates": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの更新"
+          }
+        }
+      }
+    },
+    "Updates from GitHub Releases": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub Releasesからのアップデート"
+          }
+        }
+      }
+    },
+    "Automatically check for updates": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動で確認"
+          }
+        }
+      }
+    },
+    "Download and install updates automatically": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動でダウンロード・インストール"
+          }
+        }
+      }
+    },
+    "Updates are verified before installation. Restart when you are ready to finish your current session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール前に更新ファイルを検証します。現在のセッションを終了できるタイミングで再起動してください。"
+          }
+        }
+      }
+    },
+    "Licenses": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス"
+          }
+        }
+      }
+    },
+    "This app includes the following open-source software. Original license and source-availability notices are included below.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアプリは以下のオープンソースソフトウェアを使用しています。ライセンス原文とソースコードの入手方法を確認できます。"
+          }
+        }
+      }
+    },
+    "License notices could not be loaded.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス情報を読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "Package version": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パッケージのバージョン"
+          }
+        }
+      }
+    },
+    "Source and project website": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースコード・プロジェクトのウェブサイト"
+          }
+        }
+      }
+    },
+    "Search licenses": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスを検索"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
