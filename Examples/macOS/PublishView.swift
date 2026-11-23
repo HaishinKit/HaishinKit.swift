@@ -38,6 +38,11 @@ enum VideoEffectItem: String, CaseIterable, Identifiable, Sendable {
 }
 
 struct PublishView: View {
+    @Binding var sceneOpenRequest: SceneOpenRequest?
+
+    init(sceneOpenRequest: Binding<SceneOpenRequest?> = .constant(nil)) {
+        _sceneOpenRequest = sceneOpenRequest
+    }
     @EnvironmentObject private var preference: PreferenceViewModel
     @StateObject private var model = PublishViewModel()
 
@@ -54,21 +59,19 @@ struct PublishView: View {
                     Spacer()
                     SessionStatus(state: model.readyState, busy: model.isBusy, publishing: true)
                 }
-                ScreenObjectEditingPreview(mixer: model.mixer, gravity: .resizeAspect) {
-                    MTHKViewRepresentable(previewSource: model)
-                }
+                StudioEditingPreview(source: model, editor: model.sceneEditor)
+                .frame(minHeight: 160)
                 .background(.black)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(0.5)))
                 HStack {
                     Label("Preview", systemImage: "viewfinder")
                     Spacer()
-                    Text("1280 × 720 · \(model.currentFPS.rawValue) fps")
+                    SceneCanvasCaption(editor: model.sceneEditor, frameRate: model.currentFPS.rawValue)
                         .monospacedDigit()
                 }.font(.callout).foregroundStyle(.secondary)
                 PublishMetricsPanel(model: model)
-                Text("Select an overlay in the preview to move or resize it.")
-                    .font(.callout).foregroundStyle(.secondary)
+                SceneEditorView(model: model.sceneEditor)
             }
             .padding(24)
             .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -79,6 +82,7 @@ struct PublishView: View {
                         StudioSection(title: "Destination", subtitle: "Where your broadcast goes") {
                             ConnectionFields().disabled(locked)
                         }
+                        SceneObjectInspector(model: model.sceneEditor)
                         ScreenSourceControls(source: model.screenCapture).disabled(model.captureIsStarting)
                         if AVCaptureDevice.authorizationStatus(for: .video) != .authorized {
                             Button("Request camera access") { model.requestCameraAccess(preference) }
@@ -107,6 +111,7 @@ struct PublishView: View {
                             Stepper("Audio: \(model.audioBitRate / 1000) kbps", value: $model.audioBitRate, in: 32_000...320_000, step: 16_000)
                             Toggle("Hardware encoding", isOn: $model.useHardwareEncoder)
                         }.disabled(locked)
+                        VQMetrixPanel(publisher: model)
                         if let issue = model.captureIssue {
                             Label(issue, systemImage: "exclamationmark.triangle")
                                 .font(.callout).foregroundStyle(.secondary)
@@ -138,6 +143,12 @@ struct PublishView: View {
         .navigationTitle("Publish")
         .onAppear { model.startRunning(preference) }
         .onDisappear { model.stopRunning() }
+        .task(id: sceneOpenRequest?.id) {
+            if let request = sceneOpenRequest {
+                await model.openSceneFileWhenReady(request.url)
+                if !Task.isCancelled, sceneOpenRequest?.id == request.id { sceneOpenRequest = nil }
+            }
+        }
         .onChange(of: model.currentFPS) { _, value in model.setFrameRate(value.frameRate) }
         .onChange(of: model.visualEffectItem) { _, value in model.setVisualEffet(value) }
         .alert("Couldn't publish", isPresented: $model.isShowError) {

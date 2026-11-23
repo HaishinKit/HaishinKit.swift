@@ -39,12 +39,13 @@ public final class VideoScreenObject: ScreenObject, ChromaKeyProcessable {
 
     override public var elements: [String: String] {
         get {
-            return [
-                Keys.track: track.description
-            ]
+            var values = [Keys.track: track.description]
+            if videoGravity != .resizeAspect { values["videoGravity"] = videoGravity.snapshotValue }
+            return values
         }
         set {
             track = UInt8(newValue[Keys.track]?.description ?? "0") ?? 0
+            videoGravity = .init(snapshotValue: newValue["videoGravity"] ?? videoGravity.snapshotValue)
         }
     }
 

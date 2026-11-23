@@ -15,6 +15,11 @@ public struct ScreenObjectSnapshot: Codable, Sendable {
         /// The height of the rectangle.
         public let height: Int
 
+        public init(width: Int, height: Int) {
+            self.width = width
+            self.height = height
+        }
+
         public var cgSize: CGSize {
             return CGSize(width: width, height: height)
         }
@@ -38,6 +43,13 @@ public struct ScreenObjectSnapshot: Codable, Sendable {
         public let bottom: Int
         /// The inset from the right edge.
         public let right: Int
+
+        public init(top: Int = 0, left: Int = 0, bottom: Int = 0, right: Int = 0) {
+            self.top = top
+            self.left = left
+            self.bottom = bottom
+            self.right = right
+        }
     }
 
     /// Logical type of the screen object.
@@ -82,4 +94,26 @@ public struct ScreenObjectSnapshot: Codable, Sendable {
     /// This property represents the hierarchical structure of screen objects,
     /// allowing nested objects to be captured and reconstructed.
     public let children: [ScreenObjectSnapshot]
+
+    /// The corner radius in composition pixels. Missing values mean zero.
+    public let cornerRadius: Double?
+
+    /// Creates a serializable scene node without requiring a live renderer.
+    public init(
+        type: String, id: String, size: Size, isVisible: Bool = true,
+        layoutMargin: EdgeInsets = .init(), horizontalAlignment: Int = 0,
+        verticalAlignment: Int = 0, elements: [String: String] = [:],
+        children: [ScreenObjectSnapshot] = [], cornerRadius: Double? = nil
+    ) {
+        self.type = type
+        self.id = id
+        self.size = size
+        self.isVisible = isVisible
+        self.layoutMargin = layoutMargin
+        self.horizontalAlignment = horizontalAlignment
+        self.verticalAlignment = verticalAlignment
+        self.elements = elements
+        self.children = children
+        self.cornerRadius = cornerRadius
+    }
 }

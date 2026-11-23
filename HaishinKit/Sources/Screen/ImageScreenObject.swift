@@ -24,9 +24,22 @@ private enum ImageSourceFactory {
         switch url.scheme {
         case "data":
             return DataImageSource(url: url)
+        case "file":
+            return FileImageSource(url: url)
         default:
             throw ImageSourceError.unsupported
         }
+    }
+}
+
+private struct FileImageSource: ImageSource {
+    let url: URL
+
+    func toImage() throws -> CIImage {
+        guard let image = CIImage(contentsOf: url) else {
+            throw ImageSourceError.imageDecodingFailed
+        }
+        return image
     }
 }
 

@@ -2,13 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key><string>com.haishinkit.scene</string>
+            <key>UTTypeDescription</key><string>HaishinKit Scene</string>
+            <key>UTTypeConformsTo</key><array><string>public.zip-archive</string><string>public.content</string></array>
+            <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>scene</string></array></dict>
+        </dict>
+    </array>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key><string>HaishinKit Scene</string>
+            <key>CFBundleTypeRole</key><string>Editor</string>
+            <key>LSItemContentTypes</key><array><string>com.haishinkit.scene</string></array>
+        </dict>
+    </array>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>Discover and announce SRT debug streams on your local network.</string>
+    <string>Discover SRT debug streams and upload video quality samples to VQMetrix on your local network.</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_srt._udp</string>

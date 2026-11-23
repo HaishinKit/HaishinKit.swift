@@ -16,7 +16,7 @@ resolution, codec, video/audio target bitrates, and hardware encoding for the
 next publishing session. **Settings** contains audio format, bitrate mode, and
 low-latency options.
 
-The preview canvas is 1280 × 720; encoder output resolution is configured
+New scenes use a 1280 × 720 preview canvas; imported scenes retain their canvas size; encoder output resolution is configured
 separately. Target video bitrate is a setting, not a measured throughput value.
 Measured TX and send queue use transport reports where the selected protocol
 provides them. Output FPS is currently available for RTMP. A dash means a
@@ -30,6 +30,35 @@ default so video-only debugging does not open an audio device. Camera and
 microphone access must be granted before their capture devices are opened.
 **Stop sharing · Use camera** restores authorized camera capture. Sharing stops
 when the publishing view closes.
+
+## Edit scenes and screen objects
+
+The **Scenes** list stores independent compositions. Its action menu
+creates, duplicates, or deletes a scene; enter a name and press Return to rename
+it. Selecting another scene changes the preview and the outgoing composition.
+Scenes and their layouts are restored the next time the app opens. Edits in another
+window are detected before saving; reopen Publish to load the current version if a
+conflict is reported. Editing the current scene keeps existing video playback running.
+
+Use **Objects → Add** for capture input, text, an image, or a video file. Capture
+input uses the current camera or ScreenCaptureKit source on mixer track 0.
+Imported files are copied into scene-specific Application Support `HaishinKit/SceneWorkspaceMedia`
+directories so moving the original file does not break the scene. Video objects
+loop without supplying audio; microphone settings still control capture audio.
+
+Select an object in the list or preview. Drag it to move, scroll or use the
+preview's plus/minus controls to resize, and use **Object inspector** for its
+name, position, dimensions, text, font size, and color. Press Return or Apply
+to commit inspector edits. The top object in the list is drawn in front; use
+the arrows to change its order, the eye to hide it, and the duplicate or trash
+buttons to copy or remove it. The last scene cannot be deleted.
+
+Use **Scenes → Export scene file…** to save the current layout and media as a
+single `.scene` file. **Open scene file…**, or opening the file in Finder,
+restores it as a scene. Autosaved snapshots live in `HaishinKit/Scenes`; existing
+preferences are migrated on first launch. Camera/device permissions and network
+credentials are not part of a scene. Unsupported objects remain in the file and
+are invisible on platforms that cannot render them. See <doc:scene-files>.
 
 ## Receive SRT on the local network
 
@@ -73,3 +102,46 @@ MediaMTX server. WHIP selects Opus audio. MediaMTX setup and WebRTC network
 requirements are documented in the [MediaMTX reference](https://mediamtx.org/docs/features/publish-and-read).
 The example permits plain HTTP to support local test servers; configure secure
 transport and authentication separately for production applications.
+
+## Upload a VQMetrix comparison
+
+In **Publish → VQMetrix**, choose **Capture preview sample** while the preview is
+running. The app captures 45 composed frames, normalized to a 640 × 360,
+15 fps, limited-range BT.709 reference. Capture spacing uses a monotonic arrival
+clock; source timestamps do not control the sampling interval. It replays those exact pixels through
+an offline encoder using **Evaluation codec** and the **Encoder** video bitrate. Resolution,
+frame rate, codec, and hardware selection in the live encoder controls do not apply to
+this offline encoder. Audio is excluded, and this comparison does not measure
+network effects or the exact live encoded bitstream.
+
+Start **Receive** in VQMetrix, enter its base URL (for example,
+`http://127.0.0.1:8787`) and current four-digit connection code, then choose
+**Upload sample**. HTTP is intended for a trusted network and transmits the
+video and connection code without encryption. HTTP accepts private, link-local,
+or loopback IP addresses and `.local` names only. The app validates all resolved
+addresses for a `.local` name and sends to a validated address. HTTPS keeps the
+original hostname and uses system certificate validation. Redirects are rejected.
+
+The app submits a `vqmetrix.capture.v1` ZIP with the raw Y4M reference, encoded
+variant, frame map, and SHA-256 manifest. H.264/HEVC use MP4; AV1 uses
+libaom, and VP8/VP9 use libvpx, stored in IVF. The software codecs require
+Apple silicon and a VQMetrix receiver with IVF upload support. A successful upload displays the accepted
+job ID; evaluation results are available in VQMetrix. Failed uploads retain the
+same package and run ID for retry. Capturing another sample replaces the previous
+package; temporary files are removed when the panel is released. The connection
+code is not persisted.
+
+### Verify the producer
+
+On Apple silicon, run `ruby Examples/Tests/vqmetrix_capture.rb /tmp/vqmetrix-fixtures`
+with a new output directory. This feeds deterministic frames through the actual
+capture/package implementation for all five codecs without opening a camera,
+checks 15 fps sampling of 60 Hz arrivals with mismatched source timestamps,
+payload hashes and ZIP integrity, and retains the packages. In the updated
+VQMetrix checkout, run
+`VQMETRIX_MACOS_FIXTURES=/tmp/vqmetrix-fixtures swift test --filter actualMacOSProducerArchives`
+to validate, decode, and VMAF-evaluate those exact packages.
+
+Run `ruby Examples/Tests/vqmetrix_transfer.rb` to check cancellation before and
+during upload, task-registration races, retry IDs, bounded responses, redirects,
+and local-network URL validation against temporary local test servers.

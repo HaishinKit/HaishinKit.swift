@@ -25,6 +25,7 @@ final class PublishViewModel: ObservableObject {
     @Published private(set) var readyState: StreamSessionReadyState = .closed
     private(set) var mixer = MediaMixer(captureSessionMode: .multi)
     lazy var screenCapture = ScreenCaptureSource(mixer: mixer)
+    lazy var sceneEditor = SceneEditorModel(mixer: mixer)
     private var tasks: [Task<Void, Swift.Error>] = []
     private var telemetryTask: Task<Void, Never>?
     private var telemetry: PublishTelemetry?
@@ -33,8 +34,6 @@ final class PublishViewModel: ObservableObject {
     private var shutdownTask: Task<Void, Never>?
     private var session: (any StreamSession)?
     private var currentPosition: AVCaptureDevice.Position = .back
-    @ScreenActor private var currentVideoEffect: VideoEffect?
-    @ScreenActor private var didAddSampleOverlays = false
 
     func startPublishing(_ preference: PreferenceViewModel) {
         guard !isBusy, readyState == .closed else { return }
@@ -149,31 +148,8 @@ final class PublishViewModel: ObservableObject {
             captureIsStarting = true
             defer { captureIsStarting = false }
             captureIssue = await MacCaptureCoordinator.shared.activate(mixer, frameRate: currentFPS.frameRate, useAudioEngine: preference.audioCaptureMode == .audioEngine, microphoneEnabled: UserDefaults.standard.bool(forKey: "macos.capture.microphoneEnabled"))
-        }
-        Task { @ScreenActor in
-            await mixer.screen.size = .init(width: 1280, height: 720)
-            await mixer.screen.backgroundColor = NSColor.black.cgColor
-            guard !didAddSampleOverlays else { return }
-            didAddSampleOverlays = true
-
-            let assetScreenObject = AssetScreenObject(id: "example-overlay-video")
-            assetScreenObject.isLooping = true
-            assetScreenObject.size = .init(width: 180, height: 180)
-            assetScreenObject.layoutMargin = .init(top: 16, left: 16, bottom: 0, right: 0)
-            try? assetScreenObject.startReading(AVURLAsset(url: URL(fileURLWithPath: Bundle.main.path(forResource: "SampleVideo_360x240_5mb", ofType: "mp4") ?? "")))
-            try? await mixer.screen.addChild(assetScreenObject)
-
-            let image = ImageScreenObject(id: "example-overlay-image")
-            image.size = .init(width: 120, height: 120)
-            image.horizontalAlignment = .right
-            image.verticalAlignment = .bottom
-            image.layoutMargin = .init(top: 0, left: 0, bottom: 16, right: 16)
-            let appIconFile = URL(fileURLWithPath: Bundle.main.path(forResource: "AppIcon", ofType: "png") ?? "")
-            if let nsImage = NSImage(contentsOf: appIconFile), let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                let ciImage = CIImage(cgImage: cgImage)
-                image.ciImage = ciImage
-            }
-            try? await mixer.screen.addChild(image)
+            guard !Task.isCancelled else { return }
+            await sceneEditor.start()
         }
     }
 
@@ -183,6 +159,13 @@ final class PublishViewModel: ObservableObject {
             stopRunning()
             startRunning(preference)
         }
+    }
+
+    func openSceneFileWhenReady(_ url: URL) async {
+        await startupTask?.value
+        while (captureIsStarting || sceneEditor.busy) && !Task.isCancelled { try? await Task.sleep(for: .milliseconds(20)) }
+        guard !Task.isCancelled else { return }
+        sceneEditor.openSceneFile(url)
     }
 
     func stopRunning() {
@@ -198,6 +181,7 @@ final class PublishViewModel: ObservableObject {
             telemetryTask = nil
             networkReport = nil
             measuredFPS = nil
+            await sceneEditor.stop()
             await screenCapture.stop(restoreCamera: false)
             try? await session?.close()
             await MacCaptureCoordinator.shared.deactivate(mixer)
@@ -210,16 +194,7 @@ final class PublishViewModel: ObservableObject {
     }
 
     func setVisualEffet(_ videoEffect: VideoEffectItem) {
-        Task { @ScreenActor in
-            if let currentVideoEffect {
-                _ = await mixer.screen.unregisterVideoEffect(currentVideoEffect)
-                self.currentVideoEffect = nil
-            }
-            if let videoEffect = videoEffect.makeVideoEffect() {
-                currentVideoEffect = videoEffect
-                _ = await mixer.screen.registerVideoEffect(videoEffect)
-            }
-        }
+        sceneEditor.setEffect(videoEffect)
     }
 
     func setFrameRate(_ fps: Float64) {
