@@ -75,8 +75,7 @@ final class PublishViewModel: ObservableObject {
             measuredFPS = nil
             activeEncodingDescription = nil
             session = nil
-            await makeSession(preference)
-            guard let session, !Task.isCancelled else { return }
+            guard await makeSession(preference), let session, !Task.isCancelled else { return }
             do {
                 try await session.connect {
                     Task { @MainActor in
@@ -106,14 +105,14 @@ final class PublishViewModel: ObservableObject {
         }
     }
 
-    func makeSession(_ preference: PreferenceViewModel) async {
+    func makeSession(_ preference: PreferenceViewModel) async -> Bool {
         // Make session.
         do {
             session = try await StreamSessionBuilderFactory.shared.make(preference.makeURL())
                 .setMode(.publish)
                 .build()
             guard let session else {
-                return
+                return false
             }
             await mixer.addOutput(session.stream)
             let telemetry = PublishTelemetry()
@@ -138,6 +137,7 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
         do {
             if let session {
@@ -148,6 +148,7 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
         do {
             if let session {
@@ -164,7 +165,9 @@ final class PublishViewModel: ObservableObject {
         } catch {
             self.error = error
             isShowError = true
+            return false
         }
+        return true
     }
 
     func startRunning(_ preference: PreferenceViewModel) {

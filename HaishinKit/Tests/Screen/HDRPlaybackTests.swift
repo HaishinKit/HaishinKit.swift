@@ -90,7 +90,6 @@ import Testing
     }
 
     private func renderPixel(_ image: CIImage, in view: MTHKView) throws -> [Float] {
-        let layer = try #require(view.layer as? CAMetalLayer)
         let device = try #require(view.device)
         let queue = try #require(device.makeCommandQueue())
         let command = try #require(queue.makeCommandBuffer())
@@ -101,9 +100,8 @@ import Testing
         let texture = try #require(device.makeTexture(descriptor: descriptor))
         let readback = try #require(device.makeBuffer(length: 256, options: .storageModeShared))
         let destination = CIRenderDestination(width: width, height: height, pixelFormat: view.colorPixelFormat, commandBuffer: command, mtlTextureProvider: { texture })
-        destination.colorSpace = try #require(layer.colorspace)
         let context = CIContext(mtlDevice: device, options: [.workingFormat: CIFormat.RGBAh.rawValue])
-        let task = try context.startTask(toRender: image, to: destination)
+        let task = try view.startRendering(image, to: destination, using: context)
         let blit = try #require(command.makeBlitCommandEncoder())
         blit.copy(
             from: texture, sourceSlice: 0, sourceLevel: 0,

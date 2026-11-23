@@ -30,7 +30,8 @@ final class ScreenRendererByGPU: ScreenRenderer {
     init(dynamicRangeMode: DynamicRangeMode) {
         self.dynamicRangeMode = dynamicRangeMode
         context = dynamicRangeMode.makeCIContext()
-        if let colorSpace = dynamicRangeMode.colorSpace {
+        // HDR scenes can contain SDR and HLG inputs; preserve each source's colorimetry.
+        if dynamicRangeMode == .sdr, let colorSpace = dynamicRangeMode.colorSpace {
             imageOptions = [.colorSpace: colorSpace]
         } else {
             imageOptions = nil

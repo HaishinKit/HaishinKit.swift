@@ -105,13 +105,17 @@ public class MTHKView: MTKView {
                 return currentDrawable.texture
             })
 
-        if let outputColorSpace {
-            destination.colorSpace = outputColorSpace
-        }
-        _ = try? context.startTask(toRender: scaledImage, to: destination)
+        _ = try? startRendering(scaledImage, to: destination, using: context)
 
         commandBuffer.present(currentDrawable)
         commandBuffer.commit()
+    }
+
+    func startRendering(_ image: CIImage, to destination: CIRenderDestination, using context: CIContext) throws -> CIRenderTask {
+        if let outputColorSpace {
+            destination.colorSpace = outputColorSpace
+        }
+        return try context.startTask(toRender: image, to: destination)
     }
 
     /// Registers a video effect.
