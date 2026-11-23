@@ -24,9 +24,6 @@ Sponsor: [$50 per month](https://github.com/sponsors/shogo4405): Technical suppo
 - **Optional codecs (development)** [VPXHaishinKit](VPXHaishinKit/Sources/Docs.docc/index.md) provides standalone software VP8/VP9 conversion. Integration with streams is not included.
 - **Screen Capture** ✨Supports ReplayKit(iOS) and ScreenCaptureKit(macOS) api.
 - **Video mixing** ✨Possible to display any text or bitmap on a video during broadcasting or viewing. This allows for various applications such as watermarking and time display.
-  |Publish|Playback|
-  |:---:|:---:|
-  |<img width="961" alt="" src="https://github.com/user-attachments/assets/aaf6c06f-d2de-43c1-a435-90907f370977">|<img width="849" alt="" src="https://github.com/user-attachments/assets/0a07b418-aa56-41cb-8e6d-e12596b25ae8">|
 
 ## 🌏 Requirements
 
@@ -58,6 +55,12 @@ The package declares Swift tools version 6.0. CI uses Xcode 26.6 for testing and
 - Reference implementation app for live streaming `publish` and `playback`.
 - If an issue occurs, please check whether it also happens in the examples app.
 - [Apple TV studio](Examples/tvOS/README.md): Bonjour SRT send/receive, test signals, and Continuity Camera (tvOS 17+).
+
+The macOS example below publishes a test-signal ScreenObject and receives it over SRT, without a camera.
+
+| Publish (macOS) | Playback (macOS) |
+|:---:|:---:|
+| <img width="640" alt="macOS Publish showing a test-signal ScreenObject, scene controls, and MediaMixer settings during SRT streaming" src=".github/images/macos-publish.png"> | <img width="640" alt="macOS Playback receiving the test signal over SRT with receive statistics" src=".github/images/macos-playback.png"> |
 
 #### 🧭 Run
 
