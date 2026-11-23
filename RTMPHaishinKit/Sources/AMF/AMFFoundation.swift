@@ -61,6 +61,9 @@ extension AMFArray: ExpressibleByArrayLiteral {
                 return i < data.count ? data[i] : kAMFUndefined
             }
             if let i: String = i as? String {
+                if let value = dict[i] {
+                    return value
+                }
                 if let i = Int(i) {
                     return i < data.count ? data[i] : kAMFUndefined
                 }
@@ -76,6 +79,10 @@ extension AMFArray: ExpressibleByArrayLiteral {
                 data[i] = newValue
             }
             if let i = i as? String {
+                if dict.index(forKey: i) != nil, Int(i) != nil {
+                    dict.updateValue(newValue, forKey: i)
+                    return
+                }
                 if let i = Int(i) {
                     if data.count <= i {
                         data += [(any Sendable)?](repeating: kAMFUndefined, count: i - data.count + 1)
