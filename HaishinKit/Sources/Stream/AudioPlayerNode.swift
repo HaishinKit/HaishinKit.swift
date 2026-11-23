@@ -4,16 +4,16 @@ import Foundation
 final actor AudioPlayerNode {
     static let bufferCounts: Int = 10
 
-    var currentTime: TimeInterval {
+    var currentTime: TimeInterval? {
         if playerNode.isPlaying {
             guard
                 let nodeTime = playerNode.lastRenderTime,
                 let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
-                return 0.0
+                return nil
             }
             return TimeInterval(playerTime.sampleTime) / playerTime.sampleRate
         }
-        return 0.0
+        return nil
     }
     private(set) var isPaused = false
     private(set) var isRunning = false
