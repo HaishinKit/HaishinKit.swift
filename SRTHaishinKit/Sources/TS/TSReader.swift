@@ -100,7 +100,8 @@ final class TSReader {
     private func makeSampleBuffer(_ id: UInt16, forUpdate: Bool = false) -> CMSampleBuffer? {
         guard
             let data = esSpecData[id],
-            var pes = packetizedElementaryStreams[id], pes.isEntired || forUpdate else {
+            // A bounded PES that is not complete (packet loss) is dropped, not decoded.
+            var pes = packetizedElementaryStreams[id], pes.isEntired || (forUpdate && pes.packetLength == 0) else {
             return nil
         }
         defer {
@@ -144,7 +145,9 @@ final class TSReader {
     private func makeFormatDescription(_ data: ESSpecificData, pes: inout PacketizedElementaryStream) -> CMFormatDescription? {
         switch data.streamType {
         case .adtsAac:
-
+            guard pes.data.first == ADTSHeader.sync else {
+                return nil
+            }
             return ADTSHeader(data: pes.data).makeFormatDescription()
         case .h264, .h265:
             return nalUnitReader.makeFormatDescription(&pes.data, type: data.streamType)

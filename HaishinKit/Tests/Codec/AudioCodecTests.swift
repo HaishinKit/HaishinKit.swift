@@ -112,4 +112,59 @@ import Testing
             encoder.append(sampleBuffer)
         }
     }
+
+    @Test func pcm_dropsMalformedFramesWithoutCrash() throws {
+        // Shorter than an ADTS header, and longer than any AAC frame.
+        let decoder = try Self.decoder()
+        decoder.append(try Self.aacSampleBuffer(channels: 1, sampleSizes: [3, 4096]))
+    }
+
+    @Test func pcm_acceptsStereoFrameOver1024BytesWithoutCrash() throws {
+        let decoder = try Self.decoder()
+        decoder.append(try Self.aacSampleBuffer(channels: 2, sampleSizes: [1500]))
+    }
+
+    @Test func compressedBufferCopy_refusesLargerBuffer() throws {
+        let format = AVAudioFormat(cmAudioFormatDescription: try Self.aacFormatDescription(channels: 1))
+        let source = AVAudioCompressedBuffer(format: format, packetCapacity: 1, maximumPacketSize: 4096)
+        source.byteLength = 4096
+        let destination = AVAudioCompressedBuffer(format: format, packetCapacity: 1, maximumPacketSize: 1024)
+        #expect(!destination.copy(source))
+    }
+
+    private static func decoder() throws -> HaishinKit.AudioCodec {
+        let decoder = HaishinKit.AudioCodec()
+        decoder.settings.format = .pcm
+        decoder.startRunning()
+        return decoder
+    }
+
+    private static func aacFormatDescription(channels: UInt8) throws -> CMFormatDescription {
+        // ADTS header of AAC LC, 44.1 kHz.
+        let header = Data([0xFF, 0xF1, 0x50, channels << 6, 0x00, 0x1F, 0xFC])
+        return try #require(ADTSHeader(data: header).makeFormatDescription())
+    }
+
+    private static func aacSampleBuffer(channels: UInt8, sampleSizes: [Int]) throws -> CMSampleBuffer {
+        var sampleSizes = sampleSizes
+        let blockBuffer = try #require(Data(count: sampleSizes.reduce(0, +)).makeBlockBuffer())
+        var timing = CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: .zero, decodeTimeStamp: .invalid)
+        var sampleBuffer: CMSampleBuffer?
+        let status = CMSampleBufferCreate(
+            allocator: kCFAllocatorDefault,
+            dataBuffer: blockBuffer,
+            dataReady: true,
+            makeDataReadyCallback: nil,
+            refcon: nil,
+            formatDescription: try aacFormatDescription(channels: channels),
+            sampleCount: sampleSizes.count,
+            sampleTimingEntryCount: 1,
+            sampleTimingArray: &timing,
+            sampleSizeEntryCount: sampleSizes.count,
+            sampleSizeArray: &sampleSizes,
+            sampleBufferOut: &sampleBuffer
+        )
+        #expect(status == noErr)
+        return try #require(sampleBuffer)
+    }
 }
