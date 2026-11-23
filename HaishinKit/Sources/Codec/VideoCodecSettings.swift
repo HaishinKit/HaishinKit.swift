@@ -109,12 +109,18 @@ public struct VideoCodecSettings: Codable, Sendable {
     /// Specifies the bitRateMode.
     public var bitRateMode: BitRateMode
     /// Specifies the keyframeInterval.
+    ///
+    /// - Note: With a value of 2 at 30 fps, camera frames encoded with the default rate control got a keyframe about
+    ///   every 32 frames, not every 60, on an iPhone 14 Pro (iOS 27.0.1, 27.2) and an iPhone 15 (iOS 27.0.1). With
+    ///   ``isLowLatencyRateControlEnabled`` the iPhone 15 kept the 2 s interval.
     public var maxKeyFrameIntervalDuration: Int32
     /// Specifies the allowFrameRecording.
     public var allowFrameReordering: Bool? // swiftlint:disable:this discouraged_optional_boolean
     /// Specifies the dataRateLimits
     public var dataRateLimits: [Double]?
-    /// Specifies the low-latency opretaion for an encoder.
+    /// Specifies the low-latency rate control for an encoder.
+    ///
+    /// If VideoToolbox has no low-latency encoder, as on the iOS Simulator, the default rate control is used.
     public var isLowLatencyRateControlEnabled: Bool
     /// Specifies the hardware accelerated encoder is enabled(TRUE), or not(FALSE) for macOS.
     public var isHardwareAcceleratedEnabled: Bool
