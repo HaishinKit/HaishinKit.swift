@@ -103,6 +103,7 @@ try session.connect {
 
 - <doc:macOS-debug-app>
 - <doc:codec-support>
+- <doc:visionos-studio>
 
 ### Migration
 

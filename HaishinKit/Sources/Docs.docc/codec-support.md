@@ -11,7 +11,7 @@ include bundled AOM/VPX implementations or establish support in a streaming prot
 | iOS | Preference → Device codecs |
 | macOS | Settings → Device codecs |
 | tvOS | Settings → Settings tab → Device codecs |
-| visionOS | Device codecs above the playback view |
+| visionOS | Device codecs in the toolbar below the playback view |
 
 The screen has Video and Audio lists, separate encoding and decoding information,
 and expandable format identifiers. Refresh reads the current process's reported

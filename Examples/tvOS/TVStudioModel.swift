@@ -52,7 +52,7 @@ final class TVStudioModel: ObservableObject {
     var canStart: Bool { canConfigure && (direction == .receive || source == .test || cameraName != nil) }
     var requiredRole: TVBonjourDiscovery.Role { direction == .send ? .receiver : .source }
     var isActive: Bool { phase != .idle }
-    private let signal = TVTestSignal()
+    private let signal = ExampleTestSignal()
     private let microphone = TVMicrophoneCapture()
     private let playbackEngine = AVAudioEngine()
     private lazy var audioPlayer = AudioPlayer(audioEngine: playbackEngine)
