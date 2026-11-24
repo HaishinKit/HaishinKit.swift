@@ -3,18 +3,24 @@ import HaishinKit
 import SwiftUI
 
 struct PlaybackView: View {
+    #if !os(visionOS)
     @EnvironmentObject var preference: PreferenceViewModel
+    #endif
     @StateObject private var model = PlaybackViewModel()
 
     var body: some View {
         ZStack {
             VStack {
+                #if os(visionOS)
+                PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                #else
                 switch preference.viewType {
                 case .metal:
                     MTHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
                 case .pip:
                     PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
                 }
+                #endif
             }
 
             VStack {

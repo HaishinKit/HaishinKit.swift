@@ -34,6 +34,7 @@ The following features are available:
 ### Example applications
 
 - <doc:macOS-debug-app>
+- <doc:codec-support>
 
 ## 📖 Usage
 ### Live Mixing

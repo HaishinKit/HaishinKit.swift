@@ -50,6 +50,18 @@
 		BCFE62AC2E77179F00941209 /* SRTHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = BCFE62AB2E77179F00941209 /* SRTHaishinKit */; };
 		CA0000012F00000000000002 /* AOMHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA0000012F00000000000001 /* AOMHaishinKit */; };
 		CA0000022F00000000000002 /* VPXHaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA0000022F00000000000001 /* VPXHaishinKit */; };
+		D09100012F10000000941209 /* CodecSupportCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000012F10000000941209 /* CodecSupportCatalog.swift */; };
+		D09100022F10000000941209 /* CodecSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000022F10000000941209 /* CodecSupportView.swift */; };
+		D09100032F10000000941209 /* CodecSupport.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D09000032F10000000941209 /* CodecSupport.xcstrings */; };
+		D09100042F10000000941209 /* CodecSupportCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000012F10000000941209 /* CodecSupportCatalog.swift */; };
+		D09100052F10000000941209 /* CodecSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000022F10000000941209 /* CodecSupportView.swift */; };
+		D09100062F10000000941209 /* CodecSupport.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D09000032F10000000941209 /* CodecSupport.xcstrings */; };
+		D09100072F10000000941209 /* CodecSupportCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000012F10000000941209 /* CodecSupportCatalog.swift */; };
+		D09100082F10000000941209 /* CodecSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000022F10000000941209 /* CodecSupportView.swift */; };
+		D09100092F10000000941209 /* CodecSupport.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D09000032F10000000941209 /* CodecSupport.xcstrings */; };
+		D091000A2F10000000941209 /* CodecSupportCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000012F10000000941209 /* CodecSupportCatalog.swift */; };
+		D091000B2F10000000941209 /* CodecSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09000022F10000000941209 /* CodecSupportView.swift */; };
+		D091000C2F10000000941209 /* CodecSupport.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D09000032F10000000941209 /* CodecSupport.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +115,9 @@
 		BCD5C7F92E3F189700A69F16 /* ReplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReplayKit.framework; path = System/Library/Frameworks/ReplayKit.framework; sourceTree = SDKROOT; };
 		BCD916432D3A934400D30743 /* HaishinKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HaishinKit; path = ../; sourceTree = SOURCE_ROOT; };
 		BCFE627E2E770A9900941209 /* HaishinKit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HaishinKit.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D09000012F10000000941209 /* CodecSupportCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodecSupportCatalog.swift; sourceTree = "<group>"; };
+		D09000022F10000000941209 /* CodecSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodecSupportView.swift; sourceTree = "<group>"; };
+		D09000032F10000000941209 /* CodecSupport.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = CodecSupport.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -243,6 +258,9 @@
 			isa = PBXGroup;
 			children = (
 				BC9129382D12EA820077EFF3 /* Preference.swift */,
+				D09000012F10000000941209 /* CodecSupportCatalog.swift */,
+				D09000022F10000000941209 /* CodecSupportView.swift */,
+				D09000032F10000000941209 /* CodecSupport.xcstrings */,
 				D07000012F00000000941209 /* TestSignalScreenObject.swift */,
 				CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */,
 				BC912A762D12F0600077EFF3 /* Frameworks */,
@@ -502,6 +520,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100032F10000000941209 /* CodecSupport.xcstrings in Resources */,
 				CA05F96E2E3D248A002BCC93 /* AppIcon.png in Resources */,
 				CA05F96E2E3D248A002BCC94 /* SampleVideo_360x240_5mb.mp4 in Resources */,
 			);
@@ -511,6 +530,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100062F10000000941209 /* CodecSupport.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -518,6 +538,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100092F10000000941209 /* CodecSupport.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -525,6 +546,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D091000C2F10000000941209 /* CodecSupport.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,6 +578,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100022F10000000941209 /* CodecSupportView.swift in Sources */,
+				D09100012F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000022F00000000941209 /* TestSignalScreenObject.swift in Sources */,
 				BC05F96E2E3D248A002BCC92 /* Preference.swift in Sources */,
 				CA05F96E2E3D248A002BCC92 /* ScreenObjectEditingPreview.swift in Sources */,
@@ -566,6 +590,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100052F10000000941209 /* CodecSupportView.swift in Sources */,
+				D09100042F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000032F00000000941209 /* TestSignalScreenObject.swift in Sources */,
 				BC91298C2D12EB5E0077EFF3 /* Preference.swift in Sources */,
 			);
@@ -575,6 +601,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D09100082F10000000941209 /* CodecSupportView.swift in Sources */,
+				D09100072F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000042F00000000941209 /* TestSignalScreenObject.swift in Sources */,
 				BC8212662EB8FB5200419D06 /* Preference.swift in Sources */,
 			);
@@ -584,6 +612,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D091000B2F10000000941209 /* CodecSupportView.swift in Sources */,
+				D091000A2F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000052F00000000941209 /* TestSignalScreenObject.swift in Sources */,
 				BCFE628F2E7710A100941209 /* Preference.swift in Sources */,
 				CAFE628F2E7710A100941209 /* ScreenObjectEditingPreview.swift in Sources */,
