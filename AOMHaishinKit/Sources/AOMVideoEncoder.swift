@@ -12,6 +12,7 @@ public final class AOMVideoEncoder {
 
     private var context: OpaquePointer?
     private var formatDescription: CMFormatDescription
+    private var configuration: Data?
     private var settings: AOMVideoCodecSettings
     private var finished = false
     private var lastPTS: Int64?
@@ -81,7 +82,8 @@ public final class AOMVideoEncoder {
     /// zero, and strictly increasing at microsecond precision. An invalid duration
     /// uses the expected frame rate. Serialize calls with all other operations.
     /// - Parameter sampleBuffer: A caller-prepared I420 image sample with a presentation timestamp.
-    /// - Returns: Owned raw AV1 packets, with timing and keyframe attachments.
+    /// - Returns: Owned raw AV1 packets, with timing, keyframe attachments, and an
+    ///   `av1C` configuration atom in the format description for muxing.
     ///   Packet storage remains valid after later calls or invalidation.
     /// - Throws: ``AOMVideoCodecError`` for an unsupported image, invalid timestamp,
     ///   inactive session, or a codec failure.
@@ -144,7 +146,19 @@ public final class AOMVideoEncoder {
         var outputDuration: UInt = 0
         var keyframe: Int32 = 0
         while let bytes = hk_aom_encoder_next_packet(context, &size, &outputPTS, &outputDuration, &keyframe) {
-            guard let block = makeBlockBuffer(Data(bytes: bytes, count: size)) else {
+            let data = Data(bytes: bytes, count: size)
+            if keyframe != 0, let record = try AOMAV1Configuration.record(in: data), record != configuration {
+                var description: CMFormatDescription?
+                try checkStatus(CMVideoFormatDescriptionCreate(allocator: kCFAllocatorDefault,
+                    codecType: kCMVideoCodecType_AV1, width: Int32(width), height: Int32(height),
+                    extensions: [kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms: ["av1C": record]] as CFDictionary,
+                    formatDescriptionOut: &description))
+                guard let description else { throw AOMVideoCodecError.unsupportedFormat }
+                configuration = record
+                formatDescription = description
+            }
+            guard configuration != nil else { throw AOMVideoCodecError.unsupportedFormat }
+            guard let block = makeBlockBuffer(data) else {
                 throw AOMVideoCodecError.coreMedia(kCMBlockBufferStructureAllocationFailedErr)
             }
             var timing = CMSampleTimingInfo(

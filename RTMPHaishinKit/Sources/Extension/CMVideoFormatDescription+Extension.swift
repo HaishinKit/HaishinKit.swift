@@ -11,6 +11,8 @@ extension CMVideoFormatDescription {
             return atoms["avcC"] as? Data
         case .hevc:
             return atoms["hvcC"] as? Data
+        case let type where type.rawValue == kCMVideoCodecType_AV1:
+            return atoms["av1C"] as? Data
         default:
             return nil
         }

@@ -39,7 +39,7 @@ This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metada
 
 ## Supports Enhanced RTMP Status
 ### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
-AV1 playback uses the system VideoToolbox hardware decoder. The default connection advertises `av01` only when `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)` is true, and advertises decoding capability only. No software decoder or AV1 encoder is used by RTMPHaishinKit.
+AV1 playback uses the system VideoToolbox hardware decoder. The default connection advertises `av01` only when `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)` is true, and advertises decoding capability only. RTMPHaishinKit does not select a software decoder or encoder automatically.
 
 On a device without AV1 hardware decoding, incoming AV1 video is ignored while supported audio continues to play. The stream stays connected; an unsupported video codec does not stop audio playback.
 
@@ -49,13 +49,15 @@ The receive tests include 8-bit and 10-bit Main-profile samples. Verify playback
 
 See [AV1 playback and device support](https://docs.haishinkit.com/swift/latest/documentation/haishinkit/av1-playback) for model generations, official specifications, and the runtime capability check.
 
+For software AV1 encoding and publishing, see <doc:av1-publishing>.
+
 - [x] Enhancing onMetaData
 - [ ] Defining Additional Video Codecs
   - [ ] Publish
     - [x] HEVC
     - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
-    - [ ] AV1
+    - [x] AV1 (externally encoded samples, including AOMHaishinKit)
   - [ ] Playback
     - [x] HEVC
     - [x] HEVC Main10 HDR (HLG)

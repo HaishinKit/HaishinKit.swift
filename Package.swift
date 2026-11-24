@@ -116,7 +116,7 @@ let package = Package(
         ),
         .testTarget(
             name: "RTMPHaishinKitTests",
-            dependencies: ["RTMPHaishinKit"],
+            dependencies: ["RTMPHaishinKit", "AOMHaishinKit"],
             path: "RTMPHaishinKit/Tests",
             swiftSettings: swiftSettings
         ),

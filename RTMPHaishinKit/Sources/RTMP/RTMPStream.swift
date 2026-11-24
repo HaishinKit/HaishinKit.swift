@@ -769,12 +769,16 @@ extension RTMPStream: _Stream {
         outgoing.videoSettings = videoSettings
     }
 
+    /// Appends captured video or externally compressed video for publishing.
+    /// AV1 samples must include an `av1C` atom in their format description,
+    /// as provided by AOMHaishinKit, and use increasing presentation timestamps.
     public func append(_ sampleBuffer: CMSampleBuffer) {
         switch sampleBuffer.formatDescription?.mediaType {
         case .video:
             if sampleBuffer.formatDescription?.isCompressed == true {
                 do {
-                    let decodeTimeStamp = sampleBuffer.decodeTimeStamp.isValid ? sampleBuffer.decodeTimeStamp : sampleBuffer.presentationTimeStamp
+                    let isAV1 = sampleBuffer.formatDescription?.mediaSubType.rawValue == kCMVideoCodecType_AV1
+                    let decodeTimeStamp = !isAV1 && sampleBuffer.decodeTimeStamp.isValid ? sampleBuffer.decodeTimeStamp : sampleBuffer.presentationTimeStamp
                     let timedelta = try videoTimestamp.update(decodeTimeStamp)
                     frameCount += 1
                     videoFormat = sampleBuffer.formatDescription

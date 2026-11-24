@@ -13,15 +13,15 @@ struct RTMPTimestamp<T: RTMPTimeConvertible> {
         case invalidSequence
     }
 
-    private var startedAt = kRTMPTimestamp_defaultTimeInterval
+    private var startedAt: TimeInterval?
     private var updatedAt = kRTMPTimestamp_defaultTimeInterval
     private var timedeltaFraction: TimeInterval = kRTMPTimestamp_defaultTimeInterval
 
     mutating func update(_ value: T) throws -> UInt32 {
-        guard updatedAt < value.seconds else {
+        guard value.seconds.isFinite, value.seconds >= 0, startedAt == nil || updatedAt < value.seconds else {
             throw Error.invalidSequence
         }
-        if startedAt == 0 {
+        if startedAt == nil {
             startedAt = value.seconds
             updatedAt = value.seconds
             return 0
@@ -39,7 +39,7 @@ struct RTMPTimestamp<T: RTMPTimeConvertible> {
     mutating func update(_ message: some RTMPMessage, chunkType: RTMPChunkType) {
         switch chunkType {
         case .zero:
-            if startedAt == 0 {
+            if startedAt == nil {
                 startedAt = TimeInterval(message.timestamp) / 1000
                 updatedAt = TimeInterval(message.timestamp) / 1000
             } else {
@@ -51,7 +51,7 @@ struct RTMPTimestamp<T: RTMPTimeConvertible> {
     }
 
     mutating func clear() {
-        startedAt = kRTMPTimestamp_defaultTimeInterval
+        startedAt = nil
         updatedAt = kRTMPTimestamp_defaultTimeInterval
         timedeltaFraction = kRTMPTimestamp_defaultTimeInterval
     }

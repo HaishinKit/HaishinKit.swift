@@ -4,6 +4,16 @@ import Foundation
 import Testing
 
 @Suite struct RTMPTimestampTests {
+    @Test func acceptsZeroBasedFramesWithoutLosingTheFirstDelta() throws {
+        var timestamp = RTMPTimestamp<CMTime>()
+        #expect(try timestamp.update(.zero) == 0)
+        #expect(throws: RTMPTimestamp<CMTime>.Error.self) { try timestamp.update(.zero) }
+        #expect(try timestamp.update(CMTime(value: 1, timescale: 30)) == 33)
+        #expect(try timestamp.update(CMTime(value: 2, timescale: 30)) == 33)
+        timestamp.clear()
+        #expect(try timestamp.update(.zero) == 0)
+        #expect(try timestamp.update(CMTime(value: 1, timescale: 30)) == 33)
+    }
     @Test func updateCMTime() throws {
         let times: [CMTime] = [
             CMTime(value: 286340171565869, timescale: 1000000000),
