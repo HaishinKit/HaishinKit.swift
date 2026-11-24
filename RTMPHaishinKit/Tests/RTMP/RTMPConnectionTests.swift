@@ -271,6 +271,17 @@ import Testing
         #expect(await values.next() == nil)
     }
 
+    @Test func closedSocketCannotStartLater() async {
+        let socket = RTMPSocket()
+        await socket.close()
+        await #expect {
+            try await socket.connect("127.0.0.1", port: 19369)
+        } throws: { error in
+            if case RTMPSocket.Error.invalidState = error { return true }
+            return false
+        }
+    }
+
     private func silentServer() async throws -> (listener: NWListener, queue: DispatchQueue, peers: AsyncStream<NWConnection>, url: String) {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)

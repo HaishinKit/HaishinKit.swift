@@ -216,6 +216,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         return currentTransactionId
     }
 
+    private var connectionGeneration = UUID()
     private var connectingID: UUID?
     private var connectionTimeoutTask: Task<Void, Never>?
     private var socket: RTMPSocket?
@@ -343,6 +344,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         }
         let id = UUID()
         connectingID = id
+        connectionGeneration = id
         self.uri = uri
         self.arguments = arguments
         let secure = uri.scheme == "rtmps" || uri.scheme == "rtmpts"
@@ -424,7 +426,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             connectingID = nil
             return result
         } catch {
-            if connectingID == id { try? await close() }
+            if connectingID == id { try? await closeTransport() }
             if let socketError = error as? RTMPSocket.Error {
                 switch socketError {
                 case .connectionTimedOut: throw Error.connectionTimedOut
@@ -435,7 +437,9 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             if case Error.requestFailed(let response) = error,
                let status = response.status, status.code == Code.connectRejected.rawValue {
                 switch authenticator.makeCommand(command, status: status) {
-                case .success(let next): return try await connect(next, arguments: arguments)
+                case .success(let next):
+                    guard connectionGeneration == id, !Task.isCancelled else { throw CancellationError() }
+                    return try await connect(next, arguments: arguments)
                 case .failure: throw error
                 }
             }
@@ -458,6 +462,11 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Closes the connection from the server.
     public func close() async throws {
+        connectionGeneration = UUID()
+        try await closeTransport()
+    }
+
+    private func closeTransport() async throws {
         guard (uri != nil || readyState != .uninitialized), !isClosing else {
             throw Error.invalidState
         }
