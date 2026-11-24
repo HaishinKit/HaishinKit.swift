@@ -87,7 +87,7 @@ enum RTMPVideoFourCC: UInt32, CustomStringConvertible {
     var isSupported: Bool {
         switch self {
         case .av1:
-            return false
+            return true
         case .vp9:
             return false
         case .hevc:

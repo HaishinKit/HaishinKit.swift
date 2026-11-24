@@ -472,24 +472,39 @@ struct RTMPVideoMessage: RTMPMessage {
 
     // MARK: RTMPVideoMessage
     var isExHeader: Bool {
-        return (payload[0] & 0b10000000) != 0
+        return (payload.first ?? 0) & 0b10000000 != 0
     }
 
     var packetType: UInt8 {
+        guard payload.count >= 2 else { return 0xFF }
         return isExHeader ? payload[0] & 0b00001111 : payload[1]
     }
 
+    var videoFourCC: RTMPVideoFourCC? {
+        guard isExHeader, payload.count >= 5 else { return nil }
+        return RTMPVideoFourCC(rawValue: payload[1..<5].reduce(UInt32(0)) { ($0 << 8) | UInt32($1) })
+    }
+
     var isSupported: Bool {
-        return isExHeader ?
-            payload[1] == 0x68 && payload[2] == 0x76 && payload[3] == 0x63 && payload[4] == 0x31 :
-            payload[0] & 0b01110000 >> 4 == RTMPVideoCodec.avc.rawValue
+        guard payload.count >= 5 else { return false }
+        if isExHeader {
+            guard videoFourCC?.isSupported == true else { return false }
+            if videoFourCC == .av1 {
+                return packetType == RTMPVideoPacketType.sequenceStart.rawValue ||
+                    packetType == RTMPVideoPacketType.codedFrames.rawValue ||
+                    packetType == RTMPVideoPacketType.sequenceEnd.rawValue
+            }
+            return true
+        }
+        return payload[0] & 0b00001111 == RTMPVideoCodec.avc.rawValue
     }
 
     var compositionTime: Int32 {
-        if isExHeader && packetType != RTMPVideoPacketType.codedFrames.rawValue {
+        if videoFourCC == .av1 || (isExHeader && packetType != RTMPVideoPacketType.codedFrames.rawValue) {
             return 0
         }
         let offset = self.offset
+        guard payload.count >= 5 + offset else { return 0 }
         var compositionTime = Int32(data: [0] + payload[2 + offset..<5 + offset]).bigEndian
         compositionTime <<= 8
         compositionTime /= 256
@@ -497,7 +512,7 @@ struct RTMPVideoMessage: RTMPMessage {
     }
 
     private var offset: Int {
-        return isExHeader ? packetType == RTMPVideoPacketType.codedFrames.rawValue ? 3 : 0 : 0
+        return videoFourCC == .hevc && packetType == RTMPVideoPacketType.codedFrames.rawValue ? 3 : 0
     }
 
     init(_ header: RTMPChunkMessageHeader) {
@@ -558,6 +573,17 @@ struct RTMPVideoMessage: RTMPMessage {
     }
 
     func makeSampleBuffer(_ presentationTimeStamp: CMTime, formatDesciption: CMFormatDescription?) -> CMSampleBuffer? {
+        guard isSupported, let formatDesciption, payload.count > RTMPTagType.video.headerSize + offset else {
+            return nil
+        }
+        if videoFourCC == .av1 {
+            guard packetType == RTMPVideoPacketType.codedFrames.rawValue,
+                  formatDesciption.mediaSubType.rawValue == kCMVideoCodecType_AV1 else { return nil }
+        } else if isExHeader {
+            guard formatDesciption.mediaSubType == .hevc else { return nil }
+        } else {
+            guard formatDesciption.mediaSubType == .h264 else { return nil }
+        }
         var sampleBuffer: CMSampleBuffer?
         let blockBuffer = payload.makeBlockBuffer(advancedBy: RTMPTagType.video.headerSize + offset)
         var sampleSize = blockBuffer?.dataLength ?? 0
@@ -586,7 +612,11 @@ struct RTMPVideoMessage: RTMPMessage {
     }
 
     func makeFormatDescription() -> CMFormatDescription? {
+        guard isSupported else { return nil }
         if isExHeader {
+            if videoFourCC == .av1 {
+                return AV1DecoderConfigurationRecord(data: Data(payload.dropFirst(5)))?.makeFormatDescription()
+            }
             // hevc
             if payload[1] == 0x68 && payload[2] == 0x76 && payload[3] == 0x63 && payload[4] == 0x31 {
                 var config = HEVCDecoderConfigurationRecord()

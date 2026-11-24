@@ -29,12 +29,6 @@ The following features are available:
 - Session  
   - Provides a unified API for protocols such as RTMP, SRT, WHEP, and WHIP.  
 
-## Topics
-
-### Example applications
-
-- <doc:macOS-debug-app>
-
 ## 📖 Usage
 ### Live Mixing
 ```swift
@@ -100,6 +94,14 @@ try session.connect {
 ```
 
 ## Topics
+
+### Codec capabilities
+
+- <doc:av1-playback>
+
+### Example applications
+
+- <doc:macOS-debug-app>
 
 ### Migration
 

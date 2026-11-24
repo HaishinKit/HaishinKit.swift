@@ -35,7 +35,7 @@ final class PlaybackViewModel: ObservableObject {
         error = nil
     }
 
-    private var view: PiPHKView?
+    private var view: (any StreamOutput)?
     private var session: (any StreamSession)?
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
@@ -64,9 +64,13 @@ final class PlaybackViewModel: ObservableObject {
         }
     }
 
-    func makeSession() async {
+    func makeSession(_ url: URL?) async {
+        guard let url else {
+            hasError = true
+            return
+        }
         do {
-            session = try await StreamSessionBuilderFactory.shared.make(Preference.default.makeURL())
+            session = try await StreamSessionBuilderFactory.shared.make(url)
                 .setMode(.playback)
                 .build()
             await session?.setMaxRetryCount(0)
@@ -98,6 +102,11 @@ extension PlaybackViewModel: MTHKViewRepresentable.PreviewSource {
     // MARK: MTHKViewRepresentable.PreviewSource
     nonisolated func connect(to view: MTHKView) {
         Task { @MainActor in
+            if let previous = self.view {
+                await session?.stream.removeOutput(previous)
+            }
+            self.view = view
+            await session?.stream.addOutput(view)
         }
     }
 }
@@ -106,7 +115,11 @@ extension PlaybackViewModel: PiPHKViewRepresentable.PreviewSource {
     // MARK: PiPHKSwiftUiView.PreviewSource
     nonisolated func connect(to view: HaishinKit.PiPHKView) {
         Task { @MainActor in
+            if let previous = self.view {
+                await session?.stream.removeOutput(previous)
+            }
             self.view = view
+            await session?.stream.addOutput(view)
             if pictureInPictureController == nil {
                 pictureInPictureController = AVPictureInPictureController(contentSource: .init(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate()))
             }

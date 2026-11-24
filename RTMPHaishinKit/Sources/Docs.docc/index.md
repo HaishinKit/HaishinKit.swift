@@ -14,7 +14,7 @@ RTMPHaishinKit implements the RTMP protocol.
 - [x] Publish
   - H264, HEVC, AAC and OPUS support.
 - [x] Playback
-  - H264, HEVC and AAC support.
+  - H264, HEVC, AV1 (VideoToolbox hardware decoding) and AAC support.
 - [ ] Action Message Format
   - [x] AMF0
   - [ ] AMF3

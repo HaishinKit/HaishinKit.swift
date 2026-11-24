@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import HaishinKit
 import Network
+import VideoToolbox
 
 // MARK: -
 /// The RTMPConnection class create a two-way RTMP connection.
@@ -37,7 +38,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     /// The supported protocols are rtmp, rtmps, rtmpt and rtmps.
     public static let supportedProtocols: Set<String> = ["rtmp", "rtmps"]
     /// The supported fourCcList.
-    public static let supportedFourCcList = [RTMPVideoFourCC.hevc.description, RTMPAudioFourCC.opus.description]
+    public static let supportedFourCcList = [RTMPVideoFourCC.hevc.description, RTMPAudioFourCC.opus.description] +
+        (VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1) ? [RTMPVideoFourCC.av1.description] : [])
     /// The default RTMP port is 1935.
     public static let defaultPort: Int = 1935
     /// The default RTMPS port is 443.
@@ -57,9 +59,15 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         RTMPAudioFourCC.opus.description: FourCcInfoMask.canEncode.rawValue
     ]
     /// The supported video fourCc Information.
-    public static let supportedVideoFourCcInfoMap: AMFObject = [
-        RTMPVideoFourCC.hevc.description: FourCcInfoMask.canDecode.rawValue | FourCcInfoMask.canEncode.rawValue
-    ]
+    public static let supportedVideoFourCcInfoMap: AMFObject = {
+        var map: AMFObject = [
+            RTMPVideoFourCC.hevc.description: FourCcInfoMask.canDecode.rawValue | FourCcInfoMask.canEncode.rawValue
+        ]
+        if VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1) {
+            map[RTMPVideoFourCC.av1.description] = FourCcInfoMask.canDecode.rawValue
+        }
+        return map
+    }()
     private static let connectTransactionId = 1
 
     /**
