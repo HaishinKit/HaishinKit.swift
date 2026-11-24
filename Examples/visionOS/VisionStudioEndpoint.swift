@@ -32,7 +32,8 @@ nonisolated enum VisionStudioEndpoint {
             // Empty queries crash the transport's legacy query parser. Always supply
             // the explicit caller mode; listener/rendezvous belong to the tvOS studio.
             if modes.isEmpty {
-                parts.queryItems = (parts.queryItems ?? []) + [URLQueryItem(name: "mode", value: "caller")]
+                let query = parts.percentEncodedQuery ?? ""
+                parts.percentEncodedQuery = query.isEmpty ? "mode=caller" : query + "&mode=caller"
             }
             return parts.url
         default: return nil

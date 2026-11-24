@@ -5,7 +5,7 @@ struct RTMPURL {
 
     var streamName: String {
         let pathComponents = url.pathComponents.dropFirst(2)
-        if let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.query {
+        if let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedQuery {
             return pathComponents.joined(separator: "/") + "?" + query
         } else {
             return pathComponents.joined(separator: "/")
@@ -13,12 +13,16 @@ struct RTMPURL {
     }
 
     var command: String {
-        let target = "/" + streamName
-        let urlString = url.absoluteString
-        guard let range = urlString.range(of: target) else {
-            return urlString
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url.absoluteString
         }
-        return urlString.replacingOccurrences(of: target, with: "", options: [], range: range)
+        // An RTMP URL's first path component is the application; the remaining
+        // path and encoded query are the stream name. Never search in the host.
+        let application = components.percentEncodedPath.split(separator: "/").first
+        components.percentEncodedPath = application.map { "/" + $0 } ?? ""
+        components.percentEncodedQuery = nil
+        components.fragment = nil
+        return components.url?.absoluteString ?? url.absoluteString
     }
 
     init(url: URL) {

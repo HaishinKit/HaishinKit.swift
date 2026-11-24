@@ -23,4 +23,16 @@ import Testing
         #expect(url.streamName == "live?parameter")
         #expect(url.command == "rtmp://localhost/live")
     }
+    @Test func signedQueryAndHostnameAreSplitStructurally() throws {
+        let value = RTMPURL(url: try #require(URL(string: "rtmps://live.example.test/app/live?sig=a%2Fb%3D")))
+        #expect(value.command == "rtmps://live.example.test/app")
+        #expect(value.streamName == "live?sig=a%2Fb%3D")
+    }
+
+    @Test func encodedApplicationIsPreserved() throws {
+        let value = RTMPURL(url: try #require(URL(string: "rtmp://example.test/my%20app/stream")))
+        #expect(value.command == "rtmp://example.test/my%20app")
+        #expect(value.streamName == "stream")
+    }
+
 }

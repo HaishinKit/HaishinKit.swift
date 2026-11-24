@@ -22,6 +22,14 @@ struct VisionStudioEndpointChecks {
             precondition(rtmp.command == "\(scheme.lowercased())://example.test/live")
             precondition(rtmp.streamName == "stream?token=abc&expires=123")
         }
+        let signed = RTMPURL(url: make("rtmps://example.test/live", "stream?sig=a%2Fb%3D")!)
+        precondition(signed.command == "rtmps://example.test/live")
+        precondition(signed.streamName == "stream?sig=a%2Fb%3D")
+        let hostCollision = RTMPURL(url: make("rtmp://live.example.test/app", "live")!)
+        precondition(hostCollision.command == "rtmp://live.example.test/app")
+        precondition(hostCollision.streamName == "live")
+        let secret = make("srt://example.test:9710?passphrase=0123456789==&streamid=publish:abc=xyz")!
+        precondition(secret.absoluteString == "srt://example.test:9710?passphrase=0123456789==&streamid=publish:abc=xyz&mode=caller")
         let combined = RTMPURL(url: make("rtmp://example.test/live?auth=one", "stream?token=two")!)
         precondition(combined.command == "rtmp://example.test/live")
         precondition(combined.streamName == "stream?auth=one&token=two")

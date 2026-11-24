@@ -14,7 +14,7 @@ in `Examples/Examples.xcworkspace`.
 SRT socket options belong in the URL query. For example, a receiver connecting to
 an existing SRT listener can use `srt://192.168.1.10:9710?mode=caller`.
 This studio uses SRT caller connections only. Listener, rendezvous and local adapter
-binding are not supported here; use the tvOS studio for those roles.
+binding are not supported here. The tvOS studio also offers listener mode.
 
 ## Broadcast a test signal
 
