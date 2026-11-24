@@ -43,6 +43,7 @@ final class PlaybackViewModel: ObservableObject {
     private var sessionGeneration: UInt = 0
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
+    private let playbackDelegate = PlaybackDelegate()
 
     func start() async {
         guard let session else {
@@ -188,7 +189,7 @@ extension PlaybackViewModel: PiPHKViewRepresentable.PreviewSource {
     // MARK: PiPHKSwiftUiView.PreviewSource
     nonisolated func connect(to view: HaishinKit.PiPHKView) {
         Task { @MainActor in
-            let contentSource = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate())
+            let contentSource = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: view.layer, playbackDelegate: playbackDelegate)
             if let pictureInPictureController {
                 pictureInPictureController.contentSource = contentSource
             } else {

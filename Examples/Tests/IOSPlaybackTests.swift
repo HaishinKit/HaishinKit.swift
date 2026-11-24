@@ -63,6 +63,7 @@ struct IOSPlaybackTests {
         try await waitUntil { await session.testStream.contains(first) }
         if AVPictureInPictureController.isPictureInPictureSupported() {
             #expect(model.testedPiPLayer === first.layer)
+            #expect(model.testedPiPDelegate === model.testedPlaybackDelegate)
         }
         let metal = MTHKView(frame: .zero)
         model.connect(to: metal)
@@ -75,6 +76,7 @@ struct IOSPlaybackTests {
         #expect(await session.testStream.contains(metal) == false)
         if AVPictureInPictureController.isPictureInPictureSupported() {
             #expect(model.testedPiPLayer === second.layer)
+            #expect(model.testedPiPDelegate === model.testedPlaybackDelegate)
         }
         await model.makeSession(nil)
         #expect(await session.testStream.contains(second) == false)
@@ -92,6 +94,16 @@ struct IOSPlaybackTests {
         for scheme in ["rtmp", "rtmps"] {
             preferences.uri = "\(scheme)://localhost/live"
             #expect(preferences.makeURL()?.absoluteString == "\(scheme)://localhost/live/camera")
+            preferences.uri = "\(scheme)://localhost/live?token=t"
+            #expect(preferences.makeURL()?.absoluteString == "\(scheme)://localhost/live/camera?token=t")
+            preferences.streamName = "camera?quality=hd"
+            #expect(preferences.makeURL()?.absoluteString == "\(scheme)://localhost/live/camera?token=t&quality=hd")
+            preferences.uri = "\(scheme)://localhost/live"
+            #expect(preferences.makeURL()?.absoluteString == "\(scheme)://localhost/live/camera?quality=hd")
+            preferences.uri = "\(scheme)://localhost/live/camera?token=t#position"
+            preferences.streamName = ""
+            #expect(preferences.makeURL()?.absoluteString == preferences.uri)
+            preferences.streamName = "camera"
         }
         preferences.uri = "https://localhost/whep?token=test"
         #expect(preferences.makeURL()?.absoluteString == preferences.uri)

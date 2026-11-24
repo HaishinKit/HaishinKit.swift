@@ -155,9 +155,18 @@ final class PreferenceViewModel: ObservableObject {
     }
 
     func makeURL() -> URL? {
-        if let scheme = URL(string: uri)?.scheme, scheme == "rtmp" || scheme == "rtmps" {
-            return URL(string: uri + "/" + streamName)
+        guard var components = URLComponents(string: uri),
+              components.scheme == "rtmp" || components.scheme == "rtmps" else {
+            return URL(string: uri)
         }
-        return URL(string: uri)
+        guard !streamName.isEmpty else { return components.url }
+        let name = streamName.drop(while: { $0 == "/" })
+        guard let suffix = URLComponents(string: "/" + name) else { return nil }
+        components.percentEncodedPath += suffix.percentEncodedPath
+        let query = [components.percentEncodedQuery, suffix.percentEncodedQuery]
+            .compactMap { $0 }.joined(separator: "&")
+        components.percentEncodedQuery = query.isEmpty ? nil : query
+        components.percentEncodedFragment = suffix.percentEncodedFragment ?? components.percentEncodedFragment
+        return components.url
     }
 }

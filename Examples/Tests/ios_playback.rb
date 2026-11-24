@@ -20,6 +20,8 @@ Dir.mktmpdir('haishinkit-ios-playback-') do |directory|
       extension PlaybackViewModel {
           var testedSession: (any StreamSession)? { session }
           var testedPiPLayer: AVSampleBufferDisplayLayer? { pictureInPictureController?.contentSource?.sampleBufferDisplayLayer }
+          var testedPiPDelegate: (any AVPictureInPictureSampleBufferPlaybackDelegate)? { pictureInPictureController?.contentSource?.sampleBufferPlaybackDelegate }
+          var testedPlaybackDelegate: PlaybackDelegate { playbackDelegate }
       }
     SWIFT
   end
