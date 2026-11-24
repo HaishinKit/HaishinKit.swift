@@ -35,17 +35,16 @@ struct ImageScreenObjectTests {
 
     @Test func deletingAnOverlayReleasesTheCachedObject() throws {
         let screen = Screen()
-        var image: ImageScreenObject? = ImageScreenObject()
-        weak var deleted = image
+        weak var deleted: ImageScreenObject?
         do {
-            let overlay = try #require(image)
+            let overlay = ImageScreenObject()
+            deleted = overlay
             overlay.ciImage = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 20, height: 20))
             overlay.bounds = CGRect(x: 0, y: 0, width: 20, height: 20)
             try screen.addChild(overlay)
             screen.renderer.layout(overlay)
             screen.removeChild(overlay)
         }
-        image = nil
         #expect(deleted == nil)
     }
 
