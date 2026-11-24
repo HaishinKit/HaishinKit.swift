@@ -175,7 +175,6 @@
 			membershipExceptions = (
 				PlaybackView.swift,
 				PlaybackViewModel.swift,
-				PreferenceViewModel.swift,
 			);
 			target = BC7A0E3C2B088FA7005FB2F7 /* Example visionOS */;
 		};

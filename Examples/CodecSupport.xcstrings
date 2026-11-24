@@ -113,22 +113,6 @@
         }
       }
     },
-    "VideoToolbox lists encoder implementations and hardware decoding. Software decoding is not tested; no hardware report does not mean the codec cannot play.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VideoToolbox lists encoder implementations and hardware decoding. Software decoding is not tested; no hardware report does not mean the codec cannot play."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VideoToolboxのエンコーダー情報とハードウェアデコード対応を表示します。ソフトウェアデコードは未判定で、ハードウェアの報告がない場合も再生できる可能性があります。"
-          }
-        }
-      }
-    },
     "Encode": {
       "localizations": {
         "en": {
@@ -429,6 +413,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "シミュレーターの結果は実機の対応状況を示すものではありません。"
+          }
+        }
+      }
+    },
+    "VideoToolbox lists encoders. Hardware decoding is checked for selected common formats and encoder-listed formats only. Software decoding is not tested; other formats may still play.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VideoToolbox lists encoders. Hardware decoding is checked for selected common formats and encoder-listed formats only. Software decoding is not tested; other formats may still play."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VideoToolboxのエンコーダー情報を表示します。ハードウェアデコードの照会範囲は主な形式とエンコーダーが列挙された形式のみです。ソフトウェアデコードは未判定で、ほかの形式も再生できる可能性があります。"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー"
+          }
+        }
+      }
+    },
+    "Copied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー済み"
+          }
+        }
+      }
+    },
+    "Could not copy the report.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not copy the report."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果をコピーできませんでした。"
+          }
+        }
+      }
+    },
+    "tvOS does not provide a public clipboard API.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tvOS does not provide a public clipboard API."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tvOSには公開クリップボードAPIがありません。"
           }
         }
       }

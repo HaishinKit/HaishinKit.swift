@@ -15,18 +15,34 @@ include bundled AOM/VPX implementations or establish support in a streaming prot
 
 The screen has Video and Audio lists, separate encoding and decoding information,
 and expandable format identifiers. Refresh reads the current process's reported
-capabilities again. The capability queries do not open a camera, microphone, audio session or network connection.
+capabilities again while keeping the current list visible. The capability queries do not open a camera, microphone, audio session or network connection.
+
+## Copy a report
+
+On iOS, macOS and visionOS, **Copy** writes the complete Video and Audio report,
+including encoder implementation details, query errors, OS/platform information and
+interpretation limits, to the system clipboard. Both categories are copied even
+when only one is visible. Field labels use English so reports can be compared
+across app languages. Copying happens only when the button is pressed.
+
+The tvOS SDK does not expose a public clipboard API. That sample shows an
+explanation instead of a Copy action.
 
 ## VideoToolbox
 
 [VTCopyVideoEncoderList](https://developer.apple.com/documentation/videotoolbox/vtcopyvideoencoderlist(_:_:))
 returns registered encoder implementations. The inspector displays their names,
-identifiers and reported hardware/software classification. A missing acceleration
+identifiers and reported hardware/software classification. It requests
+`kVTVideoEncoderListOption_IncludeStandardDefinitionDVEncoders` so installed
+standard-definition DV encoders are included. A missing acceleration
 flag remains unspecified. Absence from a successful list is shown as **Not listed**;
 a failed query is shown as **Unknown**, with its error status.
 
 [VTIsHardwareDecodeSupported](https://developer.apple.com/documentation/videotoolbox/vtishardwaredecodesupported(_:))
-only answers the hardware-decoding question. A negative result does not rule out
+only answers the hardware-decoding question. The inspector queries seven selected
+common codec types (H.264, HEVC, AV1, VP9, ProRes 422, ProRes 4444 and JPEG), plus
+any types returned by encoder enumeration. This is not a complete decoder inventory;
+formats outside that set are not queried. A negative result does not rule out
 software decoding. The **Hardware decode** column therefore uses **Not reported**,
 not a general “codec unsupported” result. The inspector does not create decoding
 sessions with incomplete format descriptions, which could otherwise give false

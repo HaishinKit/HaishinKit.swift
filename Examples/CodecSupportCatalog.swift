@@ -47,7 +47,7 @@ struct CodecSupportReport: Sendable {
     let failures: [Failure]
 }
 
-enum CodecSupportCatalog {
+nonisolated enum CodecSupportCatalog {
     private static let videoNames: [(UInt32, String)] = [
         (fourCC("avc1"), "H.264 / AVC"), (fourCC("hvc1"), "H.265 / HEVC"),
         (fourCC("av01"), "AV1"), (fourCC("vp09"), "VP9"),
@@ -67,7 +67,8 @@ enum CodecSupportCatalog {
     static func read() -> CodecSupportReport {
         var failures: [CodecSupportReport.Failure] = []
         var list: CFArray?
-        let videoStatus = VTCopyVideoEncoderList(nil, &list)
+        let options = [kVTVideoEncoderListOption_IncludeStandardDefinitionDVEncoders as String: true] as CFDictionary
+        let videoStatus = VTCopyVideoEncoderList(options, &list)
         let records = list as? [[String: Any]] ?? []
         let videoAvailable = videoStatus == noErr && list != nil
         if !videoAvailable {
@@ -145,5 +146,54 @@ enum CodecSupportCatalog {
             return nil
         }
         return Set(values.prefix(Int(size) / MemoryLayout<UInt32>.size))
+    }
+}
+
+extension CodecSupportReport {
+    /// Stable English field labels make reports from different app locales comparable.
+    nonisolated func textReport(platform: String, osVersion: String, simulated: Bool) -> String {
+        var lines = [
+            "HaishinKit system codec report",
+            "Platform: \(platform)",
+            "OS: \(osVersion)",
+            "Runtime: \(simulated ? "Simulator (not a physical device report)" : "Native")",
+            "Device reports do not guarantee app, protocol, profile or resolution support.",
+            "Hardware decode is checked for common and encoder-listed formats only; this is not a complete decoder inventory.",
+            "Software video decoding and actual audio conversions are not tested.",
+            "", "[Video]"
+        ]
+        for codec in video {
+            lines.append("\(codec.name) (\(CodecSupportCatalog.formatCode(codec.id)))")
+            lines.append("  Encode: \(codec.encoding.reportLabel)")
+            lines.append("  Hardware decode: \(codec.hardwareDecode ? "Available" : "Not reported")")
+            for encoder in codec.encoders {
+                let kind: String
+                switch encoder.acceleration {
+                case .hardware: kind = "Hardware"
+                case .software: kind = "Software"
+                case .unspecified: kind = "Unspecified"
+                }
+                lines.append("  Encoder: \(encoder.name) | \(encoder.id) | \(kind)")
+            }
+        }
+        lines += ["", "[AudioConverter input/output formats]"]
+        for codec in audio {
+            lines.append("\(codec.name) (\(CodecSupportCatalog.formatCode(codec.id)))")
+            lines.append("  Encode: \(codec.encoding.reportLabel); Decode: \(codec.decoding.reportLabel)")
+        }
+        lines += ["", "[Query errors]"]
+        if failures.isEmpty { lines.append("None") }
+        for failure in failures { lines.append("\(failure.id): \(failure.status)") }
+        return lines.joined(separator: "\n") + "\n"
+    }
+}
+
+private extension CodecSupportReport.Availability {
+    nonisolated var reportLabel: String {
+        switch self {
+        case .listed: return "Listed"
+        case .notListed: return "Not listed"
+        case .unknown: return "Unknown"
+        }
     }
 }

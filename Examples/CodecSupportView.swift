@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#elseif os(iOS) || os(visionOS)
+import UIKit
+#endif
 
 /// Shared by all four sample applications; only public OS capability queries are used.
 struct CodecSupportView: View {
@@ -6,6 +11,9 @@ struct CodecSupportView: View {
     @State private var report: CodecSupportReport?
     @State private var audio = false
     @State private var reload = 0
+    @State private var isReading = false
+    @State private var copied = false
+    @State private var copyFailed = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,17 +22,27 @@ struct CodecSupportView: View {
                 Spacer()
                 Button(localized("Done")) { dismiss() }
             }.padding()
-            Picker(localized("Media type"), selection: $audio) {
-                Text(localized("Video")).tag(false)
-                Text(localized("Audio")).tag(true)
-            }.pickerStyle(.segmented).padding(.horizontal)
+            HStack {
+                Picker(localized("Media type"), selection: $audio) {
+                    Text(localized("Video")).tag(false)
+                    Text(localized("Audio")).tag(true)
+                }.pickerStyle(.segmented)
+                #if !os(tvOS)
+                Button { copyReport() } label: {
+                    Label(localized(copied ? "Copied" : "Copy"), systemImage: copied ? "checkmark" : "doc.on.doc")
+                }.disabled(report == nil || isReading)
+                #endif
+            }.padding(.horizontal)
+            if copyFailed {
+                Text(localized("Could not copy the report.")).foregroundStyle(.secondary)
+            }
             if let report {
                 List {
                     Section {
                         Text(localized("Device reports are not a guarantee of app, protocol, profile or resolution support."))
                         Text(localized(audio
                             ? "AudioConverter lists input and output formats. Actual AVAudioConverter conversions depend on the format pair and audio settings; they are not tested here."
-                            : "VideoToolbox lists encoder implementations and hardware decoding. Software decoding is not tested; no hardware report does not mean the codec cannot play."))
+                            : "VideoToolbox lists encoders. Hardware decoding is checked for selected common formats and encoder-listed formats only. Software decoding is not tested; other formats may still play."))
                             .foregroundStyle(.secondary)
                     }
                     #if targetEnvironment(simulator)
@@ -61,7 +79,13 @@ struct CodecSupportView: View {
                         }
                     }
                     Section {
-                        Button(localized("Refresh")) { reload += 1 }
+                        Button(localized("Refresh")) {
+                            isReading = true
+                            reload += 1
+                        }.disabled(isReading)
+                        #if os(tvOS)
+                        Text(localized("tvOS does not provide a public clipboard API.")).foregroundStyle(.secondary)
+                        #endif
                         #if !os(tvOS)
                         Link(localized("AVAudioConverter documentation"), destination: URL(string: "https://developer.apple.com/documentation/avfaudio/avaudioconverter")!)
                         #endif
@@ -82,12 +106,46 @@ struct CodecSupportView: View {
         .onExitCommand { dismiss() }
         #endif
         .task(id: reload) {
-            report = nil
+            isReading = true
             let value = await Task.detached(priority: .utility) { CodecSupportCatalog.read() }.value
             guard !Task.isCancelled else { return }
             report = value
+            isReading = false
+            copied = false
+            copyFailed = false
         }
     }
+
+    #if !os(tvOS)
+    private func copyReport() {
+        guard let report else { return }
+        #if os(macOS)
+        let platform = "macOS"
+        #elseif os(iOS)
+        let platform = "iOS"
+        #elseif os(visionOS)
+        let platform = "visionOS"
+        #else
+        let platform = "tvOS"
+        #endif
+        #if targetEnvironment(simulator)
+        let simulated = true
+        #else
+        let simulated = false
+        #endif
+        let text = report.textReport(platform: platform, osVersion: ProcessInfo.processInfo.operatingSystemVersionString, simulated: simulated)
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        copied = NSPasteboard.general.setString(text, forType: .string)
+        copyFailed = !copied
+        #elseif os(iOS) || os(visionOS)
+        UIPasteboard.general.string = text
+        copied = true
+        copyFailed = false
+        #endif
+    }
+
+    #endif
 
     private func availability(_ value: CodecSupportReport.Availability) -> String {
         switch value {
