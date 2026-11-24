@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Danger compares the PR head and base using their Git history.
+          fetch-depth: 0
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_26.6.app'
       - name: Setup Ruby
@@ -26,7 +28,6 @@ jobs:
         id: review
         timeout-minutes: 20
         env:
-          DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SWIFT_BACKTRACE: interactive=no
           NSUnbufferedIO: 'YES'
           # Catch blocking calls that would exhaust Swift's cooperative executor.
@@ -48,3 +49,9 @@ jobs:
             test-results/review.log
           retention-days: 14
           if-no-files-found: error
+      - name: Run Danger
+        # Fork PRs have a read-only token and Danger posts a PR comment.
+        if: steps.review.outcome == 'success' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+        env:
+          DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bundle exec danger --verbose --danger_id=danger --dangerfile=Dangerfile
