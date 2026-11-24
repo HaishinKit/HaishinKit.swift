@@ -2,7 +2,7 @@ import HaishinKit
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var model = VisionPlaybackModel()
+    @StateObject private var model = VisionStudioModel()
     @State private var showingCodecs = false
     @State private var showingConnection = false
     @State private var fillVideo = false
@@ -14,19 +14,31 @@ struct ContentView: View {
                     .font(.title2).foregroundStyle(.mint)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("HaishinKit").font(.title2.bold())
-                    Text(visionText("Playback studio")).foregroundStyle(.secondary)
+                    Text(visionText("Streaming studio")).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Label(model.status, systemImage: model.readyState == .open ? "play.circle.fill" : "circle")
+                Label(model.status, systemImage: model.readyState == .open ? (model.publishing ? "dot.radiowaves.left.and.right" : "play.circle.fill") : "circle")
                     .font(.callout.weight(.medium))
                     .padding(.horizontal, 16).padding(.vertical, 10)
                     .background(.regularMaterial, in: Capsule())
             }
 
+            Picker(visionText("Mode"), selection: $model.publishing) {
+                Text(visionText("Receive")).tag(false)
+                Text(visionText("Test broadcast")).tag(true)
+            }
+            .pickerStyle(.segmented)
+            .disabled(model.active || model.busy)
+
             ZStack {
                 Color.black
                 PiPHKViewRepresentable(previewSource: model, videoGravity: fillVideo ? .resizeAspectFill : .resizeAspect)
-                if model.readyState != .open {
+                if model.publishing && !model.signalRunning, let image = Self.testPattern {
+                    Image(decorative: image, scale: 1)
+                        .resizable().aspectRatio(contentMode: fillVideo ? .fill : .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                if (!model.publishing && model.readyState != .open) || model.errorMessage != nil {
                     VStack(spacing: 16) {
                         if model.busy {
                             ProgressView()
@@ -34,7 +46,7 @@ struct ContentView: View {
                             Image(systemName: model.errorMessage == nil ? "play.rectangle" : "wifi.exclamationmark")
                                 .font(.system(size: 44, weight: .light)).foregroundStyle(.mint)
                         }
-                        Text(visionText(model.errorMessage == nil ? "Your stream, in focus" : "Unable to play stream"))
+                        Text(visionText(model.errorMessage == nil ? "Your stream, in focus" : "Unable to connect"))
                             .font(.title2.weight(.semibold))
                         Text(model.errorMessage ?? visionText("Set your server connection, then press Play."))
                             .foregroundStyle(.white.opacity(0.8))
@@ -43,7 +55,7 @@ struct ContentView: View {
                             Button(visionText("Edit connection")) { showingConnection = true }
                                 .disabled(model.busy)
                         }
-                    }.padding(32)
+                    }.padding(32).background(.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 20))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -52,7 +64,7 @@ struct ContentView: View {
 
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(visionText("Source")).font(.caption).foregroundStyle(.secondary)
+                    Text(visionText(model.publishing ? "1280 × 720 · 30 fps · H.264 / AAC" : "Source")).font(.caption).foregroundStyle(.secondary)
                     // Never display stream keys, credentials or SRT query options in the main window.
                     Text(model.sourceLabel).font(.headline).lineLimit(1).truncationMode(.middle)
                 }
@@ -65,7 +77,7 @@ struct ContentView: View {
                 Button {
                     Task { if model.active { await model.stop() } else { await model.play() } }
                 } label: {
-                    Label(visionText(model.active ? "Stop" : "Play"), systemImage: model.active ? "stop.fill" : "play.fill")
+                    Label(visionText(model.active ? "Stop" : (model.publishing ? "Broadcast" : "Play")), systemImage: model.active ? "stop.fill" : (model.publishing ? "dot.radiowaves.left.and.right" : "play.fill"))
                         .frame(minWidth: 80)
                 }
                 .tint(model.active ? .red : .mint)
@@ -89,9 +101,17 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingCodecs) { CodecSupportView() }
         .sheet(isPresented: $showingConnection) { connectionSheet }
+        .onChange(of: model.publishing) { model.clearError() }
         .onDisappear { Task { await model.stop() } }
     }
 
+    private static let testPattern: CGImage? = {
+        guard let context = CGContext(data: nil, width: 1280, height: 720, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        TestSignalPattern.draw(in: context, width: 1280, height: 720, frame: 0,
+            subtitle: "Stereo test tone: L 440 Hz / R 880 Hz")
+        return context.makeImage()
+    }()
     private var connectionSheet: some View {
         VStack(alignment: .leading, spacing: 24) {
             HStack {
@@ -99,7 +119,7 @@ struct ContentView: View {
                 Spacer()
                 Button(visionText("Done")) { showingConnection = false }
             }
-            Text(visionText("Play a stream from an RTMP, RTMPS or SRT server."))
+            Text(visionText(model.publishing ? "Send moving color bars and stereo test tone: L 440 Hz / R 880 Hz. No camera or microphone is used." : "Play a stream from an RTMP, RTMPS or SRT server."))
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 8) {
                 Text(visionText("Server URL")).font(.headline)

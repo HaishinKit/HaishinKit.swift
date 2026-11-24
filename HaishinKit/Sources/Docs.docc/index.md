@@ -35,6 +35,7 @@ The following features are available:
 
 - <doc:macOS-debug-app>
 - <doc:codec-support>
+- <doc:visionos-studio>
 
 ## 📖 Usage
 ### Live Mixing

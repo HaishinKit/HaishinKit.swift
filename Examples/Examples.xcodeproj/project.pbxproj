@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D0A000012F00000000941209 /* ExampleTestSignal.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A000002F00000000941209 /* ExampleTestSignal.swift */; };
+		D0A000022F00000000941209 /* ExampleTestSignal.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A000002F00000000941209 /* ExampleTestSignal.swift */; };
 		D08000012F00000000941209 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = D08000022F00000000941209 /* Sparkle */; };
 		D07000022F00000000941209 /* TestSignalScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07000012F00000000941209 /* TestSignalScreenObject.swift */; };
 		D07000032F00000000941209 /* TestSignalScreenObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07000012F00000000941209 /* TestSignalScreenObject.swift */; };
@@ -99,6 +101,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D0A000002F00000000941209 /* ExampleTestSignal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleTestSignal.swift; sourceTree = "<group>"; };
 		D07000012F00000000941209 /* TestSignalScreenObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSignalScreenObject.swift; sourceTree = "<group>"; };
 		CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenObjectEditingPreview.swift; sourceTree = "<group>"; };
 		CA9129382D12EA820077EFF4 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = macOS/AppIcon.png; sourceTree = SOURCE_ROOT; };
@@ -167,7 +170,7 @@
 			membershipExceptions = (
 				ContentView.swift,
 				HaishinApp.swift,
-				VisionPlaybackModel.swift,
+				VisionStudioModel.swift,
 				VisionStudio.xcstrings,
 			);
 			target = BC7A0E3C2B088FA7005FB2F7 /* Example visionOS */;
@@ -264,6 +267,7 @@
 				D09000022F10000000941209 /* CodecSupportView.swift */,
 				D09000032F10000000941209 /* CodecSupport.xcstrings */,
 				D07000012F00000000941209 /* TestSignalScreenObject.swift */,
+				D0A000002F00000000941209 /* ExampleTestSignal.swift */,
 				CA9129382D12EA820077EFF3 /* ScreenObjectEditingPreview.swift */,
 				BC912A762D12F0600077EFF3 /* Frameworks */,
 				2945CBBE1B4BE66000104112 /* Products */,
@@ -592,6 +596,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0A000012F00000000941209 /* ExampleTestSignal.swift in Sources */,
 				D09100052F10000000941209 /* CodecSupportView.swift in Sources */,
 				D09100042F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000032F00000000941209 /* TestSignalScreenObject.swift in Sources */,
@@ -603,6 +608,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0A000022F00000000941209 /* ExampleTestSignal.swift in Sources */,
 				D09100082F10000000941209 /* CodecSupportView.swift in Sources */,
 				D09100072F10000000941209 /* CodecSupportCatalog.swift in Sources */,
 				D07000042F00000000941209 /* TestSignalScreenObject.swift in Sources */,

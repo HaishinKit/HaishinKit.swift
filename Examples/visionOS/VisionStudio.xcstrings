@@ -1,22 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Playback studio": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Playback studio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再生スタジオ"
-          }
-        }
-      }
-    },
     "Your stream, in focus": {
       "localizations": {
         "en": {
@@ -29,22 +13,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "映像を、もっと見やすく"
-          }
-        }
-      }
-    },
-    "Unable to play stream": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to play stream"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ストリームを再生できません"
           }
         }
       }
@@ -381,6 +349,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーURL、ストリーム名、ネットワークを確認し、もう一度再生してください。"
+          }
+        }
+      }
+    },
+    "Streaming studio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streaming studio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミングスタジオ"
+          }
+        }
+      }
+    },
+    "Mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モード"
+          }
+        }
+      }
+    },
+    "Receive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Receive"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信"
+          }
+        }
+      }
+    },
+    "Test broadcast": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test broadcast"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト配信"
+          }
+        }
+      }
+    },
+    "Live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信中"
+          }
+        }
+      }
+    },
+    "Broadcast": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcast"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信"
+          }
+        }
+      }
+    },
+    "1280 × 720 · 30 fps · H.264 / AAC": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1280 × 720 · 30 fps · H.264 / AAC"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1280 × 720 · 30 fps · H.264 / AAC"
+          }
+        }
+      }
+    },
+    "Send moving color bars and stereo test tone: L 440 Hz / R 880 Hz. No camera or microphone is used.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send moving color bars and stereo test tone: L 440 Hz / R 880 Hz. No camera or microphone is used."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動くカラーバーとステレオのテスト音（左440 Hz / 右880 Hz）を送信します。カメラやマイクは使用しません。"
+          }
+        }
+      }
+    },
+    "Unable to connect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to connect"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続できません"
           }
         }
       }
