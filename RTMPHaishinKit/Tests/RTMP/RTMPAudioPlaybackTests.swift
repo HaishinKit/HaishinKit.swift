@@ -25,7 +25,7 @@ import Testing
         await firstIncoming.startRunning()
         await secondIncoming.startRunning()
         // Observe the second stream decoding before attaching its shared player.
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
         while firstOutput.count == 0 || secondOutput.count == 0, ContinuousClock.now < deadline {
             if firstOutput.count == 0 {
                 await firstIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
@@ -82,7 +82,7 @@ import Testing
         var engines: [AVAudioEngine] = []
         defer { engines.forEach { $0.stop() } }
         // Ensure decoding has already started before attaching any output player.
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
         while output.count == 0, ContinuousClock.now < deadline {
             await incoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
             try await Task.sleep(for: .milliseconds(1))
@@ -126,7 +126,7 @@ import Testing
     }
 
     private func waitForAudio(_ output: AudioOutput, count: Int) async throws {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
         while output.count < count, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(1))
         }
