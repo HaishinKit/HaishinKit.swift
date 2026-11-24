@@ -16,22 +16,30 @@ import Testing
         // Model a restart reaching the node before the previous stream's queued stop.
         await node.startRunning()
         await node.stopRunning()
-        for _ in 0..<12 {
-            let input = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024))
-            input.frameLength = 1024
-            let samples = try #require(input.floatChannelData?.pointee)
-            for index in 0..<1024 { samples[index] = 0.25 }
-            await node.enqueue(input, when: AVAudioTime(sampleTime: 0, atRate: 48_000))
-        }
         let output = try #require(AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 1024))
-        var peak: Float = 0
-        for _ in 0..<16 {
-            await Task.yield()
-            if try engine.renderOffline(1024, to: output) == .success, let samples = output.floatChannelData?.pointee {
-                for index in 0..<Int(output.frameLength) { peak = max(peak, abs(samples[index])) }
+        for (amplitude, buffers, renders) in [(Float(0.25), 32, 32), (Float(0.5), 12, 16)] {
+            if amplitude == 0.5 {
+                // The overtaken stop left the native timeline active. Restart again
+                // and verify new audio follows that timeline rather than scheduling in its past.
+                await node.stopRunning()
+                await node.startRunning()
             }
+            for _ in 0..<buffers {
+                let input = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024))
+                input.frameLength = 1024
+                let samples = try #require(input.floatChannelData?.pointee)
+                for index in 0..<1024 { samples[index] = amplitude }
+                await node.enqueue(input, when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            }
+            var peak: Float = 0
+            for _ in 0..<renders {
+                await Task.yield()
+                if try engine.renderOffline(1024, to: output) == .success, let samples = output.floatChannelData?.pointee {
+                    for index in 0..<Int(output.frameLength) { peak = max(peak, abs(samples[index])) }
+                }
+            }
+            #expect(peak > amplitude * 0.6)
         }
-        #expect(peak > 0.1)
         await node.detach()
     }
 

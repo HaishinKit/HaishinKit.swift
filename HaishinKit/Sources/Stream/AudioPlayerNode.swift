@@ -95,7 +95,6 @@ extension AudioPlayerNode: AsyncRunner {
         }
         scheduledAudioBuffers = 0
         playbackGeneration &+= 1
-        audioTime.reset()
         isRunning = true
     }
 

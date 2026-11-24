@@ -5,6 +5,72 @@ import Testing
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPAudioPlaybackTests {
+    @Test func stoppingALateAttachedStreamPreservesTheSharedPlayer() async throws {
+        let engine = AVAudioEngine()
+        defer { engine.stop() }
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
+        try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 1024)
+        _ = engine.mainMixerNode
+        try engine.start()
+        let player = AudioPlayer(audioEngine: engine)
+        let first = RTMPStream(connection: RTMPConnection())
+        let second = RTMPStream(connection: RTMPConnection())
+        let firstIncoming = await first.incoming
+        let secondIncoming = await second.incoming
+        let firstOutput = AudioOutput()
+        let secondOutput = AudioOutput()
+        await first.addOutput(firstOutput)
+        await second.addOutput(secondOutput)
+        await first.attachAudioPlayer(player)
+        await firstIncoming.startRunning()
+        await secondIncoming.startRunning()
+        // Observe the second stream decoding before attaching its shared player.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while firstOutput.count == 0 || secondOutput.count == 0, ContinuousClock.now < deadline {
+            if firstOutput.count == 0 {
+                await firstIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            }
+            if secondOutput.count == 0 {
+                await secondIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try #require(secondOutput.count > 0)
+        try #require(firstOutput.count > 0)
+        await second.attachAudioPlayer(player)
+        for _ in 0..<32 {
+            let count = secondOutput.count
+            await secondIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            try await waitForAudio(secondOutput, count: count + 1)
+            let firstCount = firstOutput.count
+            await firstIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            try await waitForAudio(firstOutput, count: firstCount + 1)
+        }
+        let rendered = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024))
+        for _ in 0..<32 { _ = try engine.renderOffline(1024, to: rendered) }
+        await secondIncoming.stopRunning()
+        // Let the stream's asynchronous node stop and connection update complete.
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(engine.isRunning)
+        await second.attachAudioPlayer(nil)
+        for _ in 0..<12 {
+            let count = firstOutput.count
+            await firstIncoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            try await waitForAudio(firstOutput, count: count + 1)
+        }
+        var peak: Float = 0
+        for _ in 0..<16 {
+            await Task.yield()
+            if try engine.renderOffline(1024, to: rendered) == .success, let samples = rendered.floatChannelData?.pointee {
+                for index in 0..<Int(rendered.frameLength) { peak = max(peak, abs(samples[index])) }
+            }
+        }
+        #expect(peak > 0.1)
+        await firstIncoming.stopRunning()
+        await first.attachAudioPlayer(nil)
+        withExtendedLifetime(player) {}
+    }
+
     @Test func attachingAndReplacingAudioPlayerDuringPlaybackRendersSound() async throws {
         let stream = RTMPStream(connection: RTMPConnection())
         let incoming = await stream.incoming

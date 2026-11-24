@@ -47,9 +47,6 @@ package final actor IncomingStream {
     public func attachAudioPlayer(_ audioPlayer: AudioPlayer?) async {
         await audioPlayerNode?.detach()
         audioPlayerNode = await audioPlayer?.makePlayerNode()
-        if isRunning {
-            await audioPlayerNode?.startRunning()
-        }
         await mediaLink.setAudioPlayer(audioPlayerNode)
     }
 }
