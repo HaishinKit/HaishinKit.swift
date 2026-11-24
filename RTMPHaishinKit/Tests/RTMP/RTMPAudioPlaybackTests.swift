@@ -16,8 +16,12 @@ import Testing
         var engines: [AVAudioEngine] = []
         defer { engines.forEach { $0.stop() } }
         // Ensure decoding has already started before attaching any output player.
-        await incoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
-        try await waitForAudio(output, count: 1)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while output.count == 0, ContinuousClock.now < deadline {
+            await incoming.append(try buffer(format), when: AVAudioTime(sampleTime: 0, atRate: 48_000))
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try #require(output.count > 0)
         for _ in 0..<2 {
             let engine = AVAudioEngine()
             try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 1024)

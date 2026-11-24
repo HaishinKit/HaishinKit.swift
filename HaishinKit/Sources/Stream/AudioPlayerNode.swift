@@ -46,15 +46,14 @@ final actor AudioPlayerNode {
     }
 
     func enqueue(_ audioBuffer: AVAudioBuffer, when: AVAudioTime) async {
-        guard isRunning else {
-            return
-        }
+        // A stream's queued stop/start can arrive out of order. Keep accepting new PCM;
+        // the generation checks below discard scheduling work from the previous playback.
         let generation = playbackGeneration
         format = audioBuffer.format
         guard
             let audioBuffer = audioBuffer as? AVAudioPCMBuffer,
             await player?.isConnected(self) == true,
-            isRunning, generation == playbackGeneration else {
+            generation == playbackGeneration else {
             return
         }
         if !audioTime.hasAnchor {
@@ -68,11 +67,11 @@ final actor AudioPlayerNode {
             playerNode.play()
         }
         Task {
-            guard isRunning, generation == playbackGeneration else {
+            guard generation == playbackGeneration else {
                 return
             }
             await playerNode.scheduleBuffer(audioBuffer, at: scheduledTime)
-            guard isRunning, generation == playbackGeneration else {
+            guard generation == playbackGeneration else {
                 return
             }
             scheduledAudioBuffers -= 1
@@ -106,6 +105,7 @@ extension AudioPlayerNode: AsyncRunner {
         }
         isRunning = false
         playbackGeneration &+= 1
+        scheduledAudioBuffers = 0
         playerNode.stop()
         playerNode.reset()
         audioTime.reset()
