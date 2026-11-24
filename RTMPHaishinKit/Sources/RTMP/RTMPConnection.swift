@@ -356,7 +356,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         chunkSizeC = RTMPChunkMessageHeader.chunkSize
         chunkSizeS = RTMPChunkMessageHeader.chunkSize
         currentTransactionId = Self.connectTransactionId
-        let socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none, timeout: UInt64(max(0, min(timeout, Int(UInt64.max / 1_000_000_000)))))
+        let socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
         self.socket = socket
         do {
             let networkMonitor = await socket.makeNetworkMonitor()

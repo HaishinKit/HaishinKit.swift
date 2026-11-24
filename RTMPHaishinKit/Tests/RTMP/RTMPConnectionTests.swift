@@ -263,6 +263,14 @@ import Testing
         #expect(await connection.uri == nil)
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func receiveOnClosedSocketFinishes() async {
+        let socket = RTMPSocket()
+        await socket.close()
+        var values = await socket.recv().makeAsyncIterator()
+        #expect(await values.next() == nil)
+    }
+
     private func silentServer() async throws -> (listener: NWListener, queue: DispatchQueue, peers: AsyncStream<NWConnection>, url: String) {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)

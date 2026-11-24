@@ -14,7 +14,6 @@ final actor RTMPSocket {
     }
 
     private(set) var pathReport: NWConnection.DataTransferReport.PathReport?
-    private var timeout: UInt64 = 15
     private var connected = false
     private var windowSizeC = RTMPSocket.defaultWindowSizeC
     private var securityLevel: StreamSocketSecurityLevel = .none
@@ -42,8 +41,7 @@ final actor RTMPSocket {
     init() {
     }
 
-    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel, timeout: UInt64 = 15) {
-        self.timeout = timeout
+    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel) {
         self.qualityOfService = qualityOfService
         switch securityLevel {
         case .ssLv2, .ssLv3, .tlSv1, .negotiatedSSL:
@@ -66,15 +64,6 @@ final actor RTMPSocket {
             self.connection = connection
             try await withCheckedThrowingContinuation { (checkedContinuation: CheckedContinuation<Void, Swift.Error>) in
                 self.continuation = checkedContinuation
-                Task {
-                    try? await Task.sleep(nanoseconds: timeout * 1_000_000_000)
-                    guard let continuation else {
-                        return
-                    }
-                    continuation.resume(throwing: Error.connectionTimedOut)
-                    self.continuation = nil
-                    close()
-                }
                 connection.stateUpdateHandler = { state in
                     Task { await self.stateDidChange(to: state) }
                 }
@@ -122,6 +111,7 @@ final actor RTMPSocket {
     func recv() -> AsyncStream<ReceivedData> {
         AsyncStream<ReceivedData> { continuation in
             Task {
+                defer { continuation.finish() }
                 do {
                     while connected {
                         let received = try await recv()
@@ -129,7 +119,7 @@ final actor RTMPSocket {
                         totalBytesIn += received.data.count
                     }
                 } catch {
-                    continuation.finish()
+                    // EOF and a closed transport both terminate the stream.
                 }
             }
         }
