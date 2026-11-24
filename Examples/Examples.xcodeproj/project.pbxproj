@@ -171,6 +171,7 @@
 				ContentView.swift,
 				HaishinApp.swift,
 				VisionStudioModel.swift,
+				VisionStudioEndpoint.swift,
 				VisionStudio.xcstrings,
 			);
 			target = BC7A0E3C2B088FA7005FB2F7 /* Example visionOS */;

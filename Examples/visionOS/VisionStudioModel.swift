@@ -46,28 +46,13 @@ final class VisionStudioModel: ObservableObject {
     }
 
     var validationMessage: String? {
-        endpoint == nil ? visionText("Enter a valid RTMP/RTMPS URL and stream name, or an SRT URL with a port.") : nil
+        endpoint == nil ? visionText("Enter a valid RTMP/RTMPS URL and stream name, or an SRT caller URL with a port.") : nil
     }
 
     private var endpoint: URL? {
-        Self.endpoint(server: server, streamName: streamName)
+        VisionStudioEndpoint.make(server: server, streamName: streamName)
     }
 
-    static func endpoint(server: String, streamName: String) -> URL? {
-        let input = server.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let parts = URLComponents(string: input), let scheme = parts.scheme?.lowercased(),
-              let host = parts.host, !host.isEmpty, let url = parts.url else { return nil }
-        switch scheme {
-        case "rtmp", "rtmps":
-            let name = streamName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty else { return nil }
-            return url.appendingPathComponent(name)
-        case "srt":
-            guard let port = parts.port, (1...65535).contains(port) else { return nil }
-            return url
-        default: return nil
-        }
-    }
 
     func clearError() {
         guard !active, !busy else { return }
@@ -158,7 +143,10 @@ final class VisionStudioModel: ObservableObject {
         readyState = .closing
         signal.stop()
         signalRunning = false
-        await mixer.removeOutput(previous.stream)
+        let media = await previous.stream
+        await media.attachAudioPlayer(nil)
+        if let view { await media.removeOutput(view) }
+        await mixer.removeOutput(media)
         if let view { await mixer.removeOutput(view) }
         await mixer.stopRunning()
         try? await previous.close()

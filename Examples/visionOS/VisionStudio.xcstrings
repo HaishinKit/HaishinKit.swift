@@ -193,22 +193,6 @@
         }
       }
     },
-    "For SRT, enter the complete URL including the port and any stream options. Changes apply to the next connection.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For SRT, enter the complete URL including the port and any stream options. Changes apply to the next connection."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SRTではポートと接続オプションを含む完全なURLを入力してください。変更は次の接続から適用されます。"
-          }
-        }
-      }
-    },
     "No valid source": {
       "localizations": {
         "en": {
@@ -305,22 +289,6 @@
         }
       }
     },
-    "Enter a valid RTMP/RTMPS URL and stream name, or an SRT URL with a port.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter a valid RTMP/RTMPS URL and stream name, or an SRT URL with a port."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有効なRTMP・RTMPS URLとストリーム名、またはポート付きのSRT URLを入力してください。"
-          }
-        }
-      }
-    },
     "The stream disconnected. Check the server and try again.": {
       "localizations": {
         "en": {
@@ -332,7 +300,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "接続が切れました。サーバーを確認し、もう一度再生してください。"
+            "value": "接続が切れました。サーバーを確認し、もう一度お試しください。"
           }
         }
       }
@@ -348,7 +316,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サーバーURL、ストリーム名、ネットワークを確認し、もう一度再生してください。"
+            "value": "サーバーURL、ストリーム名、ネットワークを確認し、もう一度お試しください。"
           }
         }
       }
@@ -493,6 +461,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続できません"
+          }
+        }
+      }
+    },
+    "Enter a valid RTMP/RTMPS URL and stream name, or an SRT caller URL with a port.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid RTMP/RTMPS URL and stream name, or an SRT caller URL with a port."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効なRTMP・RTMPS URLとストリーム名、またはポート付きのSRT caller URLを入力してください。"
+          }
+        }
+      }
+    },
+    "SRT uses caller connections only. Enter the port and stream options; listener and rendezvous modes are not supported here. Changes apply to the next connection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRT uses caller connections only. Enter the port and stream options; listener and rendezvous modes are not supported here. Changes apply to the next connection."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SRTはcaller接続のみ対応します。ポートとストリームのオプションを入力してください。listener・rendezvousは対象外です。変更は次の接続から適用されます。"
           }
         }
       }

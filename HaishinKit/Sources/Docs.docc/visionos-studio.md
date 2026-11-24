@@ -7,11 +7,14 @@ in `Examples/Examples.xcworkspace`.
 
 1. Choose **Receive**, then **Connection**.
 2. Enter an RTMP/RTMPS server URL and a stream name, or a complete SRT URL with a port.
+   A signed RTMP stream name may include a query (for example, `stream?token=...`).
+   Server URL query items are kept first, followed by stream-name query items.
 3. Close the connection panel and press **Play**. Press **Stop** before changing modes or endpoints.
 
 SRT socket options belong in the URL query. For example, a receiver connecting to
 an existing SRT listener can use `srt://192.168.1.10:9710?mode=caller`.
-Use the endpoint and socket role expected by the server or peer.
+This studio uses SRT caller connections only. Listener, rendezvous and local adapter
+binding are not supported here; use the tvOS studio for those roles.
 
 ## Broadcast a test signal
 
@@ -45,3 +48,10 @@ This example does not capture the Apple Vision Pro's main camera. Apple's
 [main camera access](https://developer.apple.com/documentation/visionos/accessing-the-main-camera)
 is an enterprise API requiring a separately approved entitlement. Synthetic test
 signals allow publishing to be exercised without that entitlement.
+
+## Pending RTMP connections
+
+A TCP server that accepts a connection without replying to the RTMP handshake can
+leave the current shared session waiting indefinitely. Closing a pending session
+is a known transport limitation being addressed separately; this studio does not
+add a per-window handshake deadline.

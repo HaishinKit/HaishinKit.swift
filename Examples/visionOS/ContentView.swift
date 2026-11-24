@@ -133,7 +133,7 @@ struct ContentView: View {
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                 }
             }
-            Text(visionText("For SRT, enter the complete URL including the port and any stream options. Changes apply to the next connection."))
+            Text(visionText("SRT uses caller connections only. Enter the port and stream options; listener and rendezvous modes are not supported here. Changes apply to the next connection."))
                 .font(.callout).foregroundStyle(.secondary)
             if let validation = model.validationMessage {
                 Label(validation, systemImage: "exclamationmark.circle").foregroundStyle(.orange)
