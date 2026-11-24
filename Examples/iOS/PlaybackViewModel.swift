@@ -37,6 +37,8 @@ final class PlaybackViewModel: ObservableObject {
 
     private var view: (any StreamOutput)?
     private var session: (any StreamSession)?
+    private var sessionURL: URL?
+    private var stateTask: Task<Void, Never>?
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
 
@@ -44,7 +46,13 @@ final class PlaybackViewModel: ObservableObject {
         guard let session else {
             return
         }
+        dismissError()
         do {
+            let audioSession = AVAudioSession.sharedInstance()
+            if audioSession.category != .playAndRecord {
+                try audioSession.setCategory(.playback)
+            }
+            try audioSession.setActive(true)
             try await session.connect {
                 Task { @MainActor in
                     self.hasError = true
@@ -69,7 +77,10 @@ final class PlaybackViewModel: ObservableObject {
             hasError = true
             return
         }
+        guard sessionURL != url else { return }
         do {
+            stateTask?.cancel()
+            if let session { try? await session.close() }
             session = try await StreamSessionBuilderFactory.shared.make(url)
                 .setMode(.playback)
                 .build()
@@ -77,15 +88,18 @@ final class PlaybackViewModel: ObservableObject {
             guard let session else {
                 return
             }
+            sessionURL = url
             if let view {
                 await session.stream.addOutput(view)
             }
             await session.stream.attachAudioPlayer(audioPlayer)
-            Task {
+            stateTask = Task { [weak self] in
                 for await readyState in await session.readyState {
+                    guard !Task.isCancelled, let self else { return }
                     self.readyState = readyState
                     switch readyState {
                     case .open:
+                        self.dismissError()
                         UIApplication.shared.isIdleTimerDisabled = false
                     default:
                         UIApplication.shared.isIdleTimerDisabled = true

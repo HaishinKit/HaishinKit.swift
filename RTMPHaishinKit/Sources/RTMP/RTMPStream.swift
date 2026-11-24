@@ -690,6 +690,9 @@ public actor RTMPStream {
         }
         if message.videoFourCC == .av1, !RTMPConnection.supportedFourCcList.contains(RTMPVideoFourCC.av1.description) {
             // Keep the audio path running when this device cannot decode AV1.
+            if message.packetType == RTMPVideoPacketType.sequenceStart.rawValue {
+                logger.info("AV1 video is ignored because a hardware decoder is not available.")
+            }
             av1Configuration = nil
             videoFormat = nil
             return
@@ -700,13 +703,10 @@ public actor RTMPStream {
             case RTMPVideoPacketType.sequenceStart.rawValue:
                 av1Configuration = message.videoFourCC == .av1 ? AV1DecoderConfigurationRecord(data: Data(message.payload.dropFirst(5))) : nil
                 videoFormat = message.makeFormatDescription()
-            case RTMPVideoPacketType.codedFrames.rawValue:
+            case RTMPVideoPacketType.codedFrames.rawValue, RTMPVideoPacketType.codedFramesX.rawValue:
                 if message.videoFourCC == .av1, videoFormat == nil {
                     videoFormat = av1Configuration?.makeFormatDescription(inBand: Data(message.payload.dropFirst(5)))
                 }
-                let videoFormat = videoFormat
-                Task { await incoming.append(message, presentationTimeStamp: timestamp, formatDesciption: videoFormat) }
-            case RTMPVideoPacketType.codedFramesX.rawValue:
                 let videoFormat = videoFormat
                 Task { await incoming.append(message, presentationTimeStamp: timestamp, formatDesciption: videoFormat) }
             case RTMPVideoPacketType.sequenceEnd.rawValue:

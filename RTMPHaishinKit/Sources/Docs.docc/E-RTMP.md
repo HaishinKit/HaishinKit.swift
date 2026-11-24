@@ -43,7 +43,7 @@ AV1 playback uses the system VideoToolbox hardware decoder. The default connecti
 
 On a device without AV1 hardware decoding, incoming AV1 video is ignored while supported audio continues to play. The stream stays connected; an unsupported video codec does not stop audio playback.
 
-Use the normal `RTMPStream.play` flow; no receiver-side encoder settings are needed. The server must support Enhanced RTMP AV1 and preserve its `av1C` sequence configuration and low-overhead OBU frame data. Configuration records without a Sequence Header OBU are completed from an in-band sequence header in the first sync sample. AV1 `CodedFrames` packets have no composition-time field; their RTMP timestamp is the presentation timestamp.
+Use the normal `RTMPStream.play` flow; no receiver-side encoder settings are needed. The server must support Enhanced RTMP AV1 and preserve its `av1C` sequence configuration and low-overhead OBU frame data. Configuration records without a Sequence Header OBU are completed from an in-band sequence header in the first sync sample. AV1 `CodedFrames` packets have no composition-time field; their RTMP timestamp is the presentation timestamp. Playback also accepts AV1 `CodedFramesX`, as emitted by MediaMTX, with the same payload and timestamp handling.
 
 The receive tests include 8-bit and 10-bit Main-profile samples. Verify playback on a physical AV1-capable device; simulators and older hardware may not expose an AV1 hardware decoder. AV1 HDR metadata and display validation are outside this implementation.
 

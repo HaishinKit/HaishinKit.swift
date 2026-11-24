@@ -492,6 +492,7 @@ struct RTMPVideoMessage: RTMPMessage {
             if videoFourCC == .av1 {
                 return packetType == RTMPVideoPacketType.sequenceStart.rawValue ||
                     packetType == RTMPVideoPacketType.codedFrames.rawValue ||
+                    packetType == RTMPVideoPacketType.codedFramesX.rawValue ||
                     packetType == RTMPVideoPacketType.sequenceEnd.rawValue
             }
             return true
@@ -577,7 +578,7 @@ struct RTMPVideoMessage: RTMPMessage {
             return nil
         }
         if videoFourCC == .av1 {
-            guard packetType == RTMPVideoPacketType.codedFrames.rawValue,
+            guard (packetType == RTMPVideoPacketType.codedFrames.rawValue || packetType == RTMPVideoPacketType.codedFramesX.rawValue),
                   formatDesciption.mediaSubType.rawValue == kCMVideoCodecType_AV1 else { return nil }
         } else if isExHeader {
             guard formatDesciption.mediaSubType == .hevc else { return nil }

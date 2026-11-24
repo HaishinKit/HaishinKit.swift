@@ -25,8 +25,8 @@ import VideoToolbox
         #expect(RTMPStream.supportedVideoCodecs == [.h264, .hevc])
     }
 
-    @Test(arguments: [false, true])
-    func parsesSequenceAndPreservesCodedOBUs(tenBit: Bool) throws {
+    @Test(arguments: [false, true], [false, true])
+    func parsesSequenceAndPreservesCodedOBUs(tenBit: Bool, codedFramesX: Bool) throws {
         let message = message(tenBit ? sequence10 : sequence)
         #expect(message.isSupported)
         let format = try #require(message.makeFormatDescription())
@@ -36,7 +36,8 @@ import VideoToolbox
         #expect(format.isCompressed)
         let atoms = try #require(CMFormatDescriptionGetExtension(format, extensionKey: kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms) as? [String: Data])
         #expect(atoms["av1C"] == Data((tenBit ? sequence10 : sequence).dropFirst(5)))
-        let frameData = tenBit ? keyframe10 : keyframe
+        var frameData = tenBit ? keyframe10 : keyframe
+        if codedFramesX { frameData[0] = 0x93 }
         let frame = self.message(frameData)
         #expect(frame.compositionTime == 0)
         let pts = CMTime(value: 1234, timescale: 1000)
@@ -45,7 +46,9 @@ import VideoToolbox
         #expect(sample.decodeTimeStamp == .invalid)
         #expect(!sample.isNotSync)
         #expect(try sample.dataBuffer?.dataBytes() == Data(frameData.dropFirst(5)))
-        let inter = try #require(self.message(interframe).makeSampleBuffer(.init(value: 1267, timescale: 1000), formatDesciption: format))
+        var interData = interframe
+        if codedFramesX { interData[0] = 0xA3 }
+        let inter = try #require(self.message(interData).makeSampleBuffer(.init(value: 1267, timescale: 1000), formatDesciption: format))
         #expect(inter.isNotSync)
         #expect(try inter.dataBuffer?.dataBytes() == Data(interframe.dropFirst(5)))
     }
@@ -70,7 +73,7 @@ import VideoToolbox
         for size in 0..<sequence.count {
             #expect(message(Data(sequence.prefix(size))).makeFormatDescription() == nil)
         }
-        for header: UInt8 in [0x93, 0x94, 0x95, 0x96, 0x9F] {
+        for header: UInt8 in [0x94, 0x95, 0x96, 0x9F] {
             var payload = keyframe
             payload[0] = header
             #expect(!message(payload).isSupported)
