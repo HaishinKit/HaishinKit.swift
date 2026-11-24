@@ -7,6 +7,7 @@ import UIKit
 
 /// Shared by all four sample applications; only public OS capability queries are used.
 struct CodecSupportView: View {
+    var showsDismissButton = true
     @Environment(\.dismiss) private var dismiss
     @State private var report: CodecSupportReport?
     @State private var audio = false
@@ -20,7 +21,9 @@ struct CodecSupportView: View {
             HStack {
                 Text(localized("Device codecs")).font(.title2.bold())
                 Spacer()
-                Button(localized("Done")) { dismiss() }
+                if showsDismissButton {
+                    Button(localized("Done")) { dismiss() }
+                }
             }.padding()
             HStack {
                 Picker(localized("Media type"), selection: $audio) {
