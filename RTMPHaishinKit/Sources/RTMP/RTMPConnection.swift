@@ -350,12 +350,13 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         handshakeStartedAt = nil
         handshake.clear()
         chunks.removeAll()
+        inputBuffer = RTMPChunkBuffer()
         sequence = 0
         readyState = .uninitialized
         chunkSizeC = RTMPChunkMessageHeader.chunkSize
         chunkSizeS = RTMPChunkMessageHeader.chunkSize
         currentTransactionId = Self.connectTransactionId
-        let socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
+        let socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none, timeout: UInt64(max(0, min(timeout, Int(UInt64.max / 1_000_000_000)))))
         self.socket = socket
         do {
             let networkMonitor = await socket.makeNetworkMonitor()
@@ -370,17 +371,27 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                     let seconds = UInt64(max(0, min(timeout, Int(UInt64.max / 1_000_000_000))))
                     connectionTimeoutTask = Task { [weak self] in
                         do { try await Task.sleep(nanoseconds: seconds * 1_000_000_000) } catch { return }
-                        await self?.failConnect(id, error: Error.connectionTimedOut)
+                        await self?.expireConnect(id)
                     }
                     Task {
                         do {
+                            guard connectingID == id, self.socket === socket else {
+                                await socket.close()
+                                return
+                            }
                             try await socket.connect(host, port: uri.port ?? (secure ? Self.defaultSecurePort : Self.defaultPort))
-                            guard connectingID == id, self.socket === socket else { return }
+                            guard connectingID == id, self.socket === socket else {
+                                await socket.close()
+                                return
+                            }
                             readyState = .versionSent
                             handshakeStartedAt = await socket.send(handshake.c0c1packet)
-                            guard connectingID == id, self.socket === socket else { return }
+                            guard connectingID == id, self.socket === socket else {
+                                await socket.close()
+                                return
+                            }
                             for await (data, receivedAt) in await socket.recv() {
-                                guard self.socket === socket, !isClosing else { return }
+                                guard self.socket === socket else { return }
                                 try await listen(data, receivedAt: receivedAt)
                             }
                             guard self.socket === socket else { return }
@@ -430,6 +441,12 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             }
             throw error
         }
+    }
+
+    private func expireConnect(_ id: UUID) async {
+        // The response owns the deadline until it consumes the initial operation.
+        guard operations[Self.connectTransactionId] != nil else { return }
+        await failConnect(id, error: Error.connectionTimedOut)
     }
 
     private func failConnect(_ id: UUID, error: any Swift.Error) async {

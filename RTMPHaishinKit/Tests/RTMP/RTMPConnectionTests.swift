@@ -184,13 +184,29 @@ import Testing
         #expect(await session.connected == false)
     }
 
-    @Test(.timeLimit(.minutes(1)))
-    func successfulConnectCancelsItsDeadline() async throws {
+    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
+    func successfulConnectCancelsItsDeadline(afterPartialReply: Bool) async throws {
         let server = try await silentServer()
         defer { server.listener.cancel() }
         let connection = RTMPConnection(timeout: 1)
-        let attempt = Task { try await connection.connect(server.url) }
         var peers = server.peers.makeAsyncIterator()
+        if afterPartialReply {
+            let abandoned = Task { try await connection.connect(server.url) }
+            let oldPeer = try #require(await peers.next())
+            oldPeer.start(queue: server.queue)
+            defer { oldPeer.cancel() }
+            try await receive(1 + RTMPHandshake.sigSize, from: oldPeer)
+            var handshake = Data(count: 1 + 2 * RTMPHandshake.sigSize)
+            handshake[0] = RTMPHandshake.protocolVersion
+            try await send(handshake, to: oldPeer)
+            try await receive(RTMPHandshake.sigSize, from: oldPeer)
+            try await receive(1, from: oldPeer)
+            // A partial chunk header must not become the next connection's prefix.
+            try await send(Data([3, 0, 0, 0, 0]), to: oldPeer)
+            _ = await abandoned.result
+            #expect(await connection.connected == false)
+        }
+        let attempt = Task { try await connection.connect(server.url) }
         let peer = try #require(await peers.next())
         peer.start(queue: server.queue)
         defer { peer.cancel() }

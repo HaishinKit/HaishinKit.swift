@@ -42,7 +42,8 @@ final actor RTMPSocket {
     init() {
     }
 
-    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel) {
+    init(qualityOfService: DispatchQoS, securityLevel: StreamSocketSecurityLevel, timeout: UInt64 = 15) {
+        self.timeout = timeout
         self.qualityOfService = qualityOfService
         switch securityLevel {
         case .ssLv2, .ssLv3, .tlSv1, .negotiatedSSL:
