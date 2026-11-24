@@ -496,6 +496,22 @@
           }
         }
       }
+    },
+    "Use one application path in the RTMP server URL (for example, /live). Put stream path components in Stream name / key.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use one application path in the RTMP server URL (for example, /live). Put stream path components in Stream name / key."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RTMPのサーバーURLはアプリ名1階層（例：/live）まで入力してください。ストリームの階層は「ストリーム名 / キー」に指定します。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

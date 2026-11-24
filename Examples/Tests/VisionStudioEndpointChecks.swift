@@ -22,6 +22,10 @@ struct VisionStudioEndpointChecks {
             precondition(rtmp.command == "\(scheme.lowercased())://example.test/live")
             precondition(rtmp.streamName == "stream?token=abc&expires=123")
         }
+        precondition(make("rtmp://example.test/app/instance", "camera") == nil)
+        let nested = RTMPURL(url: make("rtmp://example.test/app", "group/camera")!)
+        precondition(nested.command == "rtmp://example.test/app")
+        precondition(nested.streamName == "group/camera")
         let signed = RTMPURL(url: make("rtmps://example.test/live", "stream?sig=a%2Fb%3D")!)
         precondition(signed.command == "rtmps://example.test/live")
         precondition(signed.streamName == "stream?sig=a%2Fb%3D")

@@ -15,7 +15,7 @@ nonisolated enum VisionStudioEndpoint {
             guard !name.isEmpty,
                   let key = URLComponents(string: "rtmp://stream.invalid/" + name),
                   key.fragment == nil, key.path != "/" else { return nil }
-            guard !parts.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).isEmpty else { return nil }
+            guard parts.path.split(separator: "/").count == 1 else { return nil }
             // The stream name can carry a signed query. Keep it as a query, not an
             // escaped part of the path. Server query items precede stream query items.
             parts.path = parts.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + key.path

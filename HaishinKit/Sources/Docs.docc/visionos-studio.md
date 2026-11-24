@@ -9,6 +9,9 @@ in `Examples/Examples.xcworkspace`.
 2. Enter an RTMP/RTMPS server URL and a stream name, or a complete SRT URL with a port.
    A signed RTMP stream name may include a query (for example, `stream?token=...`).
    Server URL query items are kept first, followed by stream-name query items.
+   The server URL accepts one application path component, such as `/live`.
+   Put nested stream paths such as `group/camera` in **Stream name / key**.
+   Application/instance server paths are not supported by this sample.
 3. Close the connection panel and press **Play**. Press **Stop** before changing modes or endpoints.
 
 SRT socket options belong in the URL query. For example, a receiver connecting to

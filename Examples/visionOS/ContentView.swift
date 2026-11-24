@@ -127,6 +127,8 @@ struct ContentView: View {
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
             }
             if model.usesRTMP {
+                Text(visionText("Use one application path in the RTMP server URL (for example, /live). Put stream path components in Stream name / key."))
+                    .font(.callout).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 8) {
                     Text(visionText("Stream name / key")).font(.headline)
                     SecureField(visionText("Stream name / key"), text: $model.streamName)
