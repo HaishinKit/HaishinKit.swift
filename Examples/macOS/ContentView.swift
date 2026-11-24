@@ -11,6 +11,7 @@ struct ContentView: View {
         case publish = "Publish"
         case settings = "Settings"
         case debug = "Debug"
+        case codecs = "Device codecs"
         case licenses = "Licenses"
 
         var id: Self { self }
@@ -20,6 +21,7 @@ struct ContentView: View {
             case .publish: return "dot.radiowaves.left.and.right"
             case .settings: return "slider.horizontal.3"
             case .debug: return "ladybug"
+            case .codecs: return "cpu"
             case .licenses: return "doc.text"
             }
         }
@@ -51,6 +53,7 @@ struct ContentView: View {
                     Section(String(localized: "Configuration")) {
                         Label(LocalizedStringKey(Tab.settings.rawValue), systemImage: Tab.settings.icon).tag(Tab.settings)
                         Label(LocalizedStringKey(Tab.debug.rawValue), systemImage: Tab.debug.icon).tag(Tab.debug)
+                        Label(String(localized: "Device codecs", table: "CodecSupport"), systemImage: Tab.codecs.icon).tag(Tab.codecs)
                         Label(LocalizedStringKey(Tab.licenses.rawValue), systemImage: Tab.licenses.icon).tag(Tab.licenses)
                     }
                 }
@@ -63,6 +66,9 @@ struct ContentView: View {
             case .publish: PublishView(sceneOpenRequest: $sceneOpenRequest)
             case .settings: MacSettingsView()
             case .debug: DebugView(appearance: $appearance)
+            case .codecs:
+                CodecSupportView(showsDismissButton: false)
+                    .navigationTitle(String(localized: "Device codecs", table: "CodecSupport"))
             case .licenses: LicensesView()
             }
         }
