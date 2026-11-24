@@ -39,6 +39,8 @@ final class PlaybackViewModel: ObservableObject {
     private var session: (any StreamSession)?
     private var sessionURL: URL?
     private var stateTask: Task<Void, Never>?
+    private var sessionChangeTask: Task<Void, Never>?
+    private var sessionGeneration: UInt = 0
     private let audioPlayer = AudioPlayer(audioEngine: AVAudioEngine())
     private var pictureInPictureController: AVPictureInPictureController?
 
@@ -46,6 +48,7 @@ final class PlaybackViewModel: ObservableObject {
         guard let session else {
             return
         }
+        let generation = sessionGeneration
         dismissError()
         do {
             let audioSession = AVAudioSession.sharedInstance()
@@ -55,10 +58,18 @@ final class PlaybackViewModel: ObservableObject {
             try audioSession.setActive(true)
             try await session.connect {
                 Task { @MainActor in
+                    guard generation == self.sessionGeneration else { return }
                     self.hasError = true
                 }
             }
+            if generation != sessionGeneration {
+                try? await session.close()
+            }
         } catch {
+            guard generation == sessionGeneration else {
+                try? await session.close()
+                return
+            }
             self.error = error
             self.hasError = true
         }
@@ -73,29 +84,63 @@ final class PlaybackViewModel: ObservableObject {
     }
 
     func makeSession(_ url: URL?) async {
-        guard let url else {
-            hasError = true
-            return
+        if let url, sessionURL == url { return }
+        sessionGeneration &+= 1
+        let generation = sessionGeneration
+        stateTask?.cancel()
+        stateTask = nil
+        let previousSession = session
+        let previousView = view
+        session = nil
+        sessionURL = nil
+        readyState = .closed
+        UIApplication.shared.isIdleTimerDisabled = false
+        dismissError()
+
+        // Finish earlier setup/teardown before attaching another node to the shared player.
+        let previousChange = sessionChangeTask
+        let change = Task { [weak self] in
+            await previousChange?.value
+            guard let self else { return }
+            if let previousSession {
+                if let previousView { await previousSession.stream.removeOutput(previousView) }
+                await previousSession.stream.attachAudioPlayer(nil)
+                try? await previousSession.close()
+            }
+            guard generation == self.sessionGeneration else { return }
+            await self.prepareSession(url, generation: generation)
         }
-        guard sessionURL != url else { return }
+        sessionChangeTask = change
+        await change.value
+    }
+
+    private func prepareSession(_ url: URL?, generation: UInt) async {
         do {
-            stateTask?.cancel()
-            if let session { try? await session.close() }
-            session = try await StreamSessionBuilderFactory.shared.make(url)
-                .setMode(.playback)
-                .build()
-            await session?.setMaxRetryCount(0)
-            guard let session else {
+            guard let url,
+                  let candidate = try await StreamSessionBuilderFactory.shared.make(url)
+                    .setMode(.playback)
+                    .build() else {
+                throw StreamSessionBuilderFactory.Error.illegalArgument
+            }
+            await candidate.setMaxRetryCount(0)
+            await candidate.stream.attachAudioPlayer(audioPlayer)
+            guard generation == sessionGeneration else {
+                await candidate.stream.attachAudioPlayer(nil)
+                try? await candidate.close()
                 return
             }
+            session = candidate
             sessionURL = url
             if let view {
-                await session.stream.addOutput(view)
+                await candidate.stream.addOutput(view)
+                if generation != sessionGeneration || self.view !== view {
+                    await candidate.stream.removeOutput(view)
+                }
             }
-            await session.stream.attachAudioPlayer(audioPlayer)
+            guard generation == sessionGeneration else { return }
             stateTask = Task { [weak self] in
-                for await readyState in await session.readyState {
-                    guard !Task.isCancelled, let self else { return }
+                for await readyState in await candidate.readyState {
+                    guard !Task.isCancelled, let self, generation == self.sessionGeneration else { return }
                     self.readyState = readyState
                     switch readyState {
                     case .open:
@@ -107,7 +152,23 @@ final class PlaybackViewModel: ObservableObject {
                 }
             }
         } catch {
+            guard generation == sessionGeneration else { return }
+            self.error = error
+            hasError = true
             logger.error(error)
+        }
+    }
+
+    private func attachView(_ view: some StreamOutput) async {
+        let previousView = self.view
+        self.view = view
+        let generation = sessionGeneration
+        guard let session else { return }
+        if let previousView { await session.stream.removeOutput(previousView) }
+        guard self.view === view, generation == sessionGeneration else { return }
+        await session.stream.addOutput(view)
+        if self.view !== view || generation != sessionGeneration {
+            await session.stream.removeOutput(view)
         }
     }
 }
@@ -116,11 +177,9 @@ extension PlaybackViewModel: MTHKViewRepresentable.PreviewSource {
     // MARK: MTHKViewRepresentable.PreviewSource
     nonisolated func connect(to view: MTHKView) {
         Task { @MainActor in
-            if let previous = self.view {
-                await session?.stream.removeOutput(previous)
-            }
-            self.view = view
-            await session?.stream.addOutput(view)
+            pictureInPictureController?.stopPictureInPicture()
+            pictureInPictureController = nil
+            await attachView(view)
         }
     }
 }
@@ -129,14 +188,13 @@ extension PlaybackViewModel: PiPHKViewRepresentable.PreviewSource {
     // MARK: PiPHKSwiftUiView.PreviewSource
     nonisolated func connect(to view: HaishinKit.PiPHKView) {
         Task { @MainActor in
-            if let previous = self.view {
-                await session?.stream.removeOutput(previous)
+            let contentSource = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate())
+            if let pictureInPictureController {
+                pictureInPictureController.contentSource = contentSource
+            } else {
+                pictureInPictureController = AVPictureInPictureController(contentSource: contentSource)
             }
-            self.view = view
-            await session?.stream.addOutput(view)
-            if pictureInPictureController == nil {
-                pictureInPictureController = AVPictureInPictureController(contentSource: .init(sampleBufferDisplayLayer: view.layer, playbackDelegate: PlaybackDelegate()))
-            }
+            await attachView(view)
         }
     }
 }

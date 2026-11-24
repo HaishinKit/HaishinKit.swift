@@ -155,7 +155,7 @@ final class PreferenceViewModel: ObservableObject {
     }
 
     func makeURL() -> URL? {
-        if uri.contains("rtmp://") {
+        if let scheme = URL(string: uri)?.scheme, scheme == "rtmp" || scheme == "rtmps" {
             return URL(string: uri + "/" + streamName)
         }
         return URL(string: uri)
