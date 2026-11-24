@@ -102,6 +102,7 @@ try session.connect {
 ### Example applications
 
 - <doc:macOS-debug-app>
+- <doc:codec-support>
 
 ### Migration
 

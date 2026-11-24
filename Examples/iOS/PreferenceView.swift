@@ -19,6 +19,7 @@ struct InfoRow: View {
 struct PreferenceView: View {
     @EnvironmentObject var model: PreferenceViewModel
     @State private var showingInfo = false
+    @State private var showingCodecs = false
 
     var body: some View {
         Form {
@@ -91,6 +92,9 @@ struct PreferenceView: View {
                 Text("Metal preview is faster. AudioEngine mode is recommended for stability.")
             }
             Section {
+                Button(String(localized: "Device codecs", table: "CodecSupport")) { showingCodecs = true }
+            }
+            Section {
                 Button(action: {
                     model.showPublishSheet.toggle()
                 }, label: {
@@ -102,6 +106,7 @@ struct PreferenceView: View {
                 Text("Debug")
             }
         }
+        .sheet(isPresented: $showingCodecs) { CodecSupportView() }
         #if os(iOS)
         .sheet(isPresented: $showingInfo) {
             InfoGuideView(showingInfo: $showingInfo)

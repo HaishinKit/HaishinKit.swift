@@ -54,6 +54,7 @@ The package declares Swift tools version 6.0. CI uses Xcode 26.6 for testing and
 ### 🔧 Examples
 - Reference implementation app for live streaming `publish` and `playback`.
 - If an issue occurs, please check whether it also happens in the examples app.
+- [System codec inspector](HaishinKit/Sources/Docs.docc/codec-support.md): VideoToolbox and AudioConverter reports in the iOS, macOS, tvOS and visionOS samples.
 - [Apple TV studio](Examples/tvOS/README.md): Bonjour SRT send/receive, test signals, and Continuity Camera (tvOS 17+).
 
 The macOS example below publishes a test-signal ScreenObject and receives it over SRT, without a camera.
