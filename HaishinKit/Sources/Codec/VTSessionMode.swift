@@ -37,10 +37,17 @@ enum VTSessionMode {
                 throw VTSessionError.failedToCreate(status: kVTParameterErr)
             }
             var session: VTDecompressionSession?
+            var decoderSpecification: [CFString: Any]?
+            if CMFormatDescriptionGetMediaSubType(formatDescription) == kCMVideoCodecType_AV1 {
+                guard #available(iOS 17.0, tvOS 17.0, *), VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1) else {
+                    throw VTSessionError.failedToCreate(status: kVTCouldNotFindVideoDecoderErr)
+                }
+                decoderSpecification = [kVTVideoDecoderSpecification_RequireHardwareAcceleratedVideoDecoder: true]
+            }
             let status = VTDecompressionSessionCreate(
                 allocator: kCFAllocatorDefault,
                 formatDescription: formatDescription,
-                decoderSpecification: nil,
+                decoderSpecification: decoderSpecification as CFDictionary?,
                 imageBufferAttributes: videoCodec.makeImageBufferAttributes(.decompression) as CFDictionary?,
                 outputCallback: nil,
                 decompressionSessionOut: &session

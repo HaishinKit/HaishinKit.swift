@@ -252,6 +252,7 @@ public actor RTMPStream {
         }
     }
 
+    private var av1Configuration: AV1DecoderConfigurationRecord?
     private var videoFormat: CMFormatDescription? {
         didSet {
             guard videoFormat != oldValue else {
@@ -300,6 +301,7 @@ public actor RTMPStream {
         do {
             audioFormat = nil
             videoFormat = nil
+            av1Configuration = nil
             audioTimestamp.clear()
             videoTimestamp.clear()
             let response = try await withCheckedThrowingContinuation { continuation in
@@ -380,6 +382,7 @@ public actor RTMPStream {
         do {
             audioFormat = nil
             videoFormat = nil
+            av1Configuration = nil
             audioTimestamp.clear()
             videoTimestamp.clear()
             let response = try await withCheckedThrowingContinuation { continuation in
@@ -440,6 +443,7 @@ public actor RTMPStream {
             throw Error.invalidState
         }
         outgoing.stopRunning()
+        av1Configuration = nil
         return try await withCheckedThrowingContinuation { continutation in
             self.continuation = continutation
             switch readyState {
@@ -680,27 +684,45 @@ public actor RTMPStream {
 
     private func append(_ message: RTMPVideoMessage, type: RTMPChunkType) {
         videoTimestamp.update(message, chunkType: type)
+        let timestamp = videoTimestamp.value
         guard RTMPTagType.video.headerSize <= message.payload.count && message.isSupported else {
+            return
+        }
+        if message.videoFourCC == .av1, !RTMPConnection.supportedFourCcList.contains(RTMPVideoFourCC.av1.description) {
+            // Keep the audio path running when this device cannot decode AV1.
+            if message.packetType == RTMPVideoPacketType.sequenceStart.rawValue {
+                logger.info("AV1 video is ignored because a hardware decoder is not available.")
+            }
+            av1Configuration = nil
+            videoFormat = nil
             return
         }
         if message.isExHeader {
             // IsExHeader for Enhancing RTMP, FLV
             switch message.packetType {
             case RTMPVideoPacketType.sequenceStart.rawValue:
+                av1Configuration = message.videoFourCC == .av1 ? AV1DecoderConfigurationRecord(data: Data(message.payload.dropFirst(5))) : nil
                 videoFormat = message.makeFormatDescription()
-            case RTMPVideoPacketType.codedFrames.rawValue:
-                Task { await incoming.append(message, presentationTimeStamp: videoTimestamp.value, formatDesciption: videoFormat) }
-            case RTMPVideoPacketType.codedFramesX.rawValue:
-                Task { await incoming.append(message, presentationTimeStamp: videoTimestamp.value, formatDesciption: videoFormat) }
+            case RTMPVideoPacketType.codedFrames.rawValue, RTMPVideoPacketType.codedFramesX.rawValue:
+                if message.videoFourCC == .av1, videoFormat == nil {
+                    videoFormat = av1Configuration?.makeFormatDescription(inBand: Data(message.payload.dropFirst(5)))
+                }
+                let videoFormat = videoFormat
+                Task { await incoming.append(message, presentationTimeStamp: timestamp, formatDesciption: videoFormat) }
+            case RTMPVideoPacketType.sequenceEnd.rawValue:
+                av1Configuration = nil
+                videoFormat = nil
             default:
                 break
             }
         } else {
             switch message.packetType {
             case RTMPAVCPacketType.seq.rawValue:
+                av1Configuration = nil
                 videoFormat = message.makeFormatDescription()
             case RTMPAVCPacketType.nal.rawValue:
-                Task { await incoming.append(message, presentationTimeStamp: videoTimestamp.value, formatDesciption: videoFormat) }
+                let videoFormat = videoFormat
+                Task { await incoming.append(message, presentationTimeStamp: timestamp, formatDesciption: videoFormat) }
             default:
                 break
             }

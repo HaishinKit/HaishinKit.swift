@@ -108,7 +108,11 @@ struct PlaybackView: View {
         }
         .background(Color.black)
         .task {
-            await model.makeSession()
+            #if os(visionOS)
+            await model.makeSession(Preference.default.makeURL())
+            #else
+            await model.makeSession(preference.makeURL())
+            #endif
         }
     }
 }
