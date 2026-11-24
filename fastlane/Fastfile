@@ -71,15 +71,6 @@ lane :review do
     sh 'swift run --package-path VPXHaishinKit/Tests/Consumer Consumer'
     sh 'swift run --package-path AOMHaishinKit/Tests/Consumer Consumer'
   end
-
-  begin
-    danger(
-      danger_id: 'danger',
-      dangerfile: 'Dangerfile',
-      verbose: true
-    )
-  rescue StandardError
-  end
 end
 
 desc 'Creates documents.'
