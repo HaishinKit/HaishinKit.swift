@@ -8,6 +8,7 @@ final actor AudioPlayerNode {
         if playerNode.isPlaying {
             guard
                 let nodeTime = playerNode.lastRenderTime,
+                nodeTime.isSampleTimeValid || nodeTime.isHostTimeValid,
                 let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
                 return nil
             }

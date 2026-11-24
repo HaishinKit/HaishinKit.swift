@@ -27,12 +27,12 @@ import Testing
             let player = AudioPlayer(audioEngine: engine)
             players.append(player)
             await stream.attachAudioPlayer(player)
+            let rendered = try #require(AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 1024))
             let initialCount = output.count
             for index in 0..<32 {
                 await incoming.append(try buffer(format), when: AVAudioTime(sampleTime: Int64(index * 1024), atRate: 48_000))
                 try await waitForAudio(output, count: initialCount + index + 1)
             }
-            let rendered = try #require(AVAudioPCMBuffer(pcmFormat: engine.manualRenderingFormat, frameCapacity: 1024))
             var peak: Float = 0
             for _ in 0..<16 {
                 await Task.yield()
