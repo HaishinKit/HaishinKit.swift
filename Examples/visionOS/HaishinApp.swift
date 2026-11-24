@@ -12,6 +12,8 @@ struct HaishinApp: App {
         WindowGroup {
             ContentView()
         }
+        .defaultSize(width: 1100, height: 760)
+        .windowResizability(.contentMinSize)
     }
 
     init() {
