@@ -248,6 +248,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             outputBuffer.chunkSize = chunkSizeS
         }
     }
+    private var operationGeneration = UUID()
     private var operations: [Int: CheckedContinuation<RTMPResponse, any Swift.Error>] = [:]
     private var isClosing = false
     private var inputBuffer = RTMPChunkBuffer()
@@ -323,8 +324,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                 commandObject: nil,
                 arguments: arguments
             )
+            let generation = operationGeneration
             Task {
                 try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                guard operationGeneration == generation else { return }
                 guard let operation = operations.removeValue(forKey: message.transactionId) else {
                     return
                 }
@@ -418,8 +421,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                 for await event in await networkMonitor.event { dispatch(event) }
             }
             for stream in streams {
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 await stream.dispatch(.reset)
                 await stream.createStream()
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 try Task.checkCancellation()
             }
             guard connectingID == id, self.socket === socket else { throw CancellationError() }
@@ -477,7 +482,12 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         connectionTimeoutTask?.cancel()
         connectionTimeoutTask = nil
         uri = nil
+        operationGeneration = UUID()
+        let pending = operations
+        operations.removeAll()
+        for operation in pending.values { operation.resume(throwing: CancellationError()) }
         for stream in streams {
+            await stream.cancelPendingOperation()
             if await stream.fcPublishName == nil {
                 _ = try? await stream.close()
             } else {

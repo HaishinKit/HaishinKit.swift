@@ -282,6 +282,154 @@ import Testing
         }
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func closeSettlesCallsAndOldTimerCannotFailReplacement() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 5, requestTimeout: 700)
+        var peers = server.peers.makeAsyncIterator()
+        var firstConnect = Task { try await connection.connect(server.url) }
+        let peer1 = try #require(await peers.next())
+        peer1.start(queue: server.queue)
+        defer { peer1.cancel() }
+        try await acceptHandshake(peer1)
+        var chunkSize1 = 128
+        _ = try await command(from: peer1, chunkSize: &chunkSize1)
+        try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer1)
+        _ = try await firstConnect.value
+        let oldCall = Task { try await connection.call("old") }
+        let oldCommand = try await command(from: peer1, chunkSize: &chunkSize1)
+        #expect(oldCommand.name == "old")
+        try await connection.close()
+        if case .success = await oldCall.result { Issue.record("Closed call must finish with an error") }
+        firstConnect = Task { try await connection.connect(server.url) }
+        let peer2 = try #require(await peers.next())
+        peer2.start(queue: server.queue)
+        defer { peer2.cancel() }
+        try await acceptHandshake(peer2)
+        var chunkSize2 = 128
+        _ = try await command(from: peer2, chunkSize: &chunkSize2)
+        try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer2)
+        _ = try await firstConnect.value
+        try await Task.sleep(nanoseconds: 400_000_000)
+        let replacement = Task { try await connection.call("replacement") }
+        let replacementCommand = try await command(from: peer2, chunkSize: &chunkSize2)
+        #expect(replacementCommand.transaction == oldCommand.transaction)
+        try await Task.sleep(nanoseconds: 400_000_000)
+        try await reply(replacementCommand.transaction, arguments: [], to: peer2)
+        _ = try await replacement.value
+        try await connection.close()
+    }
+
+    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
+    func sessionCloseJoinsPendingStreamStart(publishing: Bool) async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: publishing ? .publish : .playback, configuration: nil)
+        _ = await session.stream // Register the stream before NetConnection restoration.
+        let attempt = Task { try await session.connect {} }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await acceptHandshake(peer)
+        var chunkSize = 128
+        _ = try await command(from: peer, chunkSize: &chunkSize)
+        try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer)
+        while true {
+            let next = try await command(from: peer, chunkSize: &chunkSize)
+            if next.name == (publishing ? "publish" : "play") { break }
+            try await reply(next.transaction, arguments: next.name == "createStream" ? [Double(1)] : [], to: peer)
+        }
+        let start = ContinuousClock.now
+        try await session.close()
+        #expect(start.duration(to: .now) < .seconds(1))
+        switch await attempt.result {
+        case .success: Issue.record("Closed stream setup succeeded")
+        case .failure(let error): #expect(error is CancellationError)
+        }
+        #expect(await session.connected == false)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func sessionCloseCancelsRetryBackoff() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: .playback, configuration: nil)
+        let attempt = Task { try await session.connect {} }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await acceptHandshake(peer)
+        var chunkSize = 128
+        _ = try await command(from: peer, chunkSize: &chunkSize)
+        try await reply(1, arguments: [["level": "error", "code": "NetConnection.Connect.InvalidApp"] as AMFObject], to: peer, name: "_error")
+        // Drain the remaining command bytes until the rejected connection closes.
+        do {
+            while !(try await bytes(1, from: peer)).isEmpty {}
+        } catch let error as NWError {
+            if error != .posix(.ECONNRESET) { throw error }
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        let start = ContinuousClock.now
+        try await session.close()
+        #expect(start.duration(to: .now) < .milliseconds(500))
+        switch await attempt.result {
+        case .success: Issue.record("Rejected session succeeded")
+        case .failure(let error): #expect(error is CancellationError)
+        }
+    }
+
+    private func acceptHandshake(_ peer: NWConnection) async throws {
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        var handshake = Data(count: 1 + 2 * RTMPHandshake.sigSize)
+        handshake[0] = RTMPHandshake.protocolVersion
+        try await send(handshake, to: peer)
+        try await receive(RTMPHandshake.sigSize, from: peer)
+    }
+
+    private func reply(_ transaction: Int, arguments: [(any Sendable)?], to peer: NWConnection, name: String = "_result") async throws {
+        let response = RTMPCommandMessage(streamId: 0, transactionId: transaction, objectEncoding: .amf0, commandName: name, commandObject: nil, arguments: arguments)
+        let buffer = RTMPChunkBuffer()
+        for chunk in buffer.putMessage(.zero, chunkStreamId: 3, message: response) { try await send(chunk, to: peer) }
+    }
+
+    /// The client commands/control messages in these fixtures use full headers.
+    private func command(from peer: NWConnection, chunkSize: inout Int) async throws -> (name: String, transaction: Int) {
+        while true {
+            let header = [UInt8](try await bytes(12, from: peer))
+            try #require(header.count == 12 && header[0] >> 6 == 0)
+            let size = Int(header[4]) << 16 | Int(header[5]) << 8 | Int(header[6])
+            var payload = Data()
+            while payload.count < size {
+                let part = try await bytes(min(chunkSize, size - payload.count), from: peer)
+                try #require(!part.isEmpty)
+                payload.append(part)
+                if payload.count < size { _ = try await bytes(1, from: peer) }
+            }
+            if header[7] == 1 {
+                let value = [UInt8](payload)
+                chunkSize = value.reduce(0) { ($0 << 8) | Int($1) }
+                continue
+            }
+            if header[7] != 20 { continue }
+            let serializer = AMF0Serializer(data: payload)
+            let name: String = try serializer.deserialize()
+            let transaction: Int = try serializer.deserialize()
+            return (name, transaction)
+        }
+    }
+
+    private func bytes(_ count: Int, from peer: NWConnection) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            peer.receive(minimumIncompleteLength: count, maximumLength: count) { data, _, _, error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume(returning: data ?? Data()) }
+            }
+        }
+    }
+
     private func silentServer() async throws -> (listener: NWListener, queue: DispatchQueue, peers: AsyncStream<NWConnection>, url: String) {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
