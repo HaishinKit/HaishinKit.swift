@@ -8,6 +8,7 @@ final actor AudioPlayerNode {
         if playerNode.isPlaying {
             guard
                 let nodeTime = playerNode.lastRenderTime,
+                nodeTime.isSampleTimeValid || nodeTime.isHostTimeValid,
                 let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
                 return nil
             }
@@ -21,6 +22,7 @@ final actor AudioPlayerNode {
     private let playerNode: AVAudioPlayerNode
     private var audioTime = AudioTime()
     private var scheduledAudioBuffers: Int = 0
+    private var playbackGeneration: UInt = 0
     private var isBuffering = true
     private weak var player: AudioPlayer?
     private var format: AVAudioFormat? {
@@ -44,20 +46,34 @@ final actor AudioPlayerNode {
     }
 
     func enqueue(_ audioBuffer: AVAudioBuffer, when: AVAudioTime) async {
+        // A stream's queued stop/start can arrive out of order. Keep accepting new PCM;
+        // the generation checks below discard scheduling work from the previous playback.
+        let generation = playbackGeneration
         format = audioBuffer.format
-        guard let audioBuffer = audioBuffer as? AVAudioPCMBuffer, await player?.isConnected(self) == true else {
+        guard
+            let audioBuffer = audioBuffer as? AVAudioPCMBuffer,
+            await player?.isConnected(self) == true,
+            generation == playbackGeneration else {
             return
         }
         if !audioTime.hasAnchor {
-            audioTime.anchor(playerNode.lastRenderTime ?? AVAudioTime(hostTime: 0))
+            // Scheduled sample times belong to the player, not the engine's render clock.
+            audioTime.anchor(AVAudioTime(sampleTime: 0, atRate: audioBuffer.format.sampleRate))
         }
+        let scheduledTime = audioTime.at
+        audioTime.advanced(Int64(audioBuffer.frameLength))
         scheduledAudioBuffers += 1
         if !isPaused && !playerNode.isPlaying && Self.bufferCounts <= scheduledAudioBuffers {
             playerNode.play()
         }
         Task {
-            audioTime.advanced(Int64(audioBuffer.frameLength))
-            await playerNode.scheduleBuffer(audioBuffer, at: audioTime.at)
+            guard generation == playbackGeneration else {
+                return
+            }
+            await playerNode.scheduleBuffer(audioBuffer, at: scheduledTime)
+            guard generation == playbackGeneration else {
+                return
+            }
             scheduledAudioBuffers -= 1
             if scheduledAudioBuffers == 0 {
                 isBuffering = true
@@ -78,6 +94,7 @@ extension AudioPlayerNode: AsyncRunner {
             return
         }
         scheduledAudioBuffers = 0
+        playbackGeneration &+= 1
         isRunning = true
     }
 
@@ -85,13 +102,13 @@ extension AudioPlayerNode: AsyncRunner {
         guard isRunning else {
             return
         }
-        if playerNode.isPlaying {
-            playerNode.stop()
-            playerNode.reset()
-        }
+        isRunning = false
+        playbackGeneration &+= 1
+        scheduledAudioBuffers = 0
+        playerNode.stop()
+        playerNode.reset()
         audioTime.reset()
         format = nil
-        isRunning = false
     }
 }
 
