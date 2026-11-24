@@ -4,7 +4,7 @@ Check device capabilities before receiving AV1 video through VideoToolbox.
 
 ## Overview
 
-RTMPHaishinKit receives AV1 through Enhanced RTMP and decodes it with the system VideoToolbox hardware decoder. AV1 publishing, software-decoder fallback, and AV1 transport through SRT or WebRTC are not part of this implementation.
+RTMPHaishinKit receives AV1 through Enhanced RTMP and decodes it with the system VideoToolbox hardware decoder. Software-decoder fallback and AV1 transport through SRT or WebRTC are not part of this implementation. For software AV1 publishing, see [AOMHaishinKit and Enhanced RTMP](https://docs.haishinkit.com/swift/latest/documentation/rtmphaishinkit/av1-publishing).
 
 On devices without an AV1 hardware decoder, AV1 video packets are ignored while supported audio, such as AAC, continues to play. The connection remains open. Applications should show an audio-only state rather than assume that every incoming stream can display video.
 

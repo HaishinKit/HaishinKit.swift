@@ -12,7 +12,7 @@ RTMPHaishinKit implements the RTMP protocol.
 ## 🎨 Features
 - [x] FMLE-compatible Authentication
 - [x] Publish
-  - H264, HEVC, AAC and OPUS support.
+  - H264, HEVC, externally encoded AV1, AAC and OPUS support.
 - [x] Playback
   - H264, HEVC, AV1 (VideoToolbox hardware decoding) and AAC support.
 - [ ] Action Message Format
@@ -24,6 +24,8 @@ RTMPHaishinKit implements the RTMP protocol.
 - [x] [Enhanced RTMP](E-RTMP.md)
 
 ## 📓 Usage
+See <doc:av1-publishing> to publish software-encoded AV1 using AOMHaishinKit.
+
 ### Publish
 ```swift
 let mixer = MediaMixer()

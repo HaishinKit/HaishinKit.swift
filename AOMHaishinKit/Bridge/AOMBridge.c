@@ -34,6 +34,7 @@ HKAOMSession *hk_aom_encoder_create(unsigned int width, unsigned int height,
     *status = aom_codec_enc_config_default(iface, &session->config, AOM_USAGE_REALTIME);
     if (*status != AOM_CODEC_OK) goto fail;
     session->config.g_profile = 0;
+    session->config.monochrome = 0;
     session->config.g_bit_depth = AOM_BITS_8;
     session->config.g_input_bit_depth = 8;
     session->config.rc_resize_mode = 0;
@@ -56,6 +57,10 @@ HKAOMSession *hk_aom_encoder_create(unsigned int width, unsigned int height,
     *status = aom_codec_control(&session->codec, AOME_SET_CPUUSED, 8);
     if (*status != AOM_CODEC_OK) goto fail;
     *status = aom_codec_control(&session->codec, AOME_SET_ENABLEAUTOALTREF, 0);
+    if (*status != AOM_CODEC_OK) goto fail;
+    *status = aom_codec_control(&session->codec, AV1E_SET_CHROMA_SAMPLE_POSITION, AOM_CSP_UNKNOWN);
+    if (*status != AOM_CODEC_OK) goto fail;
+    *status = aom_codec_control(&session->codec, AV1E_SET_COLOR_RANGE, 0);
     if (*status != AOM_CODEC_OK) goto fail;
     session->image.fmt = AOM_IMG_FMT_I420;
     session->image.w = session->image.d_w = width;

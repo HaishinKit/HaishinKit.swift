@@ -543,6 +543,10 @@ struct RTMPVideoMessage: RTMPMessage {
             var buffer = Data([0b10000000 | RTMPFrameType.key.rawValue << 4 | RTMPVideoPacketType.sequenceStart.rawValue, 0x68, 0x76, 0x63, 0x31])
             buffer.append(configurationBox)
             payload = buffer
+        case let type where type.rawValue == kCMVideoCodecType_AV1:
+            guard let configuration = formatDescription.configurationBox,
+                  AV1DecoderConfigurationRecord(data: configuration)?.makeFormatDescription() != nil else { return nil }
+            payload = Data([0x90, 0x61, 0x76, 0x30, 0x31]) + configuration
         default:
             return nil
         }
@@ -568,6 +572,10 @@ struct RTMPVideoMessage: RTMPMessage {
             buffer.append(contentsOf: compositionTime.bigEndian.data[1..<4])
             buffer.append(data)
             payload = buffer
+        case let type? where type.rawValue == kCMVideoCodecType_AV1:
+            guard sampleBuffer.formatDescription?.configurationBox != nil else { return nil }
+            payload = Data([0x80 | ((keyframe ? RTMPFrameType.key.rawValue : RTMPFrameType.inter.rawValue) << 4) |
+                RTMPVideoPacketType.codedFrames.rawValue, 0x61, 0x76, 0x30, 0x31]) + data
         default:
             return nil
         }

@@ -9,8 +9,9 @@ Standalone software AV1 encoding and decoding.
 This optional product exposes ``AOMVideoEncoder``, ``AOMVideoDecoder``, and
 ``AOMVideoCodecSettings`` without depending on the `HaishinKit` target. Applications
 such as VQMetrix can call it directly. The existing `VideoCodec`, codec registration,
-MediaMixer, and RTC/RTMP/SRT pipelines are unchanged; importing this product does not
-add AV1 transport support.
+MediaMixer and codec selection are unchanged by importing this product. RTMPHaishinKit
+can publish its encoded samples through Enhanced RTMP; see
+[AV1 publishing](https://docs.haishinkit.com/swift/latest/documentation/rtmphaishinkit/av1-publishing).
 
 ## Installation
 
@@ -56,6 +57,10 @@ The classes are deliberately non-Sendable: create and use each instance on one a
 or serial executor. Software compression runs on that caller; use a worker executor
 for UI applications. The APIs throw errors directly rather than dropping outputs
 through an asynchronous continuation.
+
+Encoded samples include an `av1C` configuration atom in their format description,
+derived from the emitted sequence header. The packet payload remains raw low-overhead
+AV1 OBUs, so a muxer can send configuration before the first coded frame.
 
 ## Settings and lifecycle
 
