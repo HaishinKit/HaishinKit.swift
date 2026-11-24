@@ -94,6 +94,7 @@ final class PlaybackViewModel: ObservableObject {
     }
 }
 
+#if !os(visionOS)
 extension PlaybackViewModel: MTHKViewRepresentable.PreviewSource {
     // MARK: MTHKViewRepresentable.PreviewSource
     nonisolated func connect(to view: MTHKView) {
@@ -101,6 +102,8 @@ extension PlaybackViewModel: MTHKViewRepresentable.PreviewSource {
         }
     }
 }
+
+#endif
 
 extension PlaybackViewModel: PiPHKViewRepresentable.PreviewSource {
     // MARK: PiPHKSwiftUiView.PreviewSource

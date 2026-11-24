@@ -98,6 +98,7 @@ struct StudioEmptyState: View {
 }
 
 struct MacSettingsView: View {
+    @State private var showingCodecs = false
     @AppStorage("macos.capture.microphoneEnabled") private var microphoneEnabled = false
     @State private var microphoneAccess = AVCaptureDevice.authorizationStatus(for: .audio)
     @EnvironmentObject private var preference: PreferenceViewModel
@@ -146,6 +147,9 @@ struct MacSettingsView: View {
                 Text(String(localized: "Applied when the publisher opens. Audio Engine keeps microphone input separate from camera capture."))
                     .foregroundStyle(.secondary)
             }
+            Section {
+                Button(String(localized: "Device codecs", table: "CodecSupport")) { showingCodecs = true }
+            }
             Section { UpdateSettingsView() }
             Section(String(localized: "About")) {
 
@@ -156,5 +160,6 @@ struct MacSettingsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle(String(localized: "Settings"))
+        .sheet(isPresented: $showingCodecs) { CodecSupportView() }
     }
 }

@@ -8,9 +8,11 @@ let logger = LBLogger.with("com.haishinkit.HaishinKit.visionOSApp")
 
 @main
 struct HaishinApp: App {
+    @StateObject private var preference = PreferenceViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView().environmentObject(preference)
         }
     }
 

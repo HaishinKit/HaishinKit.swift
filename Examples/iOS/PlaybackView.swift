@@ -11,7 +11,11 @@ struct PlaybackView: View {
             VStack {
                 switch preference.viewType {
                 case .metal:
+                    #if os(visionOS)
+                    PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                    #else
                     MTHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
+                    #endif
                 case .pip:
                     PiPHKViewRepresentable(previewSource: model, videoGravity: .resizeAspectFill)
                 }
