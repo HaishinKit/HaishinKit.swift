@@ -39,7 +39,16 @@ This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metada
 
 ## Supports Enhanced RTMP Status
 ### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
-Support for AV1 is planned to be implemented once the hardware becomes compatible.
+AV1 playback uses the system VideoToolbox hardware decoder. The default connection advertises `av01` only when `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)` is true, and advertises decoding capability only. No software decoder or AV1 encoder is used by RTMPHaishinKit.
+
+On a device without AV1 hardware decoding, incoming AV1 video is ignored while supported audio continues to play. The stream stays connected; an unsupported video codec does not stop audio playback.
+
+Use the normal `RTMPStream.play` flow; no receiver-side encoder settings are needed. The server must support Enhanced RTMP AV1 and preserve its `av1C` sequence configuration and low-overhead OBU frame data. Configuration records without a Sequence Header OBU are completed from an in-band sequence header in the first sync sample. AV1 `CodedFrames` packets have no composition-time field; their RTMP timestamp is the presentation timestamp. Playback also accepts AV1 `CodedFramesX`, as emitted by MediaMTX, with the same payload and timestamp handling.
+
+The receive tests include 8-bit and 10-bit Main-profile samples. Verify playback on a physical AV1-capable device; simulators and older hardware may not expose an AV1 hardware decoder. AV1 HDR metadata and display validation are outside this implementation.
+
+See [AV1 playback and device support](https://docs.haishinkit.com/swift/latest/documentation/haishinkit/av1-playback) for model generations, official specifications, and the runtime capability check.
+
 - [x] Enhancing onMetaData
 - [ ] Defining Additional Video Codecs
   - [ ] Publish
@@ -51,7 +60,7 @@ Support for AV1 is planned to be implemented once the hardware becomes compatibl
     - [x] HEVC
     - [x] HEVC Main10 HDR (HLG)
     - [ ] VP9
-    - [ ] AV1
+    - [x] AV1 (VideoToolbox hardware decoding)
 - [x] [Extending NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md#extending-netconnection-connect-command)
 - [ ] Metadata Frame
 
