@@ -17,6 +17,9 @@ actor RTMPSession: StreamSession {
 
     private let uri: RTMPURL
     private let mode: StreamSessionMode
+    private var generation = UUID()
+    private var isConnecting = false
+    private var connectionTask: Task<RTMPResponse, any Error>?
     private var retryCount: Int = 0
     private var maxRetryCount = kStreamSession_maxRetryCount
     private lazy var connection: RTMPConnection = {
@@ -51,26 +54,48 @@ actor RTMPSession: StreamSession {
     }
 
     func connect(_ disconnected: @Sendable @escaping () -> Void) async throws {
-        guard await connection.connected == false else {
-            return
+        guard !isConnecting, _readyState.value != .closing else { throw RTMPConnection.Error.invalidState }
+        let id = generation
+        isConnecting = true
+        defer {
+            if generation == id { isConnecting = false; connectionTask = nil }
         }
+        guard await connection.connected == false else { return }
+        guard generation == id, !Task.isCancelled else { throw CancellationError() }
         _readyState.value = .connecting
         disconnctedTask = nil
-        // Retry handling at the TCP/IP level and during RTMP connection.
-        do {
-            _ = try await connection.connect(uri.command)
-        } catch {
-            guard retryCount < maxRetryCount else {
-                retryCount = 0
-                _readyState.value = .closed
-                throw error
+        while true {
+            let task = Task { try await self.connection.connect(self.uri.command) }
+            connectionTask = task
+            do {
+                _ = try await withTaskCancellationHandler {
+                    try await task.value
+                } onCancel: { task.cancel() }
+                break
+            } catch {
+                guard generation == id else { throw CancellationError() }
+                connectionTask = nil
+                guard !Task.isCancelled else {
+                    _readyState.value = .closed
+                    throw CancellationError()
+                }
+                guard retryCount < maxRetryCount else {
+                    retryCount = 0
+                    _readyState.value = .closed
+                    throw error
+                }
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(retryCount))) * 1_000_000_000)
+                } catch {
+                    if generation == id { _readyState.value = .closed }
+                    throw error
+                }
+                guard generation == id, !Task.isCancelled else { throw CancellationError() }
+                retryCount += 1
             }
-            // It is being delayed using backoff for congestion control.
-            try await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(retryCount))) * 1_000_000_000)
-            retryCount += 1
-            try await connect(disconnected)
         }
         do {
+            guard generation == id, !Task.isCancelled else { throw CancellationError() }
             retryCount = 0
             switch mode {
             case .publish:
@@ -78,11 +103,13 @@ actor RTMPSession: StreamSession {
             case .playback:
                 _ = try await _stream.play(uri.streamName)
             }
+            guard generation == id, !Task.isCancelled else { throw CancellationError() }
             _readyState.value = .open
         } catch {
             // Errors at the NetStream layer, such as incorrect stream names,
             // cannot be resolved by retrying, so they are thrown as exceptions.
-            try await connection.close()
+            guard generation == id else { throw CancellationError() }
+            try? await connection.close()
             _readyState.value = .closed
             throw error
         }
@@ -100,12 +127,16 @@ actor RTMPSession: StreamSession {
     }
 
     func close() async throws {
-        guard await connection.connected else {
-            return
-        }
+        guard _readyState.value != .closing else { return }
+        generation = UUID()
+        let pending = connectionTask
+        pending?.cancel()
+        connectionTask = nil
         _readyState.value = .closing
         disconnctedTask = nil
-        try await connection.close()
+        if await connection.uri != nil { try? await connection.close() }
+        _ = await pending?.result
+        isConnecting = false
         retryCount = 0
         _readyState.value = .closed
     }

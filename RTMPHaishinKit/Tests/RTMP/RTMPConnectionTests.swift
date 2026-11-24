@@ -89,6 +89,182 @@ import Testing
         _ = await secondAttempt.result
     }
 
+    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
+    func incompleteConnectionTimesOut(afterHandshake: Bool) async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 1)
+        let attempt = Task { try await connection.connect(server.url) }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        if afterHandshake {
+            var data = Data(count: 1 + 2 * RTMPHandshake.sigSize)
+            data[0] = RTMPHandshake.protocolVersion
+            try await send(data, to: peer)
+            try await receive(RTMPHandshake.sigSize, from: peer)
+            try await receive(1, from: peer)
+        }
+        switch await attempt.result {
+        case .success: Issue.record("A silent server must not connect")
+        case .failure(let error):
+            guard case RTMPConnection.Error.connectionTimedOut = error else {
+                Issue.record("Unexpected timeout error: \(error)")
+                return
+            }
+        }
+        #expect(await connection.uri == nil)
+        #expect(await connection.connected == false)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancelledHandshakeClosesTransport() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 5)
+        let attempt = Task { try await connection.connect(server.url) }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        attempt.cancel()
+        switch await attempt.result {
+        case .success: Issue.record("Cancelled handshake succeeded")
+        case .failure(let error): #expect(error is CancellationError)
+        }
+        #expect(await connection.uri == nil)
+        #expect(await connection.connected == false)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func closingHandshakeAllowsAnotherAttempt() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 1)
+        var peers = server.peers.makeAsyncIterator()
+        let first = Task { try await connection.connect(server.url) }
+        let peer1 = try #require(await peers.next())
+        peer1.start(queue: server.queue)
+        defer { peer1.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer1)
+        try await Task.sleep(nanoseconds: 600_000_000)
+        try await connection.close()
+        _ = await first.result
+        let second = Task { try await connection.connect(server.url) }
+        let peer2 = try #require(await peers.next())
+        peer2.start(queue: server.queue)
+        defer { peer2.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer2)
+        try await Task.sleep(nanoseconds: 600_000_000)
+        #expect(await connection.uri != nil)
+        try await connection.close()
+        _ = await second.result
+        #expect(await connection.uri == nil)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func sessionCanCloseBeforeHandshakeCompletes() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: .publish, configuration: nil)
+        let attempt = Task { try await session.connect {} }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        try await session.close()
+        switch await attempt.result {
+        case .success: Issue.record("Closed session connected")
+        case .failure(let error): #expect(error is CancellationError)
+        }
+        #expect(await session.connected == false)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func successfulConnectCancelsItsDeadline() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 1)
+        let attempt = Task { try await connection.connect(server.url) }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        var handshake = Data(count: 1 + 2 * RTMPHandshake.sigSize)
+        handshake[0] = RTMPHandshake.protocolVersion
+        try await send(handshake, to: peer)
+        try await receive(RTMPHandshake.sigSize, from: peer)
+        try await receive(1, from: peer)
+        let reply = RTMPCommandMessage(streamId: 0, transactionId: 1, objectEncoding: .amf0,
+            commandName: "_result", commandObject: nil,
+            arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject])
+        let buffer = RTMPChunkBuffer()
+        for chunk in buffer.putMessage(.zero, chunkStreamId: 3, message: reply) {
+            try await send(chunk, to: peer)
+        }
+        _ = try await attempt.value
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        #expect(await connection.connected)
+        try await connection.close()
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func tlsSetupUsesTheConnectionDeadline() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 1)
+        let attempt = Task { try await connection.connect(server.url.replacingOccurrences(of: "rtmp:", with: "rtmps:")) }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        // The TCP peer deliberately sends no TLS response.
+        switch await attempt.result {
+        case .success: Issue.record("Silent TLS peer connected")
+        case .failure(let error):
+            guard case RTMPConnection.Error.connectionTimedOut = error else {
+                Issue.record("Unexpected TLS deadline error: \(error)")
+                return
+            }
+        }
+        #expect(await connection.uri == nil)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancellationBeforeConnectStartsIsClean() async throws {
+        let connection = RTMPConnection(timeout: 1)
+        let attempt = Task {
+            return try await connection.connect("rtmp://127.0.0.1:19369/live")
+        }
+        attempt.cancel()
+        _ = await attempt.result
+        #expect(await connection.connected == false)
+        #expect(await connection.uri == nil)
+    }
+
+    private func silentServer() async throws -> (listener: NWListener, queue: DispatchQueue, peers: AsyncStream<NWConnection>, url: String) {
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
+        let listener = try NWListener(using: parameters)
+        let queue = DispatchQueue(label: "RTMPConnectionTests.silent")
+        let (states, updates) = AsyncStream<NWListener.State>.makeStream()
+        let (peers, arrivals) = AsyncStream<NWConnection>.makeStream()
+        listener.stateUpdateHandler = { updates.yield($0) }
+        listener.newConnectionHandler = { arrivals.yield($0) }
+        listener.start(queue: queue)
+        for await state in states {
+            if case .ready = state { break }
+            if case .failed(let error) = state { listener.cancel(); throw error }
+        }
+        let port = try #require(listener.port)
+        return (listener, queue, peers, "rtmp://127.0.0.1:\(port.rawValue)/live")
+    }
+
     private func receive(_ count: Int, from peer: NWConnection) async throws {
         let received = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Int, any Error>) in
             peer.receive(minimumIncompleteLength: count, maximumLength: count) { data, _, _, error in

@@ -103,3 +103,16 @@ var connection = RTMPConnection()
 connection.connect("rtmp://username:password@localhost/appName/instanceName")
 ```
 
+
+## Connection deadlines and cancellation
+
+`RTMPConnection.timeout` bounds TCP/TLS setup, the RTMP handshake and the initial
+NetConnection response (15 seconds by default). A server that accepts TCP but
+never responds now throws `RTMPConnection.Error.connectionTimedOut`. The deadline
+stops once the initial connection response arrives; it does not limit playback
+or publishing duration.
+
+Cancelling the task awaiting `connect` closes that attempt and throws
+`CancellationError`. Calling `close` also works while a connection is pending,
+including through an RTMP stream session. A closed session does not restart a
+pending retry. An old attempt's deadline cannot close a replacement connection.

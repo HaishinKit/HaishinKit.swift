@@ -178,7 +178,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     public let videoFourCcInfoMap: AMFObject?
     /// The capability flags for Enhancing NetConnection connect Command.
     public let capsEx: Int
-    /// The time to wait for TCP/IP Handshake done.
+    /// Seconds allowed for TCP/TLS, the RTMP handshake and the initial connect response.
     public let timeout: Int
     /// The RTMP request timeout value. Defaul value is 500 msec.
     public let requestTimeout: UInt64
@@ -216,6 +216,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         return currentTransactionId
     }
 
+    private var connectingID: UUID?
+    private var connectionTimeoutTask: Task<Void, Never>?
     private var socket: RTMPSocket?
     private var chunks: [UInt16: RTMPChunkMessageHeader] = [:]
     private var streams: [RTMPStream] = []
@@ -334,15 +336,13 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Creates a two-way connection to an application on RTMP Server.
     public func connect(_ command: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
-        guard !isClosing else {
-            throw Error.invalidState
-        }
-        guard !connected else {
-            throw Error.invalidState
-        }
-        guard let uri = URL(string: command), let scheme = uri.scheme, let host = uri.host, !host.isEmpty, Self.supportedProtocols.contains(scheme) else {
+        guard !isClosing, !connected, connectingID == nil else { throw Error.invalidState }
+        guard let uri = URL(string: command), let scheme = uri.scheme, let host = uri.host,
+              !host.isEmpty, Self.supportedProtocols.contains(scheme) else {
             throw Error.unsupportedCommand(command)
         }
+        let id = UUID()
+        connectingID = id
         self.uri = uri
         self.arguments = arguments
         let secure = uri.scheme == "rtmps" || uri.scheme == "rtmpts"
@@ -355,90 +355,101 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         chunkSizeC = RTMPChunkMessageHeader.chunkSize
         chunkSizeS = RTMPChunkMessageHeader.chunkSize
         currentTransactionId = Self.connectTransactionId
-        socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
-        networkMonitor = await socket?.makeNetworkMonitor()
-        guard let socket, let networkMonitor else {
-            throw Error.invalidState
-        }
+        let socket = RTMPSocket(qualityOfService: qualityOfService, securityLevel: secure ? .negotiatedSSL : .none)
+        self.socket = socket
         do {
-            let result: RTMPResponse = try await withCheckedThrowingContinuation { continutation in
-                Task {
-                    do {
-                        try await socket.connect(host, port: uri.port ?? (secure ? Self.defaultSecurePort : Self.defaultPort))
-                    } catch {
-                        continutation.resume(throwing: error)
-                        return
+            let networkMonitor = await socket.makeNetworkMonitor()
+            guard connectingID == id, self.socket === socket else { throw CancellationError() }
+            self.networkMonitor = networkMonitor
+            let result: RTMPResponse = try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                return try await withCheckedThrowingContinuation { continuation in
+                    // Install before crossing to the socket actor so close/cancel can
+                    // finish the attempt even while TCP or TLS is still connecting.
+                    operations[Self.connectTransactionId] = continuation
+                    let seconds = UInt64(max(0, min(timeout, Int(UInt64.max / 1_000_000_000))))
+                    connectionTimeoutTask = Task { [weak self] in
+                        do { try await Task.sleep(nanoseconds: seconds * 1_000_000_000) } catch { return }
+                        await self?.failConnect(id, error: Error.connectionTimedOut)
                     }
-                    do {
-                        readyState = .versionSent
-                        handshakeStartedAt = await socket.send(handshake.c0c1packet)
-                        operations[Self.connectTransactionId] = continutation
-                        for await (data, receivedAt) in await socket.recv() {
+                    Task {
+                        do {
+                            try await socket.connect(host, port: uri.port ?? (secure ? Self.defaultSecurePort : Self.defaultPort))
+                            guard connectingID == id, self.socket === socket else { return }
+                            readyState = .versionSent
+                            handshakeStartedAt = await socket.send(handshake.c0c1packet)
+                            guard connectingID == id, self.socket === socket else { return }
+                            for await (data, receivedAt) in await socket.recv() {
+                                guard self.socket === socket, !isClosing else { return }
+                                try await listen(data, receivedAt: receivedAt)
+                            }
                             guard self.socket === socket else { return }
-                            try await listen(data, receivedAt: receivedAt)
+                            try? await close()
+                        } catch {
+                            if connectingID == id {
+                                await failConnect(id, error: error)
+                            } else if self.socket === socket {
+                                try? await close()
+                            }
                         }
-                        // An old receive loop can finish after a reconnect has replaced its socket.
-                        guard self.socket === socket else { return }
-                        try? await close()
-                    } catch {
-                        guard self.socket === socket else { return }
-                        try? await close()
                     }
                 }
+            } onCancel: {
+                Task { await self.failConnect(id, error: CancellationError()) }
             }
+            guard connectingID == id, self.socket === socket else { throw CancellationError() }
+            connectionTimeoutTask?.cancel()
+            connectionTimeoutTask = nil
+            try Task.checkCancellation()
             Task {
-                for await event in await networkMonitor.event {
-                    dispatch(event)
-                }
+                for await event in await networkMonitor.event { dispatch(event) }
             }
             for stream in streams {
                 await stream.dispatch(.reset)
                 await stream.createStream()
+                try Task.checkCancellation()
             }
+            guard connectingID == id, self.socket === socket else { throw CancellationError() }
+            connectingID = nil
             return result
-        } catch let error as RTMPSocket.Error {
-            switch error {
-            case .connectionTimedOut:
-                throw Error.connectionTimedOut
-            case .connectionNotEstablished(let socketError):
-                throw Error.socketErrorOccurred(socketError)
-            default:
-                throw Error.socketErrorOccurred(nil)
-            }
-        } catch let error as Error {
-            switch error {
-            case .requestFailed(let response):
-                guard let status = response.status else {
-                    throw error
-                }
-                // Handles an RTMP auth.
-                if status.code == RTMPConnection.Code.connectRejected.rawValue {
-                    switch authenticator.makeCommand(command, status: status) {
-                    case .success(let command):
-                        await socket.close()
-                        return try await connect(command, arguments: arguments)
-                    case .failure:
-                        throw error
-                    }
-                } else {
-                    throw error
-                }
-            default:
-                throw error
-            }
         } catch {
+            if connectingID == id { try? await close() }
+            if let socketError = error as? RTMPSocket.Error {
+                switch socketError {
+                case .connectionTimedOut: throw Error.connectionTimedOut
+                case .connectionNotEstablished(let underlying): throw Error.socketErrorOccurred(underlying)
+                default: throw Error.socketErrorOccurred(nil)
+                }
+            }
+            if case Error.requestFailed(let response) = error,
+               let status = response.status, status.code == Code.connectRejected.rawValue {
+                switch authenticator.makeCommand(command, status: status) {
+                case .success(let next): return try await connect(next, arguments: arguments)
+                case .failure: throw error
+                }
+            }
             throw error
         }
     }
 
+    private func failConnect(_ id: UUID, error: any Swift.Error) async {
+        guard connectingID == id else { return }
+        let continuation = operations.removeValue(forKey: Self.connectTransactionId)
+        try? await close()
+        continuation?.resume(throwing: error)
+    }
+
     /// Closes the connection from the server.
     public func close() async throws {
-        guard readyState != .uninitialized, !isClosing else {
+        guard (uri != nil || readyState != .uninitialized), !isClosing else {
             throw Error.invalidState
         }
         isClosing = true
         defer { isClosing = false }
 
+        connectingID = nil
+        connectionTimeoutTask?.cancel()
+        connectionTimeoutTask = nil
         uri = nil
         for stream in streams {
             if await stream.fcPublishName == nil {
@@ -449,6 +460,8 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         }
         await socket?.close()
         await networkMonitor?.stopRunning()
+        socket = nil
+        networkMonitor = nil
 
         let status = readyState == .handshakeDone ?
             Code.connectClosed.status("") :
