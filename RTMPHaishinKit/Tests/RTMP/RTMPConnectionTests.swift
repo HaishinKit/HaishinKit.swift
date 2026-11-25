@@ -321,8 +321,9 @@ import Testing
         try await connection.close()
     }
 
-    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
-    func sessionCloseJoinsPendingStreamStart(publishing: Bool) async throws {
+    @Test(.timeLimit(.minutes(1)), arguments: [0, 1, 2])
+    func sessionCloseJoinsPendingStreamStart(phase: Int) async throws {
+        let publishing = phase == 2
         let server = try await silentServer()
         defer { server.listener.cancel() }
         let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: publishing ? .publish : .playback, configuration: nil)
@@ -338,7 +339,7 @@ import Testing
         try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer)
         while true {
             let next = try await command(from: peer, chunkSize: &chunkSize)
-            if next.name == (publishing ? "publish" : "play") { break }
+            if next.name == (publishing ? "publish" : "play") || (phase == 0 && next.name == "createStream") { break }
             try await reply(next.transaction, arguments: next.name == "createStream" ? [Double(1)] : [], to: peer)
         }
         let start = ContinuousClock.now
