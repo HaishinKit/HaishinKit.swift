@@ -381,6 +381,19 @@ struct RTMPAudioMessage: RTMPMessage {
         return payload.isEmpty ? .unknown : RTMPAudioCodec(rawValue: payload[0] >> 4) ?? .unknown
     }
 
+    var packetType: UInt8? {
+        guard payload.count >= headerSize else { return nil }
+        return codec == .exheader ? payload[0] & 15 : payload[1]
+    }
+
+    var headerSize: Int { codec == .exheader ? 5 : 2 }
+
+    var isSupported: Bool {
+        guard packetType != nil else { return false }
+        if codec == .aac { return true }
+        return codec == .exheader && Array(payload[1..<5]) == Array("Opus".utf8)
+    }
+
     init(_ header: RTMPChunkMessageHeader) {
         streamId = header.messageStreamId
         timestamp = header.timestamp
@@ -428,21 +441,30 @@ struct RTMPAudioMessage: RTMPMessage {
         }
     }
 
-    func copyMemory(_ audioBuffer: AVAudioCompressedBuffer?) {
+    @discardableResult
+    func copyMemory(_ audioBuffer: AVAudioCompressedBuffer?) -> Bool {
+        guard isSupported, let audioBuffer, payload.count > headerSize,
+              payload.count - headerSize <= audioBuffer.byteCapacity else { return false }
         payload.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
-            guard let baseAddress = buffer.baseAddress, let audioBuffer else {
+            guard let baseAddress = buffer.baseAddress else {
                 return
             }
-            let byteCount = payload.count - codec.headerSize
+            let byteCount = payload.count - headerSize
             audioBuffer.packetDescriptions?.pointee = AudioStreamPacketDescription(mStartOffset: 0, mVariableFramesInPacket: 0, mDataByteSize: UInt32(byteCount))
             audioBuffer.packetCount = 1
             audioBuffer.byteLength = UInt32(byteCount)
-            audioBuffer.data.copyMemory(from: baseAddress.advanced(by: codec.headerSize), byteCount: byteCount)
+            audioBuffer.data.copyMemory(from: baseAddress.advanced(by: headerSize), byteCount: byteCount)
         }
+        return true
     }
 
     func makeAudioFormat() -> AVAudioFormat? {
-        switch payload[1] {
+        guard isSupported else { return nil }
+        if codec == .exheader {
+            guard packetType == RTMPAudioPacketType.sequenceStart.rawValue else { return nil }
+            return OpusHeaderPacket(data: Data(payload.dropFirst(headerSize)))?.makeAudioFormat()
+        }
+        switch packetType {
         case RTMPAACPacketType.seq.rawValue:
             let config = AudioSpecificConfig(bytes: [UInt8](payload[codec.headerSize..<payload.count]))
             return config?.makeAudioFormat()

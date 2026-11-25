@@ -253,6 +253,7 @@ public actor RTMPStream {
     }
 
     private var av1Configuration: AV1DecoderConfigurationRecord?
+    private var opusDecoder: RTMPOpusDecoder?
     private var videoFormat: CMFormatDescription? {
         didSet {
             guard videoFormat != oldValue else {
@@ -300,6 +301,7 @@ public actor RTMPStream {
         }
         do {
             audioFormat = nil
+            opusDecoder = nil
             videoFormat = nil
             av1Configuration = nil
             audioTimestamp.clear()
@@ -381,6 +383,7 @@ public actor RTMPStream {
         }
         do {
             audioFormat = nil
+            opusDecoder = nil
             videoFormat = nil
             av1Configuration = nil
             audioTimestamp.clear()
@@ -444,6 +447,7 @@ public actor RTMPStream {
         }
         outgoing.stopRunning()
         av1Configuration = nil
+        opusDecoder = nil
         return try await withCheckedThrowingContinuation { continutation in
             self.continuation = continutation
             switch readyState {
@@ -663,18 +667,40 @@ public actor RTMPStream {
 
     private func append(_ message: RTMPAudioMessage, type: RTMPChunkType) {
         audioTimestamp.update(message, chunkType: type)
-        guard message.codec.isSupported else {
+        if message.codec == .exheader, message.payload.first.map({ $0 & 15 }) == RTMPAudioPacketType.sequenceStart.rawValue {
+            // Even a truncated or unsupported new sequence must retire the old decoder.
+            opusDecoder = nil
+            audioFormat = nil
+        }
+        guard message.isSupported else {
             return
         }
-        switch message.payload[1] {
+        if message.codec == .exheader {
+            switch message.packetType {
+            case RTMPAudioPacketType.sequenceStart.rawValue:
+                audioFormat = nil
+                opusDecoder = OpusHeaderPacket(data: Data(message.payload.dropFirst(message.headerSize)))
+                    .flatMap { RTMPOpusDecoder(header: $0) }
+            case RTMPAudioPacketType.codedFrames.rawValue:
+                if let (buffer, when) = opusDecoder?.decode(Data(message.payload.dropFirst(message.headerSize)), when: audioTimestamp.value) {
+                    Task { await incoming.append(buffer, when: when) }
+                }
+            case RTMPAudioPacketType.sequenceEnd.rawValue:
+                opusDecoder = nil
+            default:
+                break
+            }
+            return
+        }
+        opusDecoder = nil
+        switch message.packetType {
         case RTMPAACPacketType.seq.rawValue:
             audioFormat = message.makeAudioFormat()
         case RTMPAACPacketType.raw.rawValue:
             if audioFormat == nil {
                 audioFormat = message.makeAudioFormat()
             }
-            if let audioBuffer {
-                message.copyMemory(audioBuffer)
+            if let audioBuffer, message.copyMemory(audioBuffer) {
                 Task { await incoming.append(audioBuffer, when: audioTimestamp.value) }
             }
         default:

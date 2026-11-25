@@ -38,6 +38,20 @@ Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not c
 This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
 
 ## Supports Enhanced RTMP Status
+### Opus playback
+
+Use the normal `RTMPStream.play` flow and attach an `AudioPlayer` to hear Opus
+audio. The connection advertises both Opus encoding and decoding support.
+No receiver-side `AudioCodecSettings` change is needed.
+
+Playback accepts a single mono or stereo Opus stream (ID-header mapping family
+zero), using the 48 kHz decode timeline. The `OpusHead` sequence header's input
+sample rate is informational; its pre-skip and output gain are applied during
+decoding. Each `CodedFrames` message carries one Opus packet, up to 120 ms.
+An invalid or unsupported sequence header stops Opus decoding until a valid new
+sequence header arrives. Multichannel mapping, multitrack audio, and headerless
+sequences are not supported. The server must support Enhanced RTMP Opus.
+
 ### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
 AV1 playback uses the system VideoToolbox hardware decoder. The default connection advertises `av01` only when `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)` is true, and advertises decoding capability only. No software decoder or AV1 encoder is used by RTMPHaishinKit.
 
@@ -79,7 +93,7 @@ See [AV1 playback and device support](https://docs.haishinkit.com/swift/latest/d
   - [ ] Publish
     - [x] OPUS
   - [ ] Playback
-    - [ ] OPUS
+    - [x] OPUS (mono/stereo)
 - [ ] Multitrack Streaming via Enhanced RTMP
 - [x] [Enhancing NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v2.md#enhancing-netconnection-connect-command)
 
