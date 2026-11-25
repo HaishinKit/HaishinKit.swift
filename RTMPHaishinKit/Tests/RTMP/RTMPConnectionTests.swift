@@ -435,11 +435,32 @@ import Testing
         }
         try await redundant.value
         #expect(await session.connected)
+        let activeStream = try #require(await session.stream as? RTMPStream)
+        for publishing in [false, true] {
+            let cancelled = Task {
+                withUnsafeCurrentTask { $0?.cancel() }
+                return publishing ? try await activeStream.publish("replacement") : try await activeStream.play("replacement")
+            }
+            if case .failure(let error) = await cancelled.result { #expect(error is CancellationError) }
+            else { Issue.record("Cancelled start succeeded") }
+            #expect(await activeStream.readyState == .playing)
+        }
         let closing = Task { try await session.close() }
         let close = try await command(from: peer, chunkSize: &chunkSize)
         #expect(close.name == "closeStream")
+        let completion = CloseCompletion()
+        let joiningClose = Task { try await session.close(); await completion.finish() }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(await completion.finished == false)
         try await reply(0, arguments: [["level": "status", "code": "NetStream.Play.Stop"] as AMFObject], to: peer, name: "onStatus", streamID: 1)
         try await closing.value
+        try await joiningClose.value
+        #expect(await completion.finished)
+    }
+
+    private actor CloseCompletion {
+        private(set) var finished = false
+        func finish() { finished = true }
     }
 
     @Test(arguments: [false, true])
@@ -455,6 +476,37 @@ import Testing
         case .failure(let error): #expect(error is CancellationError)
         }
         #expect(await stream.readyState == .idle)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func concurrentRestorationCannotDiscardTheAwaitedStreamID() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: .playback, configuration: nil)
+        let stream = try #require(await session.stream as? RTMPStream)
+        let attempt = Task { try await session.connect {} }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await acceptHandshake(peer)
+        var chunkSize = 128
+        _ = try await command(from: peer, chunkSize: &chunkSize)
+        try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer)
+        let awaited = try await command(from: peer, chunkSize: &chunkSize)
+        #expect(awaited.name == "createStream")
+        let registration = Task { await stream.createStream() }
+        let duplicate = try await command(from: peer, chunkSize: &chunkSize)
+        #expect(duplicate.name == "createStream")
+        try await reply(awaited.transaction, arguments: [Double(1)], to: peer)
+        for _ in 0..<200 {
+            if await stream.id == 1 { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        #expect(await stream.id == 1)
+        try await session.close()
+        _ = await attempt.result
+        await registration.value
     }
 
     private func acceptHandshake(_ peer: NWConnection) async throws {

@@ -301,8 +301,8 @@ public actor RTMPStream {
                 throw Error.invalidState
             }
         }
+        try Task.checkCancellation()
         do {
-            try Task.checkCancellation()
             audioFormat = nil
             videoFormat = nil
             av1Configuration = nil
@@ -385,8 +385,8 @@ public actor RTMPStream {
         guard readyState != .publish else {
             throw Error.invalidState
         }
+        try Task.checkCancellation()
         do {
-            try Task.checkCancellation()
             audioFormat = nil
             videoFormat = nil
             av1Configuration = nil
@@ -656,8 +656,9 @@ public actor RTMPStream {
 
     func createStream(generation: UUID? = nil) async {
         guard let connection else { return }
-        let restoration = UUID()
-        restorationID = restoration
+        // Concurrent registration/restoration in the same connection shares validity.
+        // Only teardown invalidates this cohort, not another request in that cohort.
+        let restoration = restorationID
         let currentGeneration = await connection.streamGeneration()
         guard let generation = generation ?? currentGeneration, restorationID == restoration else { return }
         if let fcPublishName {

@@ -20,6 +20,7 @@ actor RTMPSession: StreamSession {
     private var generation = UUID()
     private var isConnecting = false
     private var connectionTask: Task<Void, any Error>?
+    private var closeTask: Task<Void, Never>?
     private var maxRetryCount = kStreamSession_maxRetryCount
     private lazy var connection: RTMPConnection = {
         switch mode {
@@ -148,15 +149,22 @@ actor RTMPSession: StreamSession {
     }
 
     func close() async throws {
-        guard _readyState.value != .closing else { return }
+        if let closeTask { await closeTask.value; return }
         generation = UUID()
         let pending = connectionTask
         pending?.cancel()
         connectionTask = nil
         _readyState.value = .closing
         disconnctedTask = nil
+        let task = Task { await self.finishClose(pending) }
+        closeTask = task
+        await task.value
+    }
+
+    private func finishClose(_ pending: Task<Void, any Error>?) async {
         if await connection.uri != nil { try? await connection.close() }
         _ = await pending?.result
+        closeTask = nil
         isConnecting = false
         _readyState.value = .closed
     }
