@@ -248,6 +248,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             outputBuffer.chunkSize = chunkSizeS
         }
     }
+    private var operationGeneration = UUID()
     private var operations: [Int: CheckedContinuation<RTMPResponse, any Swift.Error>] = [:]
     private var isClosing = false
     private var inputBuffer = RTMPChunkBuffer()
@@ -311,7 +312,23 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Calls a command or method on RTMP Server.
     public func call(_ commandName: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
-        guard connected else {
+        try await performCall(commandName, arguments: arguments, allowsClosing: false)
+    }
+
+    func callForTeardown(_ commandName: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        try await performCall(commandName, arguments: arguments, allowsClosing: true)
+    }
+
+    func streamGeneration() -> UUID? {
+        connected && !isClosing ? connectionGeneration : nil
+    }
+
+    func callForStream(_ commandName: String, generation: UUID, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        try await performCall(commandName, arguments: arguments, allowsClosing: false, generation: generation)
+    }
+
+    private func performCall(_ commandName: String, arguments: [(any Sendable)?], allowsClosing: Bool, generation: UUID? = nil) async throws -> RTMPResponse {
+        guard connected, allowsClosing || !isClosing, generation == nil || generation == connectionGeneration else {
             throw Error.invalidState
         }
         return try await withCheckedThrowingContinuation { continutation in
@@ -323,8 +340,10 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                 commandObject: nil,
                 arguments: arguments
             )
+            let generation = operationGeneration
             Task {
                 try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                guard operationGeneration == generation else { return }
                 guard let operation = operations.removeValue(forKey: message.transactionId) else {
                     return
                 }
@@ -344,6 +363,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         }
         let id = UUID()
         connectingID = id
+        operationGeneration = UUID()
         connectionGeneration = id
         self.uri = uri
         self.arguments = arguments
@@ -418,8 +438,11 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                 for await event in await networkMonitor.event { dispatch(event) }
             }
             for stream in streams {
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 await stream.dispatch(.reset)
-                await stream.createStream()
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
+                await stream.createStream(generation: id)
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 try Task.checkCancellation()
             }
             guard connectingID == id, self.socket === socket else { throw CancellationError() }
@@ -477,6 +500,13 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         connectionTimeoutTask?.cancel()
         connectionTimeoutTask = nil
         uri = nil
+        operationGeneration = UUID()
+        let pending = operations.filter { $0.key != Self.connectTransactionId }
+        for (id, operation) in pending {
+            operations.removeValue(forKey: id)
+            operation.resume(throwing: CancellationError())
+        }
+        for stream in streams { await stream.cancelPendingOperation() }
         for stream in streams {
             if await stream.fcPublishName == nil {
                 _ = try? await stream.close()
@@ -509,6 +539,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             logger.trace("<<", message)
         }
         let chunks = Array(outputBuffer.putMessage(type, chunkStreamId: chunkStreamId.rawValue, message: message))
+        let socket = socket
         Task {
             await socket?.send(chunks)
         }

@@ -210,8 +210,11 @@ public actor RTMPStream {
     private var frameCount: UInt16 = 0
     private var audioBuffer: AVAudioCompressedBuffer?
     private var howToPublish: RTMPStream.HowToPublish = .live
+    private var restorationID = UUID()
+    private var requestID = UUID()
     private var continuation: CheckedContinuation<RTMPResponse, any Swift.Error>? {
         didSet {
+            requestID = UUID()
             if continuation == nil {
                 expectedResponse = nil
             }
@@ -298,6 +301,7 @@ public actor RTMPStream {
                 throw Error.invalidState
             }
         }
+        try Task.checkCancellation()
         do {
             audioFormat = nil
             videoFormat = nil
@@ -308,9 +312,11 @@ public actor RTMPStream {
                 readyState = .play
                 expectedResponse = Code.playStart
                 self.continuation = continuation
+                let pendingRequestID = requestID
                 Task {
                     await incoming.startRunning()
                     try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                    guard requestID == pendingRequestID else { return }
                     self.continuation.map {
                         $0.resume(throwing: Error.requestTimedOut)
                     }
@@ -379,6 +385,7 @@ public actor RTMPStream {
         guard readyState != .publish else {
             throw Error.invalidState
         }
+        try Task.checkCancellation()
         do {
             audioFormat = nil
             videoFormat = nil
@@ -389,8 +396,10 @@ public actor RTMPStream {
                 readyState = .publish
                 expectedResponse = Code.publishStart
                 self.continuation = continuation
+                let pendingRequestID = requestID
                 Task {
                     try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                    guard requestID == pendingRequestID else { return }
                     self.continuation.map {
                         $0.resume(throwing: Error.requestTimedOut)
                     }
@@ -446,6 +455,7 @@ public actor RTMPStream {
         av1Configuration = nil
         return try await withCheckedThrowingContinuation { continutation in
             self.continuation = continutation
+            let pendingRequestID = requestID
             switch readyState {
             case .playing:
                 expectedResponse = Code.playStop
@@ -457,6 +467,7 @@ public actor RTMPStream {
             Task {
                 await incoming.stopRunning()
                 try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                guard requestID == pendingRequestID else { return }
                 self.continuation.map {
                     $0.resume(throwing: Error.requestTimedOut)
                 }
@@ -548,8 +559,10 @@ public actor RTMPStream {
         let response = try await withCheckedThrowingContinuation { continuation in
             expectedResponse = isPaused ? Code.pauseNotify : Code.unpauseNotify
             self.continuation = continuation
+            let pendingRequestID = requestID
             Task {
                 try? await Task.sleep(nanoseconds: requestTimeout * 1_000_000)
+                guard requestID == pendingRequestID else { return }
                 self.continuation.map {
                     $0.resume(throwing: Error.requestTimedOut)
                 }
@@ -634,15 +647,29 @@ public actor RTMPStream {
         }
     }
 
-    func createStream() async {
+    func cancelPendingOperation() {
+        restorationID = UUID()
+        let pending = continuation
+        continuation = nil
+        pending?.resume(throwing: CancellationError())
+    }
+
+    func createStream(generation: UUID? = nil) async {
+        guard let connection else { return }
+        // Concurrent registration/restoration in the same connection shares validity.
+        // Only teardown invalidates this cohort, not another request in that cohort.
+        let restoration = restorationID
+        let currentGeneration = await connection.streamGeneration()
+        guard let generation = generation ?? currentGeneration, restorationID == restoration else { return }
         if let fcPublishName {
             // FMLE-compatible sequences
-            async let _ = connection?.call("releaseStream", arguments: fcPublishName)
-            async let _ = connection?.call("FCPublish", arguments: fcPublishName)
+            async let _ = connection.callForStream("releaseStream", generation: generation, arguments: fcPublishName)
+            async let _ = connection.callForStream("FCPublish", generation: generation, arguments: fcPublishName)
         }
         do {
-            let response = try await connection?.call("createStream")
-            guard let first = response?.arguments.first as? Double else {
+            guard restorationID == restoration else { return }
+            let response = try await connection.callForStream("createStream", generation: generation)
+            guard restorationID == restoration, let first = response.arguments.first as? Double else {
                 return
             }
             id = UInt32(first)
@@ -657,8 +684,8 @@ public actor RTMPStream {
             return
         }
         outgoing.stopRunning()
-        async let _ = try? connection?.call("FCUnpublish", arguments: fcPublishName)
-        async let _ = try? connection?.call("deleteStream", arguments: id)
+        async let _ = try? connection?.callForTeardown("FCUnpublish", arguments: fcPublishName)
+        async let _ = try? connection?.callForTeardown("deleteStream", arguments: id)
     }
 
     private func append(_ message: RTMPAudioMessage, type: RTMPChunkType) {
