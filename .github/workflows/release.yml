@@ -9,6 +9,10 @@ on:
         description: 'Release tag to build the macOS example and publish documentation for'
         required: true
         type: string
+      macos_only:
+        description: 'Rebuild only the macOS release assets'
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -47,7 +51,12 @@ jobs:
       - name: Build, verify and sign Apple Silicon macOS updates
         env:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
-        run: bundle exec fastlane macos_example "version:$RELEASE_VERSION" updates:true
+        # The license build phase uses /usr/bin/ruby, which must not inherit
+        # Bundler's Ruby-version-specific RUBYOPT, RUBYLIB, or gem paths.
+        run: >-
+          bundle exec ruby -rbundler -e
+          'Bundler.with_unbundled_env { load Gem.bin_path("fastlane", "fastlane") }'
+          -- macos_example "version:$RELEASE_VERSION" updates:true
       - name: Upload macOS example to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -74,6 +83,7 @@ jobs:
           fi
           gh release upload "$RELEASE_VERSION" "${assets[@]}" --clobber
   build:
+    if: ${{ !inputs.macos_only }}
     runs-on: macos-26
     env:
       RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
