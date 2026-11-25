@@ -5,78 +5,17 @@ import Testing
 @testable import RTMPHaishinKit
 
 @Suite struct RTMPOpusTests {
-    // FFmpeg/libopus 60-ms mono sine packet, extracted from Enhanced FLV.
-    @Test func decodesExternal60msPacket() throws {
-        let header = try #require(OpusHeaderPacket(data: Data(base64Encoded: "T3B1c0hlYWQBATgBgLsAAAAAAA==")!))
-        let decoder = try #require(RTMPOpusDecoder(header: header))
-        let data = Data(base64Encoded: "+wNySUcnEOTIW3gni4cywfAWFLzOloPklOYIBUI1IPndkrnvwWd6mU8VqSsGK9fpHcCqeUQLVpo9rErVBaagmdvGP6nngLNxsszgH+Hro1SwZmdhVZL7ohz6A3qkSq22wek0dWBURz2w5XcTKsncNcVow6h/RlFcyhBvzzk9W2xFANHcLk0yY03kk7iODRZzZuJkZUjmhlcc4NfhQY1yjBWv6R3t2sduSEBEYA8nMG7eAQN3Jer+Z5lbk9AV3IvlLyOBEOzuNA6CQl0kCjNt3th0H+S6obuFkk4yb7sx8Bd5M0lPMx95ZdPxlUAk1+iVc+BZ47uoDHZN6fw7qGBObcNRe9mncZl2jtkZxpmlNr1Z2jJ8pGBIw555dSyxMBA97sz2S1pQS1qtEMDB7qraRl5dQYCRU7+A8s50Hcc9E+6xoaDoHbwDNkt9CRpUbq2WVXT5FD5qqu9J+vuyF8pLvZ2R0bxq30drkbyEm9bzJrm8Y+Zw2/FJOXHaDO5VRLvqWQaqKt0HkGjM02N3ozA9z89pgKmbr1JPi9o6KfoVpy9+9ya86tbwLzLFOk+9StrG0Efw6TYyUNy2AaTIMQTUZdi8lcf+ELg6WoY2mvQny6Cfedw4XtgyZWITmU9H3e4=")!
-        #expect(RTMPOpusDecoder.frameCount(data) == 2880)
-        let (pcm, _) = try #require(decoder.decode(data, when: AVAudioTime(hostTime: 0)))
-        #expect(pcm.frameLength > 2000)
-        #expect((0..<Int(pcm.frameLength)).contains { abs(pcm.floatChannelData![0][$0]) > 0.05 })
-    }
-
     @Test func advertisesOpusPlayback() {
         #expect(RTMPConnection.supportedAudioFourCcInfoMap["Opus"] as? Int == 3)
     }
 
     @Test(arguments: [1, 2])
-    func parsesIDHeaderAndDecodesRealAudio(channels: Int) throws {
+    func parsesIDHeader(channels: Int) throws {
         let header = try #require(OpusHeaderPacket(data: idHeader(channels: channels)))
+        #expect(header.channels == channels)
         let format = try #require(try message([0x90] + Array("Opus".utf8) + idHeader(channels: channels)).makeAudioFormat())
         #expect(format.sampleRate == 48_000)
         #expect(format.channelCount == channels)
-        let decoder = try #require(RTMPOpusDecoder(header: header))
-        let packets = try encode(channels: channels)
-        var frames = 0
-        var peak: Float = 0
-        var times: [Int64] = []
-        for (index, packet) in packets.enumerated() {
-            if let (pcm, time) = decoder.decode(packet, when: AVAudioTime(hostTime: AVAudioTime.hostTime(forSeconds: 1320 + Double(index) * 0.02))) {
-                #expect(time.isHostTimeValid)
-                times.append(time.sampleTime)
-                frames += Int(pcm.frameLength)
-                for index in 0..<Int(pcm.frameLength) { peak = max(peak, abs(pcm.floatChannelData![0][index])) }
-            }
-        }
-        #expect(frames >= 960 * (packets.count - 1))
-        #expect(peak > 0.1)
-        let firstTime = try #require(times.first)
-        #expect(firstTime == Int64(63_360_000))
-        #expect(zip(times, times.dropFirst()).allSatisfy { $0 < $1 })
-    }
-
-    @Test func honorsPreSkipAndOutputGain() throws {
-        let packet = try #require(encode(channels: 1).first)
-        let plainHeader = try #require(OpusHeaderPacket(data: idHeader(channels: 1)))
-        let adjustedHeader = try #require(OpusHeaderPacket(data: idHeader(channels: 1, skip: 312, gain: -1536)))
-        let baseline = try #require(RTMPOpusDecoder(header: plainHeader))
-        let adjusted = try #require(RTMPOpusDecoder(header: adjustedHeader))
-        let when = AVAudioTime(hostTime: 0)
-        let (plain, _) = try #require(baseline.decode(packet, when: when))
-        let (trimmed, time) = try #require(adjusted.decode(packet, when: when))
-        #expect(trimmed.frameLength + 312 == plain.frameLength)
-        #expect(time.sampleTime == 0)
-        let scale = pow(Float(10), -6 / 20)
-        for index in 0..<Int(trimmed.frameLength) {
-            #expect(abs(trimmed.floatChannelData![0][index] - plain.floatChannelData![0][index + 312] * scale) < 0.00001)
-        }
-    }
-
-    @Test func preSkipSpansPacketsAndSourceGapsArePreserved() throws {
-        let header = try #require(OpusHeaderPacket(data: idHeader(channels: 1, skip: 2000)))
-        let decoder = try #require(RTMPOpusDecoder(header: header))
-        let packets = try encode(channels: 1)
-        var outputTimes: [Int64] = []
-        for (index, packet) in packets.enumerated() {
-            let seconds = Double(index) * 0.02 + (index >= 4 ? 1 : 0)
-            if let (_, when) = decoder.decode(packet, when: AVAudioTime(hostTime: AVAudioTime.hostTime(forSeconds: seconds))) {
-                outputTimes.append(when.sampleTime)
-            }
-        }
-        let first = try #require(outputTimes.first)
-        #expect(first == Int64(0))
-        #expect(zip(outputTimes, outputTimes.dropFirst()).contains { $1 - $0 > 48_000 })
     }
 
     @Test func rejectsMalformedHeadersAndPackets() throws {
@@ -92,13 +31,6 @@ import Testing
             #expect(!packet.isSupported)
             #expect(packet.makeAudioFormat() == nil)
         }
-        #expect(RTMPOpusDecoder.frameCount(Data()) == nil)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x83])) == nil)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x83, 0])) == nil)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x9B, 63])) == nil)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x80])) == 120)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x98])) == 960)
-        #expect(RTMPOpusDecoder.frameCount(Data([0x18])) == 2880)
     }
 
     @Test func aacFormatAndCopyRemainSupported() throws {

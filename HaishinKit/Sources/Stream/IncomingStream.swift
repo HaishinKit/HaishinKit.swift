@@ -15,6 +15,7 @@ package final actor IncomingStream {
     private lazy var videoCodec = VideoCodec()
     private weak var stream: (any _Stream)?
     private var audioPlayerNode: AudioPlayerNode?
+    private var opusSequence: UUID?
 
     /// Creates a new instance.
     package init(_ stream: some _Stream) {
@@ -40,6 +41,17 @@ package final actor IncomingStream {
 
     /// Appends an audio buffer for playback.
     public func append(_ buffer: AVAudioBuffer, when: AVAudioTime) {
+        audioCodec.append(buffer, when: when)
+    }
+
+    /// Passes an Opus packet and sequence metadata to the shared audio codec.
+    package func append(_ buffer: AVAudioCompressedBuffer, when: AVAudioTime,
+                        opusSequence: UUID, preSkip: UInt16, outputGain: Int16) {
+        guard isRunning else { return }
+        if self.opusSequence != opusSequence {
+            audioCodec.configureOpusDecoder(preSkip: preSkip, outputGain: outputGain)
+            self.opusSequence = opusSequence
+        }
         audioCodec.append(buffer, when: when)
     }
 
@@ -87,6 +99,7 @@ extension IncomingStream: AsyncRunner {
         }
         videoCodec.stopRunning()
         audioCodec.stopRunning()
+        opusSequence = nil
         Task { await mediaLink.stopRunning() }
         Task { await audioPlayerNode?.stopRunning() }
         isRunning = false

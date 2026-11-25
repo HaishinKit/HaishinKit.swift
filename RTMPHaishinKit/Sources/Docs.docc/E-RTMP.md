@@ -43,6 +43,8 @@ This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metada
 Use the normal `RTMPStream.play` flow and attach an `AudioPlayer` to hear Opus
 audio. The connection advertises both Opus encoding and decoding support.
 No receiver-side `AudioCodecSettings` change is needed.
+The shared `AudioCodec` converts Opus packets to PCM for playback; the RTMP layer
+parses the sequence header and passes compressed audio and sequence metadata to it.
 
 Playback accepts a single mono or stereo Opus stream (ID-header mapping family
 zero), using the 48 kHz decode timeline. The `OpusHead` sequence header's input
