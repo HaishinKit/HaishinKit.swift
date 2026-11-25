@@ -56,7 +56,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
     public static let defaultRequestTimeout: UInt64 = 3000
     /// The supported audio fourCc Information.
     public static let supportedAudioFourCcInfoMap: AMFObject = [
-        RTMPAudioFourCC.opus.description: FourCcInfoMask.canEncode.rawValue
+        RTMPAudioFourCC.opus.description: FourCcInfoMask.canEncode.rawValue | FourCcInfoMask.canDecode.rawValue
     ]
     /// The supported video fourCc Information.
     public static let supportedVideoFourCcInfoMap: AMFObject = {

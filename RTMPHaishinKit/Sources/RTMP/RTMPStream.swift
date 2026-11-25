@@ -253,6 +253,8 @@ public actor RTMPStream {
     }
 
     private var av1Configuration: AV1DecoderConfigurationRecord?
+    private var opusHeader: OpusHeaderPacket?
+    private var opusSequence = UUID()
     private var videoFormat: CMFormatDescription? {
         didSet {
             guard videoFormat != oldValue else {
@@ -300,6 +302,7 @@ public actor RTMPStream {
         }
         do {
             audioFormat = nil
+            opusHeader = nil
             videoFormat = nil
             av1Configuration = nil
             audioTimestamp.clear()
@@ -381,6 +384,7 @@ public actor RTMPStream {
         }
         do {
             audioFormat = nil
+            opusHeader = nil
             videoFormat = nil
             av1Configuration = nil
             audioTimestamp.clear()
@@ -444,6 +448,7 @@ public actor RTMPStream {
         }
         outgoing.stopRunning()
         av1Configuration = nil
+        opusHeader = nil
         return try await withCheckedThrowingContinuation { continutation in
             self.continuation = continutation
             switch readyState {
@@ -663,18 +668,50 @@ public actor RTMPStream {
 
     private func append(_ message: RTMPAudioMessage, type: RTMPChunkType) {
         audioTimestamp.update(message, chunkType: type)
-        guard message.codec.isSupported else {
+        if message.codec == .exheader, message.payload.first.map({ $0 & 15 }) == RTMPAudioPacketType.sequenceStart.rawValue {
+            // Even a truncated or unsupported new sequence must retire the old decoder.
+            opusHeader = nil
+            audioFormat = nil
+        }
+        guard message.isSupported else {
             return
         }
-        switch message.payload[1] {
+        if message.codec == .exheader {
+            switch message.packetType {
+            case RTMPAudioPacketType.sequenceStart.rawValue:
+                audioFormat = nil
+                opusHeader = OpusHeaderPacket(data: Data(message.payload.dropFirst(message.headerSize)))
+                opusSequence = UUID()
+                audioFormat = opusHeader?.makeAudioFormat()
+            case RTMPAudioPacketType.codedFrames.rawValue:
+                if let header = opusHeader, let audioFormat, message.payload.count > message.headerSize,
+                   message.payload.count - message.headerSize <= 61_440 {
+                    let buffer = AVAudioCompressedBuffer(format: audioFormat, packetCapacity: 1,
+                        maximumPacketSize: message.payload.count - message.headerSize)
+                    guard message.copyMemory(buffer) else { return }
+                    let sequence = opusSequence
+                    let when = audioTimestamp.value
+                    Task { await incoming.append(buffer, when: when, opusSequence: sequence,
+                        preSkip: header.preSkip, outputGain: header.outputGain) }
+                }
+            case RTMPAudioPacketType.sequenceEnd.rawValue:
+                opusHeader = nil
+                audioFormat = nil
+            default:
+                break
+            }
+            return
+        }
+        if audioFormat?.formatDescription.mediaSubType == .opus { audioFormat = nil }
+        opusHeader = nil
+        switch message.packetType {
         case RTMPAACPacketType.seq.rawValue:
             audioFormat = message.makeAudioFormat()
         case RTMPAACPacketType.raw.rawValue:
             if audioFormat == nil {
                 audioFormat = message.makeAudioFormat()
             }
-            if let audioBuffer {
-                message.copyMemory(audioBuffer)
+            if let audioBuffer, message.copyMemory(audioBuffer) {
                 Task { await incoming.append(audioBuffer, when: audioTimestamp.value) }
             }
         default:

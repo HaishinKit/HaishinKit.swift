@@ -30,6 +30,7 @@ final class AudioCodec {
             guard inputFormat != oldValue else {
                 return
             }
+            if oldValue != nil { opusDecoding = OpusDecodingState() }
             inputBuffers.removeAll()
             inputBuffersCursor = Self.defaultInputBuffersCursor
             outputBuffers.removeAll()
@@ -41,6 +42,7 @@ final class AudioCodec {
             }
         }
     }
+    private var opusDecoding = OpusDecodingState()
     private var audioTime = AudioTime()
     private var ringBuffer: AudioRingBuffer?
     private var inputBuffers: [AVAudioBuffer] = []
@@ -83,6 +85,11 @@ final class AudioCodec {
     func append(_ audioBuffer: AVAudioBuffer, when: AVAudioTime) {
         inputFormat = audioBuffer.format
         guard let audioConverter, isRunning else {
+            return
+        }
+        if settings.format == .pcm, audioBuffer.format.formatDescription.mediaSubType == .opus,
+           let compressed = audioBuffer as? AVAudioCompressedBuffer {
+            decodeOpus(compressed, when: when, converter: audioConverter)
             return
         }
         var error: NSError?
@@ -134,6 +141,88 @@ final class AudioCodec {
         } while(outputStatus == .haveData && settings.format != .pcm)
     }
 
+    /// Starts a new Opus sequence. Transports without an ID header can use append directly.
+    func configureOpusDecoder(preSkip: UInt16 = 0, outputGain: Int16 = 0) {
+        inputFormat = nil
+        opusDecoding = OpusDecodingState(preSkip: preSkip, gain: pow(10, Float(outputGain) / (20 * 256)))
+    }
+
+    private struct OpusDecodingState {
+        var preSkip: UInt16 = 0
+        var gain: Float = 1
+        var remainingSkip = 0
+        var decodedFrames: Int64 = 0
+        var inputFrames: Int64 = 0
+        var firstSampleTime: Int64?
+    }
+
+    private func decodeOpus(_ buffer: AVAudioCompressedBuffer, when: AVAudioTime, converter: AVAudioConverter) {
+        guard buffer.packetCount == 1, buffer.byteLength > 0, buffer.byteLength <= buffer.byteCapacity,
+              buffer.byteLength <= 61_440 else { return }
+        let data = Data(bytes: buffer.data, count: Int(buffer.byteLength))
+        guard let frames = Self.opusFrameCount(data) else { return }
+        let input = AVAudioCompressedBuffer(format: converter.inputFormat, packetCapacity: 1, maximumPacketSize: data.count)
+        input.copy(buffer)
+        input.packetDescriptions?.pointee.mVariableFramesInPacket = UInt32(Double(frames) * buffer.format.sampleRate / 48_000)
+        let outputFormat = converter.outputFormat
+        let rate = outputFormat.sampleRate
+        guard let output = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: UInt32(ceil(rate * 0.12))) else { return }
+        var supplied = false
+        var error: NSError?
+        let status = converter.convert(to: output, error: &error) { _, state in
+            guard !supplied else { state.pointee = .noDataNow; return nil }
+            supplied = true
+            state.pointee = .haveData
+            return input
+        }
+        guard status != .error, error == nil else { return }
+        let seconds = when.isHostTimeValid ? AVAudioTime.seconds(forHostTime: when.hostTime) :
+            (when.isSampleTimeValid ? Double(when.sampleTime) / when.sampleRate : 0)
+        let packetTime = Int64((seconds * rate).rounded())
+        let preSkip = Int((Double(opusDecoding.preSkip) * rate / 48_000).rounded())
+        if opusDecoding.firstSampleTime == nil {
+            opusDecoding.firstSampleTime = packetTime
+            opusDecoding.remainingSkip = preSkip
+        } else if let first = opusDecoding.firstSampleTime {
+            let difference = packetTime - (first + opusDecoding.inputFrames)
+            // Allow millisecond timestamp rounding while preserving real source gaps.
+            if abs(difference) > Int64(ceil(rate / 1000)) { opusDecoding.firstSampleTime = first + difference }
+        }
+        opusDecoding.inputFrames += Int64((Double(frames) * rate / 48_000).rounded())
+        let skip = min(opusDecoding.remainingSkip, Int(output.frameLength))
+        let position = (opusDecoding.firstSampleTime ?? 0) + opusDecoding.decodedFrames + Int64(skip - preSkip)
+        opusDecoding.decodedFrames += Int64(output.frameLength)
+        opusDecoding.remainingSkip -= skip
+        let length = Int(output.frameLength) - skip
+        guard length > 0, let channels = output.floatChannelData else { return }
+        for channel in 0..<Int(outputFormat.channelCount) {
+            for index in 0..<length { channels[channel][index] = channels[channel][index + skip] * opusDecoding.gain }
+        }
+        output.frameLength = UInt32(length)
+        let time = AVAudioTime(hostTime: AVAudioTime.hostTime(forSeconds: max(0, Double(position) / rate)),
+            sampleTime: position, atRate: rate)
+        _outputStream.yield((output, time))
+    }
+
+    /// RFC 6716 packet duration on the 48 kHz Opus clock, bounded to 120 ms.
+    static func opusFrameCount(_ data: Data) -> UInt32? {
+        guard let toc = data.first, data.count <= 61_440 else { return nil }
+        let frames: UInt32
+        switch toc & 3 {
+        case 0: frames = 1
+        case 1, 2: frames = 2
+        default:
+            guard data.count > 1 else { return nil }
+            frames = UInt32(data[data.startIndex + 1] & 63)
+        }
+        let samples: UInt32
+        if toc & 128 != 0 { samples = 120 << ((toc >> 3) & 3) }
+        else if toc & 96 == 96 { samples = toc & 8 == 0 ? 480 : 960 }
+        else { samples = [480, 960, 1920, 2880][Int((toc >> 3) & 3)] }
+        let total = samples * frames
+        return frames > 0 && total <= 5760 ? total : nil
+    }
+
     private func makeInputBuffer() -> AVAudioBuffer? {
         guard let inputFormat else {
             return nil
@@ -154,7 +243,18 @@ final class AudioCodec {
             let outputFormat = settings.format.makeOutputAudioFormat(inputFormat, sampleRate: settings.sampleRate, channelMap: settings.channelMap) else {
             return nil
         }
-        let converter = AVAudioConverter(from: inputFormat, to: outputFormat)
+        var converterInputFormat = inputFormat
+        if settings.format == .pcm, inputFormat.formatDescription.mediaSubType == .opus {
+            // RTP may describe 20-ms frames even when a packet contains more audio.
+            // Opus duration comes from its TOC and packet description, not that hint.
+            var description = inputFormat.streamDescription.pointee
+            description.mFramesPerPacket = 0
+            guard let variableFormat = AVAudioFormat(streamDescription: &description, channelLayout: inputFormat.channelLayout) else {
+                return nil
+            }
+            converterInputFormat = variableFormat
+        }
+        let converter = AVAudioConverter(from: converterInputFormat, to: outputFormat)
         settings.apply(converter, oldValue: nil)
         if inputFormat.formatDescription.mediaSubType == .linearPCM {
             ringBuffer = AudioRingBuffer(inputFormat)
@@ -201,6 +301,7 @@ extension AudioCodec: Runner {
             return
         }
         audioTime.reset()
+        opusDecoding = OpusDecodingState()
         ringBuffer?.reset()
         audioConverter?.reset()
         isRunning = true
