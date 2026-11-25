@@ -5,8 +5,6 @@ The support status of Enhanced RTMP in RTMPHaishinKit.
 An extended RTMP standard called Enhanced RTMP is being developed by the Veovera Software Organization.
 Please check [this repository](https://github.com/veovera/enhanced-rtmp/) for the specifications.
 
-☑️ Supported · — Not implemented. Codec availability also depends on the device.
-
 ## [Enhanced RTMP v1 support](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
 
 | Video codec | Publishing | Playback |
@@ -21,6 +19,8 @@ Please check [this repository](https://github.com/veovera/enhanced-rtmp/) for th
 | Enhancing onMetaData (`videocodecid` FourCC) | ☑️ |
 | Extending NetConnection connect Command (`fourCcList`) | ☑️ |
 | Metadata Frame | — |
+
+☑️ Supported · — Not implemented. Codec availability also depends on the device.
 
 ### HDR with HEVC and HLG
 
@@ -78,6 +78,8 @@ See [AV1 playback and device support](https://docs.haishinkit.com/swift/latest/d
 | Reconnect Request | — |
 | Multitrack Streaming via Enhanced RTMP | — |
 | Enhancing NetConnection connect Command (`fourCcList`, `audioFourCcInfoMap`, `videoFourCcInfoMap`) | ☑️ |
+
+☑️ Supported · — Not implemented. Codec availability also depends on the device.
 
 ### Connection capabilities
 
