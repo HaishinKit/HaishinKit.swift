@@ -319,8 +319,16 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         try await performCall(commandName, arguments: arguments, allowsClosing: true)
     }
 
-    private func performCall(_ commandName: String, arguments: [(any Sendable)?], allowsClosing: Bool) async throws -> RTMPResponse {
-        guard connected, allowsClosing || !isClosing else {
+    func streamGeneration() -> UUID? {
+        connected && !isClosing ? connectionGeneration : nil
+    }
+
+    func callForStream(_ commandName: String, generation: UUID, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        try await performCall(commandName, arguments: arguments, allowsClosing: false, generation: generation)
+    }
+
+    private func performCall(_ commandName: String, arguments: [(any Sendable)?], allowsClosing: Bool, generation: UUID? = nil) async throws -> RTMPResponse {
+        guard connected, allowsClosing || !isClosing, generation == nil || generation == connectionGeneration else {
             throw Error.invalidState
         }
         return try await withCheckedThrowingContinuation { continutation in
@@ -433,7 +441,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
                 guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 await stream.dispatch(.reset)
                 guard connectingID == id, self.socket === socket else { throw CancellationError() }
-                await stream.createStream()
+                await stream.createStream(generation: id)
                 guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 try Task.checkCancellation()
             }
@@ -531,6 +539,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             logger.trace("<<", message)
         }
         let chunks = Array(outputBuffer.putMessage(type, chunkStreamId: chunkStreamId.rawValue, message: message))
+        let socket = socket
         Task {
             await socket?.send(chunks)
         }

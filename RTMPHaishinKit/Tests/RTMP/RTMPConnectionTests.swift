@@ -442,6 +442,21 @@ import Testing
         try await closing.value
     }
 
+    @Test(arguments: [false, true])
+    func cancelledStreamStartCannotInstallPendingResponse(publishing: Bool) async {
+        let connection = RTMPConnection()
+        let stream = RTMPStream(connection: connection)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return publishing ? try await stream.publish("stream") : try await stream.play("stream")
+        }
+        switch await task.result {
+        case .success: Issue.record("Cancelled start succeeded")
+        case .failure(let error): #expect(error is CancellationError)
+        }
+        #expect(await stream.readyState == .idle)
+    }
+
     private func acceptHandshake(_ peer: NWConnection) async throws {
         try await receive(1 + RTMPHandshake.sigSize, from: peer)
         var handshake = Data(count: 1 + 2 * RTMPHandshake.sigSize)

@@ -210,6 +210,7 @@ public actor RTMPStream {
     private var frameCount: UInt16 = 0
     private var audioBuffer: AVAudioCompressedBuffer?
     private var howToPublish: RTMPStream.HowToPublish = .live
+    private var restorationID = UUID()
     private var requestID = UUID()
     private var continuation: CheckedContinuation<RTMPResponse, any Swift.Error>? {
         didSet {
@@ -301,6 +302,7 @@ public actor RTMPStream {
             }
         }
         do {
+            try Task.checkCancellation()
             audioFormat = nil
             videoFormat = nil
             av1Configuration = nil
@@ -384,6 +386,7 @@ public actor RTMPStream {
             throw Error.invalidState
         }
         do {
+            try Task.checkCancellation()
             audioFormat = nil
             videoFormat = nil
             av1Configuration = nil
@@ -645,20 +648,27 @@ public actor RTMPStream {
     }
 
     func cancelPendingOperation() {
+        restorationID = UUID()
         let pending = continuation
         continuation = nil
         pending?.resume(throwing: CancellationError())
     }
 
-    func createStream() async {
+    func createStream(generation: UUID? = nil) async {
+        guard let connection else { return }
+        let restoration = UUID()
+        restorationID = restoration
+        let currentGeneration = await connection.streamGeneration()
+        guard let generation = generation ?? currentGeneration, restorationID == restoration else { return }
         if let fcPublishName {
             // FMLE-compatible sequences
-            async let _ = connection?.call("releaseStream", arguments: fcPublishName)
-            async let _ = connection?.call("FCPublish", arguments: fcPublishName)
+            async let _ = connection.callForStream("releaseStream", generation: generation, arguments: fcPublishName)
+            async let _ = connection.callForStream("FCPublish", generation: generation, arguments: fcPublishName)
         }
         do {
-            let response = try await connection?.call("createStream")
-            guard let first = response?.arguments.first as? Double else {
+            guard restorationID == restoration else { return }
+            let response = try await connection.callForStream("createStream", generation: generation)
+            guard restorationID == restoration, let first = response.arguments.first as? Double else {
                 return
             }
             id = UInt32(first)
