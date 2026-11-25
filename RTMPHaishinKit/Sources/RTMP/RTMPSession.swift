@@ -54,7 +54,12 @@ actor RTMPSession: StreamSession {
 
     func connect(_ disconnected: @Sendable @escaping () -> Void) async throws {
         guard !isConnecting, _readyState.value != .closing else { throw RTMPConnection.Error.invalidState }
-        let id = generation
+        // An already-open session is a no-op, even if that redundant caller was cancelled.
+        if await connection.connected { return }
+        guard !isConnecting, _readyState.value != .closing else { throw RTMPConnection.Error.invalidState }
+        try Task.checkCancellation()
+        let id = UUID()
+        generation = id
         isConnecting = true
         let task = Task { try await self.connect(id, disconnected: disconnected) }
         connectionTask = task
@@ -70,7 +75,7 @@ actor RTMPSession: StreamSession {
     }
 
     private func cancel(_ id: UUID) async {
-        guard generation == id else { return }
+        guard generation == id, isConnecting else { return }
         try? await close()
     }
 

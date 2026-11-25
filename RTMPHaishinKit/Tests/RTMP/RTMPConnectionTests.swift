@@ -301,7 +301,10 @@ import Testing
         let oldCommand = try await command(from: peer1, chunkSize: &chunkSize1)
         #expect(oldCommand.name == "old")
         try await connection.close()
-        if case .success = await oldCall.result { Issue.record("Closed call must finish with an error") }
+        switch await oldCall.result {
+        case .success: Issue.record("Closed call must finish with an error")
+        case .failure(let error): #expect(error is CancellationError)
+        }
         firstConnect = Task { try await connection.connect(server.url) }
         let peer2 = try #require(await peers.next())
         peer2.start(queue: server.queue)
@@ -321,9 +324,9 @@ import Testing
         try await connection.close()
     }
 
-    @Test(.timeLimit(.minutes(1)), arguments: [0, 1, 2])
+    @Test(.timeLimit(.minutes(1)), arguments: [0, 1, 2, 3])
     func sessionCloseJoinsPendingStreamStart(phase: Int) async throws {
-        let publishing = phase == 2
+        let publishing = phase >= 2
         let server = try await silentServer()
         defer { server.listener.cancel() }
         let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: publishing ? .publish : .playback, configuration: nil)
@@ -339,7 +342,7 @@ import Testing
         try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer)
         while true {
             let next = try await command(from: peer, chunkSize: &chunkSize)
-            if next.name == (publishing ? "publish" : "play") || (phase == 0 && next.name == "createStream") { break }
+            if next.name == (publishing ? "publish" : "play") || (phase == 0 && next.name == "createStream") || (phase == 3 && (next.name == "FCPublish" || next.name == "releaseStream")) { break }
             try await reply(next.transaction, arguments: next.name == "createStream" ? [Double(1)] : [], to: peer)
         }
         let start = ContinuousClock.now
@@ -382,6 +385,63 @@ import Testing
         }
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func peerClosePreservesConnectionFailureResponse() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let connection = RTMPConnection(timeout: 5)
+        let attempt = Task { try await connection.connect(server.url) }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        try await receive(1 + RTMPHandshake.sigSize, from: peer)
+        peer.cancel()
+        switch await attempt.result {
+        case .success: Issue.record("Closed peer connected")
+        case .failure(let error):
+            guard case RTMPConnection.Error.requestFailed(let response) = error else {
+                Issue.record("Expected a connection failure response, got \(error)")
+                return
+            }
+            #expect(response.status?.code == RTMPConnection.Code.connectFailed.rawValue)
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancelledRedundantConnectKeepsOpenSession() async throws {
+        let server = try await silentServer()
+        defer { server.listener.cancel() }
+        let session = RTMPSessionFactory().make(try #require(URL(string: server.url + "/stream")), mode: .playback, configuration: nil)
+        _ = await session.stream
+        let attempt = Task { try await session.connect {} }
+        var peers = server.peers.makeAsyncIterator()
+        let peer = try #require(await peers.next())
+        peer.start(queue: server.queue)
+        defer { peer.cancel() }
+        try await acceptHandshake(peer)
+        var chunkSize = 128
+        _ = try await command(from: peer, chunkSize: &chunkSize)
+        try await reply(1, arguments: [["level": "status", "code": "NetConnection.Connect.Success"] as AMFObject], to: peer)
+        let create = try await command(from: peer, chunkSize: &chunkSize)
+        #expect(create.name == "createStream")
+        try await reply(create.transaction, arguments: [Double(1)], to: peer)
+        let play = try await command(from: peer, chunkSize: &chunkSize)
+        #expect(play.name == "play")
+        try await reply(0, arguments: [["level": "status", "code": "NetStream.Play.Start"] as AMFObject], to: peer, name: "onStatus", streamID: 1)
+        try await attempt.value
+        let redundant = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await session.connect {}
+        }
+        try await redundant.value
+        #expect(await session.connected)
+        let closing = Task { try await session.close() }
+        let close = try await command(from: peer, chunkSize: &chunkSize)
+        #expect(close.name == "closeStream")
+        try await reply(0, arguments: [["level": "status", "code": "NetStream.Play.Stop"] as AMFObject], to: peer, name: "onStatus", streamID: 1)
+        try await closing.value
+    }
+
     private func acceptHandshake(_ peer: NWConnection) async throws {
         try await receive(1 + RTMPHandshake.sigSize, from: peer)
         var handshake = Data(count: 1 + 2 * RTMPHandshake.sigSize)
@@ -390,8 +450,8 @@ import Testing
         try await receive(RTMPHandshake.sigSize, from: peer)
     }
 
-    private func reply(_ transaction: Int, arguments: [(any Sendable)?], to peer: NWConnection, name: String = "_result") async throws {
-        let response = RTMPCommandMessage(streamId: 0, transactionId: transaction, objectEncoding: .amf0, commandName: name, commandObject: nil, arguments: arguments)
+    private func reply(_ transaction: Int, arguments: [(any Sendable)?], to peer: NWConnection, name: String = "_result", streamID: UInt32 = 0) async throws {
+        let response = RTMPCommandMessage(streamId: streamID, transactionId: transaction, objectEncoding: .amf0, commandName: name, commandObject: nil, arguments: arguments)
         let buffer = RTMPChunkBuffer()
         for chunk in buffer.putMessage(.zero, chunkStreamId: 3, message: response) { try await send(chunk, to: peer) }
     }

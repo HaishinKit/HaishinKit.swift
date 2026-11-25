@@ -673,8 +673,8 @@ public actor RTMPStream {
             return
         }
         outgoing.stopRunning()
-        async let _ = try? connection?.call("FCUnpublish", arguments: fcPublishName)
-        async let _ = try? connection?.call("deleteStream", arguments: id)
+        async let _ = try? connection?.callForTeardown("FCUnpublish", arguments: fcPublishName)
+        async let _ = try? connection?.callForTeardown("deleteStream", arguments: id)
     }
 
     private func append(_ message: RTMPAudioMessage, type: RTMPChunkType) {

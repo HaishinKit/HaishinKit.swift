@@ -312,7 +312,15 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
 
     /// Calls a command or method on RTMP Server.
     public func call(_ commandName: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
-        guard connected else {
+        try await performCall(commandName, arguments: arguments, allowsClosing: false)
+    }
+
+    func callForTeardown(_ commandName: String, arguments: (any Sendable)?...) async throws -> RTMPResponse {
+        try await performCall(commandName, arguments: arguments, allowsClosing: true)
+    }
+
+    private func performCall(_ commandName: String, arguments: [(any Sendable)?], allowsClosing: Bool) async throws -> RTMPResponse {
+        guard connected, allowsClosing || !isClosing else {
             throw Error.invalidState
         }
         return try await withCheckedThrowingContinuation { continutation in
@@ -347,6 +355,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         }
         let id = UUID()
         connectingID = id
+        operationGeneration = UUID()
         connectionGeneration = id
         self.uri = uri
         self.arguments = arguments
@@ -423,6 +432,7 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
             for stream in streams {
                 guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 await stream.dispatch(.reset)
+                guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 await stream.createStream()
                 guard connectingID == id, self.socket === socket else { throw CancellationError() }
                 try Task.checkCancellation()
@@ -483,11 +493,13 @@ public actor RTMPConnection: HaishinKit.NetworkConnection {
         connectionTimeoutTask = nil
         uri = nil
         operationGeneration = UUID()
-        let pending = operations
-        operations.removeAll()
-        for operation in pending.values { operation.resume(throwing: CancellationError()) }
+        let pending = operations.filter { $0.key != Self.connectTransactionId }
+        for (id, operation) in pending {
+            operations.removeValue(forKey: id)
+            operation.resume(throwing: CancellationError())
+        }
+        for stream in streams { await stream.cancelPendingOperation() }
         for stream in streams {
-            await stream.cancelPendingOperation()
             if await stream.fcPublishName == nil {
                 _ = try? await stream.close()
             } else {
