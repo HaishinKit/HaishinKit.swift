@@ -14,8 +14,8 @@ final actor RTMPSocket {
     }
 
     private(set) var pathReport: NWConnection.DataTransferReport.PathReport?
-    private var timeout: UInt64 = 15
     private var connected = false
+    private var isClosed = false
     private var windowSizeC = RTMPSocket.defaultWindowSizeC
     private var securityLevel: StreamSocketSecurityLevel = .none
     private var totalBytesIn = 0
@@ -53,7 +53,7 @@ final actor RTMPSocket {
     }
 
     func connect(_ name: String, port: Int) async throws {
-        guard !connected else {
+        guard !connected, !isClosed else {
             throw Error.invalidState
         }
         totalBytesIn = 0
@@ -65,15 +65,6 @@ final actor RTMPSocket {
             self.connection = connection
             try await withCheckedThrowingContinuation { (checkedContinuation: CheckedContinuation<Void, Swift.Error>) in
                 self.continuation = checkedContinuation
-                Task {
-                    try? await Task.sleep(nanoseconds: timeout * 1_000_000_000)
-                    guard let continuation else {
-                        return
-                    }
-                    continuation.resume(throwing: Error.connectionTimedOut)
-                    self.continuation = nil
-                    close()
-                }
                 connection.stateUpdateHandler = { state in
                     Task { await self.stateDidChange(to: state) }
                 }
@@ -121,6 +112,7 @@ final actor RTMPSocket {
     func recv() -> AsyncStream<ReceivedData> {
         AsyncStream<ReceivedData> { continuation in
             Task {
+                defer { continuation.finish() }
                 do {
                     while connected {
                         let received = try await recv()
@@ -128,13 +120,14 @@ final actor RTMPSocket {
                         totalBytesIn += received.data.count
                     }
                 } catch {
-                    continuation.finish()
+                    // EOF and a closed transport both terminate the stream.
                 }
             }
         }
     }
 
     func close(_ error: NWError? = nil) {
+        isClosed = true
         guard connection != nil else {
             return
         }
@@ -151,6 +144,7 @@ final actor RTMPSocket {
     }
 
     private func stateDidChange(to state: NWConnection.State) {
+        guard !isClosed, connection != nil else { return }
         switch state {
         case .ready:
             logger.info("Connection is ready.")
