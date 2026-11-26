@@ -5,10 +5,24 @@ The support status of Enhanced RTMP in RTMPHaishinKit.
 An extended RTMP standard called Enhanced RTMP is being developed by the Veovera Software Organization.
 Please check [this repository](https://github.com/veovera/enhanced-rtmp/) for the specifications.
 
-## Notice
-Enhanced RTMP also requires support on the server side. Please check the support status of the server you are using.
+## [Enhanced RTMP v1 support](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
 
-## HDR with HEVC and HLG
+| Video codec | Publishing | Playback |
+| --- | --- | --- |
+| HEVC | ☑️ | ☑️ |
+| HEVC Main10 HDR (HLG) | ☑️ | ☑️ |
+| VP9 | — | — |
+| AV1 (VideoToolbox hardware decoding) | — | ☑️ |
+
+| Other features | Status |
+| --- | --- |
+| Enhancing onMetaData (`videocodecid` FourCC) | ☑️ |
+| Extending NetConnection connect Command (`fourCcList`) | ☑️ |
+| Metadata Frame | — |
+
+☑️ Supported · — Not implemented. Codec availability also depends on the device.
+
+### HDR with HEVC and HLG
 
 To publish the mixer's 10-bit BT.2100 HLG output, configure both the mixer and the encoder before publishing:
 
@@ -37,8 +51,8 @@ Call `setDynamicRangeMode(.sdr)` when returning to SDR. Incoming frames do not c
 
 This supports HLG carried in HEVC. It does not implement `VideoPacketType.Metadata` (`colorInfo`), HDR10 mastering metadata, or Dolby Vision signaling.
 
-## Supports Enhanced RTMP Status
-### [v1](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md)
+### AV1 playback
+
 AV1 playback uses the system VideoToolbox hardware decoder. The default connection advertises `av01` only when `VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)` is true, and advertises decoding capability only. No software decoder or AV1 encoder is used by RTMPHaishinKit.
 
 On a device without AV1 hardware decoding, incoming AV1 video is ignored while supported audio continues to play. The stream stays connected; an unsupported video codec does not stop audio playback.
@@ -49,37 +63,31 @@ The receive tests include 8-bit and 10-bit Main-profile samples. Verify playback
 
 See [AV1 playback and device support](https://docs.haishinkit.com/swift/latest/documentation/haishinkit/av1-playback) for model generations, official specifications, and the runtime capability check.
 
-- [x] Enhancing onMetaData
-- [ ] Defining Additional Video Codecs
-  - [ ] Publish
-    - [x] HEVC
-    - [x] HEVC Main10 HDR (HLG)
-    - [ ] VP9
-    - [ ] AV1
-  - [ ] Playback
-    - [x] HEVC
-    - [x] HEVC Main10 HDR (HLG)
-    - [ ] VP9
-    - [x] AV1 (VideoToolbox hardware decoding)
-- [x] [Extending NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v1.md#extending-netconnection-connect-command)
-- [ ] Metadata Frame
+## [Enhanced RTMP v2 support](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v2.md)
 
-### [v2](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v2.md)
-- [ ] Enhancements to RTMP and FLV
-- [ ] Enhancing onMetaData
-- [ ] Reconnect Request
-- [ ] Enhanced Video
-  - [ ] Publish
-    - [ ] VP8
-    - [ ] AV1(HDR)
-  - [ ] Playback
-    - [ ] VP8
-    - [ ] AV1(HDR)
-- [ ] Enhanced Audio
-  - [ ] Publish
-    - [x] OPUS
-  - [ ] Playback
-    - [ ] OPUS
-- [ ] Multitrack Streaming via Enhanced RTMP
-- [x] [Enhancing NetConnection connect Command](https://github.com/veovera/enhanced-rtmp/blob/main/docs/enhanced/enhanced-rtmp-v2.md#enhancing-netconnection-connect-command)
+| Codec | Publishing | Playback |
+| --- | --- | --- |
+| VP8 (Enhanced Video) | — | — |
+| AV1 HDR (Enhanced Video) | — | — |
+| Opus (Enhanced Audio) | ☑️ | — |
 
+| Other features | Status |
+| --- | --- |
+| Enhancements to RTMP and FLV | — |
+| Enhancing onMetaData (`audiocodecid` FourCC) | ☑️ |
+| Reconnect Request | — |
+| Multitrack Streaming via Enhanced RTMP | — |
+| Enhancing NetConnection connect Command (`fourCcList`, `audioFourCcInfoMap`, `videoFourCcInfoMap`) | ☑️ |
+
+☑️ Supported · — Not implemented. Codec availability also depends on the device.
+
+### Connection capabilities
+
+The default connect command sends `fourCcList`, `audioFourCcInfoMap` and
+`videoFourCcInfoMap`. It advertises HEVC encoding/decoding and Opus encoding.
+AV1 decoding is advertised only when VideoToolbox reports hardware decode support.
+The connection initializer can override these properties. This does not claim
+support for reconnection or multitrack streaming.
+
+## Notice
+Enhanced RTMP also requires support on the server side. Please check the support status of the server you are using.
